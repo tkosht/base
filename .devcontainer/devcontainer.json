@@ -1,5 +1,5 @@
 {
-	"name": "Cursor Development Project",
+	"name": "Base Project",
 	"dockerComposeFile": [
 		"../compose.yml"
 	],

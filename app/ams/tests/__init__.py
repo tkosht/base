@@ -1,3 +1,0 @@
-"""
-AMS test package
-"""
