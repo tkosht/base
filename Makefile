@@ -2,13 +2,13 @@ default: all
 
 all: up install
 
-install: install-poetry install-claudecode
+install: install-poetry install-agent-cli
 
 install-poetry:
 	docker compose exec app bash bin/install_poetry.sh
 
-install-claudecode:
-	docker compose exec app bash bin/install_claudecode.sh
+install-agent-cli:
+	docker compose exec app bash bin/install_agentcli.sh
 
 # ==========
 # interaction tasks

@@ -1,3 +1,3 @@
 #!/usr/bin/sh
 
-npm install -g @google/gemini-cli
+npm install @google/gemini-cli

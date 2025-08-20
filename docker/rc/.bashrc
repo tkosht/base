@@ -118,10 +118,8 @@ fi
 
 
 export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/.detaspace/bin:$PATH"
+export PATH="$HOME/workspace/node_modules/.bin/:$PATH"
 export UV_LINK_MODE=copy
-
-export GOOGLE_CLOUD_PROJECT=gen-lang-client-0389906364
 
 alias auto_claude="claude --dangerously-skip-permissions"
 alias auto_codex="codex --dangerously-bypass-approvals-and-sandbox"
