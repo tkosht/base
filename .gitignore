@@ -44,6 +44,9 @@ cleanup_analysis_report.md
 !.clinerules
 !.gitkeep
 
+# Allow only .env example
+!.env.example
+
 # LLM
 *.gguf
 elyza/
