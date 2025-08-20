@@ -1,0 +1,20 @@
+[flake8]
+exclude = 
+    .git,
+    __pycache__,
+    backup,
+    docs,
+    memory-bank,
+    templates,
+    htmlcov,
+    .pytest_cache,
+    node_modules,
+    examples,
+    .venv,
+    venv,
+    build,
+    dist
+max-line-length = 100
+max-complexity = 10
+# Black-compatible settings
+ignore = E203, W503

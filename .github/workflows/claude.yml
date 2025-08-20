@@ -1,0 +1,85 @@
+name: Claude Code
+on:
+    issue_comment:
+        types: [created]
+    pull_request_review_comment:
+        types: [created]
+    issues:
+        types: [opened, assigned]
+    pull_request_review:
+        types: [submitted]
+
+jobs:
+    claude:
+        if: |
+            (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@claude')) ||
+            (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, '@claude')) ||
+            (github.event_name == 'pull_request_review' && contains(github.event.review.body, '@claude')) ||
+            (github.event_name == 'issues' && (contains(github.event.issue.body, '@claude') || contains(github.event.issue.title, '@claude')))
+
+        runs-on: ubuntu-latest
+        permissions:
+            contents: write
+            pull-requests: write
+            issues: write
+            id-token: write
+
+        steps:
+            - name: Checkout repository
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 1
+
+            - name: Setup Node.js (Latest LTS)
+              uses: actions/setup-node@v4
+              with:
+                  node-version: 'lts/*'
+                  cache: 'npm'
+
+            - name: Install Node.js dependencies
+              run: |
+                  # Ensure npm is up to date
+                  npm install -g npm@latest
+                  
+                  # Install project dependencies if package.json exists
+                  if [ -f package.json ]; then
+                      npm ci
+                  fi
+                  
+                  # Make Node.js and npm available to Claude
+                  echo "NODE_VERSION=$(node --version)" >> $GITHUB_ENV
+                  echo "NPM_VERSION=$(npm --version)" >> $GITHUB_ENV
+                  echo "Node.js $(node --version) and npm $(npm --version) are now available"
+
+            - name: Setup Python environment
+              uses: actions/setup-python@v5
+              with:
+                  python-version: '3.10'
+                  cache: 'pip'
+
+            - name: Install Python dependencies
+              run: |
+                  python -m pip install --upgrade pip
+                  # Install Poetry if pyproject.toml exists
+                  if [ -f pyproject.toml ]; then
+                      pip install poetry
+                      # Use --without dev for Poetry 1.2+ (backward compatible)
+                      poetry install --without dev,test || poetry install --only main || poetry install
+                  elif [ -f requirements.txt ]; then
+                      pip install -r requirements.txt
+                  fi
+
+            - name: Run Claude Code
+              id: claude
+              # uses: anthropics/claude-code-action@main
+              uses: grll/claude-code-action@beta
+              with:
+                  use_oauth: 'true'
+                  claude_access_token: ${{ secrets.CLAUDE_ACCESS_TOKEN }}
+                  claude_refresh_token: ${{ secrets.CLAUDE_REFRESH_TOKEN }}
+                  claude_expires_at: ${{ secrets.CLAUDE_EXPIRES_AT }}
+              env:
+                  # Make development tools available to Claude
+                  NODE_VERSION: ${{ env.NODE_VERSION }}
+                  NPM_VERSION: ${{ env.NPM_VERSION }}
+

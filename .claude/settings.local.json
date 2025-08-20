@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(python scripts/simple_structure_check.py:*)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git checkout:*)",
+      "Bash(git push:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr:*)",
+      "Bash(git pull:*)",
+      "Bash(git branch:*)",
+      "mcp__serena__onboarding",
+      "mcp__serena__list_dir",
+      "mcp__serena__read_file",
+      "mcp__serena__find_file",
+      "mcp__serena__write_memory",
+      "mcp__serena__list_memories",
+      "mcp__serena__activate_project",
+      "mcp__serena__execute_shell_command",
+      "mcp__cognee__list_data",
+      "mcp__cognee__get_developer_rules",
+      "mcp__cognee__search"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "sequential-thinking",
+    "serena",
+    "cognee"
+  ]
+}

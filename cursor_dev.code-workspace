@@ -1,0 +1,33 @@
+{
+    "folders": [
+        {
+            "name": "root",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+        },
+        "[python]": {
+            "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "python.formatting.provider": "none",
+        "makefile.configureOnOpen": false
+    },
+    "extensions": {
+        "recommendations": [
+            "ms-python.python",
+            "ms-python.vscode-pylance",
+            "ms-python.black-formatter",
+            "ms-python.flake8",
+            "ms-python.isort",
+            "ms-toolsai.jupyter",
+            "saoudrizwan.claude-dev",
+            "rooveterinaryinc.roo-cline",
+            "oderwat.indent-rainbow",
+            "donjayamanne.githistory",
+            "hediet.vscode-drawio",
+        ]
+    }
+}

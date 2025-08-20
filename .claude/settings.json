@@ -1,0 +1,117 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(python:*)",
+      "Bash(find:*)",
+      "Bash(git add:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git push:*)",
+      "Bash(gh auth:*)",
+      "Bash(flake8:*)",
+      "Bash(pytest:*)",
+      "Bash(poetry run flake8:*)",
+      "Bash(poetry run pytest:*)",
+      "Bash(poetry run black:*)",
+      "Bash(poetry run isort:*)",
+      "Bash(git commit:*)",
+      "Bash(make:*)",
+      "Bash(cat:*)",
+      "Bash(rg:*)",
+      "Bash(git checkout:*)",
+      "Bash(mv:*)",
+      "Bash(chmod:*)",
+      "Bash(for:*)",
+      "Bash(do sed -i 's/a2a_mvp/a2a/g' \"$file\")",
+      "Bash(done)",
+      "Bash(mkdir:*)",
+      "Bash(rmdir:*)",
+      "Bash(tree:*)",
+      "Bash(sed:*)",
+      "Bash(touch:*)",
+      "Bash(curl:*)",
+      "Bash(pkill:*)",
+      "Bash(black:*)",
+      "Bash(git config:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr checks:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run list:*)",
+      "Bash(isort:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(git branch:*)",
+      "Bash(git check-ignore:*)",
+      "Bash(claude:*)",
+      "Bash(git worktree:*)",
+      "Bash(tmux:*)",
+      "Bash(date:*)",
+      "Bash(stat:*)",
+      "Bash(realpath:*)",
+      "Bash(unset:*)",
+      "Bash(source:*)",
+      "Bash(jq:*)",
+      "Bash(echo:*)",
+      "Bash(cp:*)",
+      "Bash(rm:*)",
+      "Bash(./hello)",
+      "Bash(.claude/commands/hello.sh:*)",
+      "Bash(/hello)",
+      "Bash(git pull:*)",
+      "Bash(git rm:*)",
+      "WebFetch(domain:docs.anthropic.com)",
+      "Bash(ps:*)",
+      "Bash(gh pr create:*)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/devuser/workspace/.claude/hooks/auto_review_trigger_wrapper.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/devuser/workspace/.claude/hooks/post_commit_wrapper.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/devuser/workspace/.claude/hooks/auto_task_report_wrapper.sh"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/devuser/workspace/.claude/hooks/pre_commit_worktree_wrapper.sh"
+          }
+        ]
+      }
+    ]
+  },
+  "env": {
+    "CLAUDE_CODE_MAX_OUTPUT_TOKENS": "20000",
+    "MAX_THINKING_TOKENS": "31999"
+  }
+}

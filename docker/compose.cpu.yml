@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile.cpu
+      args:
+        user_name: $user_name
+        group_name: $group_name
+    image: $pj_name.app
+    container_name: $pj_name.app
+    privileged: true
+    tty: true
+    volumes:
+      - .:/home/$user_name/workspace
+      - .ssh/:/home/$user_name/.ssh/
+    working_dir: /home/$user_name/workspace
+    # sysctls:
+    #   - net.core.somaxconn=$somaxconn
+    #   - net.ipv4.tcp_syncookies=0
+    ports:
+      - "13000:3000"    # cognee frontend
+      - "17474:7474"    # cognee neo4j
+      - "17687:7687"    # cognee neo4j/bolt
+      - "15432:5432"    # cognee postgres
+      - "18000:8000"    # cognee sse
+      - "19121:9121"    # serena sse
+      - "15173:5173"    # web app frontend
+      # - "8502:8501"   # streamlit
+
