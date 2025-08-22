@@ -1,4 +1,3 @@
-# app_tabs_chat_md_avatar_file.py
 import time
 import os
 import gradio as gr
@@ -76,25 +75,33 @@ def llm_stream(_prompt):
         yield t
 
 # 第1段：ガード＆準備（非ストリーム）
-# 出力: chat, status, stop, msg, go_flag, prompt
+# 出力: chat, status, stop, send, msg, go_flag, prompt   ★ sendを追加
 def guard_and_prep(message: str, history):
     history = history or []
     text = (message or "").strip()
 
     if not text:
         # 空のときは完全に無反応（全アウトプット no-op）
-        return gr.update(), gr.update(), gr.update(), gr.update(), False, ""
+        return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), False, ""
 
-    # 非空：履歴に下書き・停止有効化・Textbox即クリア
+    # 非空：履歴に下書き・停止可視化/有効化・送信は隠す・Textbox即クリア
     history = history + [(message, "⌛ typing...")]
-    return history, "⌛ 回答生成中...", gr.update(interactive=True), "", True, text
+    return (
+        history,
+        "⌛ 回答生成中...",
+        gr.update(visible=True, interactive=True),   # stop
+        gr.update(visible=False),                    # send
+        "",                                          # msg clear
+        True,                                        # go_flag
+        text                                         # prompt
+    )
 
 # 第2段：ストリーム（generator）
-# 入出力: go_flag, prompt, history -> chat, status, stop
+# 入出力: go_flag, prompt, history -> chat, status, stop, send   ★ sendを追加
 def stream_llm(go: bool, prompt: str, history):
     if not go:
         # 空経路：UI変更なしで即終了
-        yield gr.update(), gr.update(), gr.update()
+        yield gr.update(), gr.update(), gr.update(), gr.update()
         return
 
     history = history or []
@@ -102,9 +109,11 @@ def stream_llm(go: bool, prompt: str, history):
     for tok in llm_stream(prompt):
         body += tok
         history[-1] = (history[-1][0], body)
-        yield history, "⌛ 回答生成中...", gr.update()
+        # ストリーム中は stop=表示/有効、send=非表示
+        yield history, "⌛ 回答生成中...", gr.update(visible=True, interactive=True), gr.update(visible=False)
 
-    yield history, "回答生成完了", gr.update(interactive=False)
+    # 完了で stopを隠し、sendを再表示
+    yield history, "回答生成完了", gr.update(visible=False, interactive=False), gr.update(visible=True)
 
 
 # ====== UI ======
@@ -124,12 +133,13 @@ with gr.Blocks(css=r"""
   --avatar-size: 48px;
   --avatar-ring: 6px;
 
-  /* チャット入力（停止ボタン） */
-  --chat-btn-gap: 10px;       /* 入力右端とのベース距離 */
-  --stop-nudge: 12px;         /* 右端ボーダーから少し左へ寄せる量（px） */
-  --stop-diameter: 36px;      /* ★ 円の直径（これで大きさ決定） */
-  --stop-bg: #6b7280;         /* 円の色 */
-  --stop-total-w: var(--stop-diameter); /* 入力欄パディング計算用 */
+  /* チャット入力（停止/送信ボタン） */
+  --chat-btn-gap: 10px;
+  --stop-nudge: 12px;
+  --stop-diameter: 36px;
+  --stop-bg: #6b7280;
+  --send-bg: #60A5FA;  /* 少し薄め */
+  --stop-total-w: var(--stop-diameter);
 
   /* 検索UI */
   --chip-bg: #e5e7eb;
@@ -183,38 +193,39 @@ with gr.Blocks(css=r"""
 .combo-field .chip{ background:var(--chip-bg); border-radius:9999px; padding:.2rem .6rem; font-size:.9rem; }
 .combo-hint{ opacity:.8; margin-top:.25rem; }
 
-/* ---------- チャット入力行（停止ボタンを“円”で右内側に） ---------- */
+/* ---------- チャット入力行（停止/送信ボタンを“円”で右内側に） ---------- */
 #msgrow{ position: relative; width:100%; }
 #msgrow .gr-button > button{ min-width:0 !important; }
 
-/* 円形のバッジはラッパー側（#stopbtn）に背景を付ける */
-#stopbtn{
+/* 共通：円形オーバーレイ */
+#stopbtn, #sendbtn{
   position: absolute;
   top: 50%;
   transform: translateY(-50%);
-  right: calc(var(--chat-btn-gap) + var(--stop-nudge)); /* ← ここで“ほんの少し左へ”寄せられる */
+  right: calc(var(--chat-btn-gap) + var(--stop-nudge));
   width: var(--stop-diameter) !important;
   height: var(--stop-diameter) !important;
   border-radius: 9999px !important;
-  background: var(--stop-bg) !important;
   display: flex; align-items: center; justify-content: center;
   padding: 0 !important; margin: 0 !important;
   z-index: 5;
 }
+#stopbtn{ background: var(--stop-bg) !important; }
+#sendbtn{ background: var(--send-bg) !important; }
 
 /* 内側ボタンは円いっぱいをクリック可能に（透明） */
-#stopbtn > button{
+#stopbtn > button, #sendbtn > button{
   width: 100% !important;
   height: 100% !important;
   background: transparent !important;
-  color: #fff !important;
   border: none !important;
   box-shadow: none !important;
   font-size: 14px; line-height: 1;
   display: inline-flex; align-items: center; justify-content: center;
 }
 
-/* 入力テキストが円に重ならないよう右パディング確保 */
+
+/* 入力テキストが円に重ならないよう右パディング確保（stop/send共通サイズを前提） */
 #msgrow input, #msgrow textarea{
   padding-right: calc(var(--stop-total-w) + var(--chat-btn-gap) + var(--stop-nudge)) !important;
 }
@@ -263,29 +274,55 @@ with gr.Blocks(css=r"""
                     placeholder="Markdownで入力できます（**太字**、`code` など）",
                     show_label=False, lines=1
                 )
-                stop = gr.Button("⏹", elem_id="stopbtn", interactive=False)
+                # ★ 初期状態：stopは非表示、sendは表示
+                stop = gr.Button("⏹", elem_id="stopbtn", visible=False, interactive=False)
+                send = gr.Button("↑",  elem_id="sendbtn", visible=True)
 
             status = gr.Markdown("準備OK! いつでもチャットを開始できます。", elem_id="status")
 
-            # Enter → guard（空は no-op）→ stream（go=False は 1 回 no-op）
+            # Enter / ↑ → guard（空は no-op）→ stream（go=False は 1 回 no-op）
             go_flag   = gr.State(False)
             prompt_st = gr.State("")
-            guard_evt = msg.submit(
+
+            # Enter送信チェーン
+            guard_evt_enter = msg.submit(
                 guard_and_prep,
                 inputs=[msg, chat],
-                outputs=[chat, status, stop, msg, go_flag, prompt_st],
+                outputs=[chat, status, stop, send, msg, go_flag, prompt_st],
             )
-            stream_evt = guard_evt.then(
+            stream_evt_enter = guard_evt_enter.then(
                 stream_llm,
                 inputs=[go_flag, prompt_st, chat],
-                outputs=[chat, status, stop],
+                outputs=[chat, status, stop, send],
             )
 
-            def stop_chat():
-                return gr.update(interactive=False), "実行中の処理を停止しました。"
-            stop.click(stop_chat, None, [stop, status], cancels=[stream_evt])
+            # ↑クリック送信チェーン（Enterと同一ロジック）
+            guard_evt_send = send.click(
+                guard_and_prep,
+                inputs=[msg, chat],
+                outputs=[chat, status, stop, send, msg, go_flag, prompt_st],
+            )
+            stream_evt_send = guard_evt_send.then(
+                stream_llm,
+                inputs=[go_flag, prompt_st, chat],
+                outputs=[chat, status, stop, send],
+            )
 
-        # ---- タブ2: 検索 ----
+            # 停止：ストリームをキャンセルし、UIを↑に戻す
+            def stop_chat():
+                return (
+                    gr.update(visible=False, interactive=False),  # stop
+                    gr.update(visible=True),                      # send
+                    "実行中の処理を停止しました。"
+                )
+            stop.click(
+                stop_chat,
+                None,
+                [stop, send, status],
+                cancels=[stream_evt_enter, stream_evt_send]
+            )
+
+        # ---- タブ2: 設定 ----
         with gr.TabItem("設定"):
             with gr.Group(elem_classes=["combo-field"]):
                 with gr.Row(elem_id="search_title_band"):
@@ -317,7 +354,8 @@ with gr.Blocks(css=r"""
             out = gr.JSON()
             save_btn.click(lambda v: {"selected": v}, inputs=[selected_state], outputs=[out])
 
-    demo.queue(max_size=16)
+    demo.queue(max_size=16)  # 必要なら concurrency_count=1 も検討
+    # demo.queue(max_size=16, concurrency_count=1)
 
 if __name__ == "__main__":
     demo.launch(server_name="0.0.0.0", server_port=7860)
