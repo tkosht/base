@@ -14,7 +14,6 @@ from fastapi.responses import FileResponse, RedirectResponse
 import gradio as gr
 
 from .svg_utils import make_favicon_data_uri, build_favicon_svg, write_emoji_svg
-from .ui_css import CSS
 from .chat_feature import guard_and_prep, stream_llm, stop_chat
 from .search_feature import suggest, on_change, chips_html
 
