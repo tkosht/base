@@ -9,9 +9,9 @@ def write_emoji_svg(
     dest_path: str,
     size: int = 64,
     bg: str | None = "#FFFFFF",
-    pad: int = 6,                 # 白円を相対的に大きく見せる余白
-    emoji_scale: float = 0.66,    # 上部欠け防止で少し小さめ
-    dy_em: float = 0.06           # 視覚中心を下に少し補正
+    pad: int = 6,
+    emoji_scale: float = 0.66,
+    dy_em: float = 0.06
 ) -> str:
     inner = max(4, size - 2 * pad)
     cx = cy = size / 2
@@ -75,40 +75,25 @@ def llm_stream(_prompt):
         time.sleep(0.25)
         yield t
 
-# --- 第1段：ガード＆準備（非ストリーム）
-# 返り値：chat, status, stop, msg, go_flag, prompt
+# 第1段：ガード＆準備（非ストリーム）
+# 出力: chat, status, stop, msg, go_flag, prompt
 def guard_and_prep(message: str, history):
     history = history or []
     text = (message or "").strip()
 
     if not text:
-        # ★ 空のときは完全に“無反応”にする → すべて NO-UPDATE
-        return (
-            gr.update(),  # Chatbot
-            gr.update(),  # Status
-            gr.update(),  # Stop
-            gr.update(),  # Msg
-            False,        # go_flag
-            ""            # prompt
-        )
+        # 空のときは完全に無反応（全アウトプット no-op）
+        return gr.update(), gr.update(), gr.update(), gr.update(), False, ""
 
-    # 非空：履歴に下書き・停止ボタン有効化・Textbox 即クリア
+    # 非空：履歴に下書き・停止有効化・Textbox即クリア
     history = history + [(message, "⌛ typing...")]
-    return (
-        history,
-        "⌛ 回答生成中...",
-        gr.update(interactive=True),
-        "",           # ← ここで即クリア
-        True,         # go_flag
-        text          # prompt
-    )
+    return history, "⌛ 回答生成中...", gr.update(interactive=True), "", True, text
 
-# --- 第2段：ストリーム（generator）
-# inputs: go_flag, prompt, history
-# outputs: chat, status, stop
+# 第2段：ストリーム（generator）
+# 入出力: go_flag, prompt, history -> chat, status, stop
 def stream_llm(go: bool, prompt: str, history):
-    # ★ 空メッセージ経路：UI を一切変えずに即終了
     if not go:
+        # 空経路：UI変更なしで即終了
         yield gr.update(), gr.update(), gr.update()
         return
 
@@ -119,7 +104,6 @@ def stream_llm(go: bool, prompt: str, history):
         history[-1] = (history[-1][0], body)
         yield history, "⌛ 回答生成中...", gr.update()
 
-    # 終了時に停止ボタンを無効化
     yield history, "回答生成完了", gr.update(interactive=False)
 
 
@@ -128,21 +112,42 @@ USER_AVATAR_PATH = write_emoji_svg("💻", "/tmp/gradio_user_avatar.svg", bg="#D
 BOT_AVATAR_PATH  = write_emoji_svg("🦜",  "/tmp/gradio_bot_avatar.svg",  bg="#E5E7EB")
 
 with gr.Blocks(css=r"""
+/* =================== Design Tokens =================== */
 :root{
-  --avatar-size: 48px;
-  --avatar-ring: 6px;           /* 白い外輪を太くして“白円が大きく”見える */
-  --chat-btn-size: 24px;
-  --chat-btn-gap: 8px;
-  --stop-nudge: 6px;            /* 右端から左へ少し寄せる量 */
-  --chip-bg: #e5e7eb;
-  --stop-bg: #6b7280;
+  /* ベース */
   --text: #111827;
   --card: #ffffff;
   --card-border: #e5e7eb;
   --code-bg: #f8fafc;
+
+  /* アバター */
+  --avatar-size: 48px;
+  --avatar-ring: 6px;
+
+  /* チャット入力（停止ボタン） */
+  --chat-btn-gap: 10px;       /* 入力右端とのベース距離 */
+  --stop-nudge: 12px;         /* 右端ボーダーから少し左へ寄せる量（px） */
+  --stop-diameter: 36px;      /* ★ 円の直径（これで大きさ決定） */
+  --stop-bg: #6b7280;         /* 円の色 */
+  --stop-total-w: var(--stop-diameter); /* 入力欄パディング計算用 */
+
+  /* 検索UI */
+  --chip-bg: #e5e7eb;
+
+  /* 設定タブ：検索フォーム帯＆検索ボックス */
+  --search-band-bg: #F1F5F9;
+  --search-band-radius: 10px;
+  --search-band-pad: 12px;
+
+  --search-bg:        #EEF2FF;
+  --search-text:      #111827;
+  --search-border:    #BFDBFE;
+  --search-ph:        #6B7280;
+  --search-bg-focus:  #FFFFFF;
+  --search-outline:   rgba(37,99,235,.25);
 }
 
-/* Chatbot（白一重バブル） */
+/* ---------- Chatbot バブル ---------- */
 .gr-chatbot .message{
   background: var(--card) !important;
   color: var(--text) !important;
@@ -150,12 +155,10 @@ with gr.Blocks(css=r"""
   border-radius: 14px !important;
   box-shadow: none !important;
 }
-.gr-chatbot .message *{ color: var(--text) !important; }
 .gr-chatbot .message pre,
 .gr-chatbot .message code{
   background: var(--code-bg) !important;
   border: 1px solid var(--card-border) !important;
-  color: var(--text) !important;
 }
 .gr-chatbot .message-row{ box-shadow:none !important; background:transparent !important; }
 
@@ -165,14 +168,14 @@ with gr.Blocks(css=r"""
   height: var(--avatar-size) !important;
   border-radius: 9999px !important;
   background: #fff !important;
-  box-shadow: 0 0 0 var(--avatar-ring) #fff;  /* 白い背景円を“ひと回り”拡張 */
+  box-shadow: 0 0 0 var(--avatar-ring) #fff;
   overflow: hidden;
 }
 .gr-chatbot .avatar > img, .gr-chatbot .avatar-image > img{
   width: 100% !important; height: 100% !important; object-fit: contain;
 }
 
-/* 検索UI */
+/* ---------- 検索UI（共通） ---------- */
 .combo-field .wrap, .combo-field .wrap.svelte-1ipelgc{ gap:.5rem; }
 .combo-field .gr-textbox input{ border-top-right-radius:0; border-bottom-right-radius:0; }
 .combo-field .gr-button{ border-top-left-radius:0; border-bottom-left-radius:0; }
@@ -180,33 +183,73 @@ with gr.Blocks(css=r"""
 .combo-field .chip{ background:var(--chip-bg); border-radius:9999px; padding:.2rem .6rem; font-size:.9rem; }
 .combo-hint{ opacity:.8; margin-top:.25rem; }
 
-/* 入力欄内の停止ボタン配置（少し左へ逃がす） */
-#msgrow { position: relative; display: inline-block; width: 100%; }
-#msgrow .gr-button > button { min-width: 0 !important; }
+/* ---------- チャット入力行（停止ボタンを“円”で右内側に） ---------- */
+#msgrow{ position: relative; width:100%; }
+#msgrow .gr-button > button{ min-width:0 !important; }
+
+/* 円形のバッジはラッパー側（#stopbtn）に背景を付ける */
 #stopbtn{
-  position: absolute; top: 50%; transform: translateY(-50%);
-  right: calc(var(--chat-btn-gap) + var(--chat-btn-size) * 0.2 + var(--stop-nudge));
-  margin: 0 !important; padding: 0 !important; width: auto !important; z-index: 5;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: calc(var(--chat-btn-gap) + var(--stop-nudge)); /* ← ここで“ほんの少し左へ”寄せられる */
+  width: var(--stop-diameter) !important;
+  height: var(--stop-diameter) !important;
+  border-radius: 9999px !important;
+  background: var(--stop-bg) !important;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0 !important; margin: 0 !important;
+  z-index: 5;
 }
+
+/* 内側ボタンは円いっぱいをクリック可能に（透明） */
 #stopbtn > button{
-  width: var(--chat-btn-size) !important;
-  height: var(--chat-btn-size) !important;
-  padding: 0 !important; border-radius: 6px !important;
-  display: inline-flex; align-items: center; justify-content: center;
+  width: 100% !important;
+  height: 100% !important;
+  background: transparent !important;
+  color: #fff !important;
+  border: none !important;
+  box-shadow: none !important;
   font-size: 14px; line-height: 1;
-  background: var(--stop-bg) !important; color:#fff !important;
+  display: inline-flex; align-items: center; justify-content: center;
 }
-/* ボタンとテキストが重ならないよう右パディングを確保 */
+
+/* 入力テキストが円に重ならないよう右パディング確保 */
 #msgrow input, #msgrow textarea{
-  padding-right: calc(var(--chat-btn-size) * 2 + var(--chat-btn-gap) * 4 + var(--stop-nudge)) !important;
+  padding-right: calc(var(--stop-total-w) + var(--chat-btn-gap) + var(--stop-nudge)) !important;
 }
 #msgrow .gr-textbox{ margin-bottom: 0 !important; }
 
 /* ステータス：1行・スクロール禁止 */
-#status{ min-height: 1.6em; line-height: 1.6em; overflow: hidden !important; }
-#status *{ overflow: hidden !important; margin: 0 !important; }
-#status .prose, #status .markdown, #status .gr-prose{ white-space: nowrap; text-overflow: ellipsis; }
+#status{ min-height:1.6em; line-height:1.6em; overflow:hidden !important; }
+#status *{ overflow:hidden !important; margin:0 !important; }
+#status .prose, #status .markdown, #status .gr-prose{ white-space:nowrap; text-overflow:ellipsis; }
+
+/* ---------- 設定タブ：検索フォーム帯＆検索ボックス ---------- */
+#search_band{
+  background: var(--search-band-bg) !important;
+  border-radius: var(--search-band-radius);
+  padding: var(--search-band-pad);
+}
+#search_band .gr-textbox, #search_band .gr-button{
+  margin-top:0 !important; margin-bottom:0 !important;
+}
+#searchbox input, #searchbox textarea{
+  background: var(--search-bg) !important;
+  color: var(--search-text) !important;
+  border-color: var(--search-border) !important;
+}
+#searchbox input::placeholder, #searchbox textarea::placeholder{
+  color: var(--search-ph) !important; opacity:1;
+}
+#searchbox input:focus, #searchbox textarea:focus{
+  background: var(--search-bg-focus) !important;
+  border-color: #2563EB !important;
+  box-shadow: 0 0 0 3px var(--search-outline) !important;
+  outline: none !important;
+}
 """) as demo:
+
     gr.Markdown("### デモアプリ")
 
     with gr.Tabs():
@@ -224,7 +267,7 @@ with gr.Blocks(css=r"""
 
             status = gr.Markdown("準備OK! いつでもチャットを開始できます。", elem_id="status")
 
-            # Enter → guard（空はNO-UPDATE）→ stream（go=FalseはNO-UPDATE 1回だけ）
+            # Enter → guard（空は no-op）→ stream（go=False は 1 回 no-op）
             go_flag   = gr.State(False)
             prompt_st = gr.State("")
             guard_evt = msg.submit(
@@ -245,19 +288,21 @@ with gr.Blocks(css=r"""
         # ---- タブ2: 検索 ----
         with gr.TabItem("設定"):
             with gr.Group(elem_classes=["combo-field"]):
-                gr.Markdown("**検索フォーム**")
-                with gr.Row(equal_height=True):
+                with gr.Row(elem_id="search_title_band"):
+                    gr.Markdown("**検索フォーム**")
+
+                with gr.Row(equal_height=True, elem_id="search_band"):
                     search_box = gr.Textbox(
                         placeholder="キーワードを入力して Enter or 検索ボタンを押してください（2文字以上） ",
-                        show_label=False, scale=4
+                        show_label=False, scale=4, elem_id="searchbox"
                     )
                     search_btn = gr.Button("検索", scale=1)
 
                 selected = ["テスト1(test1@test.com)", "テスト2(test2@test.com)", "テスト3(test3@test.com)"]
                 selected_state = gr.State(selected)
+                hit_info = gr.Markdown("", elem_classes=["combo-hint"])
                 combo = gr.Dropdown(choices=selected_state.value, value=selected_state.value,
                                     multiselect=True, show_label=True, label="候補（複数選択可）")
-                hit_info = gr.Markdown("", elem_classes=["combo-hint"])
                 chips = gr.HTML(chips_html([]))
 
             search_box.submit(suggest, [search_box, combo, selected_state], [combo, hit_info])
