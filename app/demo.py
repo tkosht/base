@@ -2,6 +2,11 @@ import time
 import os
 import urllib.parse
 import gradio as gr
+from pathlib import Path
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, RedirectResponse
+import uvicorn
 
 
 # ====== 絵文字SVG（ローカルSVGアバター用） ======
@@ -406,7 +411,48 @@ with gr.Blocks(
                 outputs=[out],
             )
 
+    # --- Static manifest setup (extensible) ---
+    public_dir = Path(__file__).resolve().parent.parent / "public"
+    manifest_path = public_dir / "manifest.json"
+    os.makedirs(public_dir, exist_ok=True)
+
+    if not manifest_path.exists():
+        # 初期テンプレートを自動生成（必要に応じて後から編集できます）
+        manifest_path.write_text(
+            (
+                '{\n'
+                '  "name": "でもあぷり",\n'
+                '  "short_name": "でもあぷり",\n'
+                '  "start_url": ".",\n'
+                '  "display": "standalone",\n'
+                '  "background_color": "#111827",\n'
+                '  "theme_color": "#111827",\n'
+                '  "icons": []\n'
+                '}\n'
+            ),
+            encoding="utf-8",
+        )
+
+    # Gradio を FastAPI にマウントして拡張ルートを使えるようにする
+    api = FastAPI()
+
+    # /public/* を静的配信
+    api.mount("/public", StaticFiles(directory=str(public_dir)), name="public")
+
+    # ルートで要求される /manifest.json はファイルを返す
+    @api.get("/manifest.json")
+    def _manifest_file():
+        return FileResponse(str(manifest_path), media_type="application/manifest+json")
+
+    # Gradio Blocks を /gradio にマウント（ルートを占有しない）
+    gr.mount_gradio_app(api, demo, path="/gradio")
+
+    # ルートは /gradio へリダイレクト
+    @api.get("/")
+    def _root():
+        return RedirectResponse(url="/gradio")
+
     demo.queue(max_size=16)
 
 if __name__ == "__main__":
-    demo.launch(server_name="0.0.0.0", server_port=7860)
+    uvicorn.run(api, host="0.0.0.0", port=7860)
