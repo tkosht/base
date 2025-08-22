@@ -33,10 +33,10 @@ def create_blocks() -> gr.Blocks:
     )
 
     with gr.Blocks(
-        css=CSS,
         title="でもあぷり",
         head=f"""
   <link rel=\"icon\" href=\"{make_favicon_data_uri('🦜', size=64, circle_fill='#1f2937', ring_color='#fff', ring_width=2)}\" />
+  <link rel=\"stylesheet\" href=\"/public/styles/app.css\" />
 """,
     ) as demo:
         gr.Markdown("### デモアプリ")

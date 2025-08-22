@@ -1,16 +1,10 @@
-"""Gradio UI のカスタム CSS。
-
-`app/demo.py` に記述されていた CSS をそのまま移設する。
-"""
-
-CSS = r"""
 /* =================== Tokens =================== */
 :root{
-  --avatar-base: 32px;     /* 内部が32pxでもOK：基準実寸（触らない） */
-  --avatar-zoom: 1.1;      /* ← 見かけの拡大率（2.0〜3.2で調整） */
-  --avatar-gap: .3rem;     /* アバターと本文の隙間 */
-  --avatar-shift-y: -2px;  /* 上下微調整（負=上へ） */
-  --avatar-ring: 0px;      /* ← 外周の白リングの太さ（見え方確認用） */
+  --avatar-base: 32px;
+  --avatar-zoom: 1.1;
+  --avatar-gap: .3rem;
+  --avatar-shift-y: -2px;
+  --avatar-ring: 0px;
 
   --text:#111827; --card:#fff; --card-border:#e5e7eb; --code-bg:#f8fafc;
   --chat-btn-gap:10px; --stop-nudge:12px; --stop-diameter:36px;
@@ -30,24 +24,14 @@ CSS = r"""
 /* ===== アバター列：列幅は拡大後寸法に合わせる ===== */
 .gr-chatbot .message-row{
   display:grid !important;
-  /* 列1 = 見かけ寸法（base × zoom）、列2 = 本文 */
   grid-template-columns: calc(var(--avatar-base) * var(--avatar-zoom)) 1fr !important;
   align-items:center !important;
   column-gap: var(--avatar-gap) !important;
-  /* 行の高さも見かけ寸法に合わせる */
   min-height: calc(var(--avatar-base) * var(--avatar-zoom)) !important;
   overflow:visible !important;
 }
 
-/* avatar sizing now handled by .avatar-container */
-
-/* legacy inner selectors removed */
-
-/* image centering is handled by .avatar-container > img */
-
-/* avatar-image direct rule removed; .avatar-container covers it */
-
-/* GradioのDOMで用いられる avatar-container を直接拡大（確実適用） */
+/* GradioのDOMで用いられる avatar-container を直接拡大 */
 .avatar-container{
   width: calc(var(--avatar-base) * var(--avatar-zoom)) !important;
   height: calc(var(--avatar-base) * var(--avatar-zoom)) !important;
@@ -65,9 +49,7 @@ CSS = r"""
   border-radius:9999px !important;
 }
 
-/* fallbacks removed; container-based sizing is sufficient */
-
-/* ===== 入力行（既存のまま） ===== */
+/* ===== 入力行 ===== */
 #msgrow{ position:relative; width:100%; }
 #msgrow .gr-button > button{ min-width:0 !important; }
 #stopbtn,#sendbtn{
@@ -88,7 +70,7 @@ CSS = r"""
 }
 #msgrow .gr-textbox{ margin-bottom:0 !important; }
 
-/* ===== ステータス / 検索UI（省略可、既存どおり） ===== */
+/* ===== ステータス / 検索UI ===== */
 #status{ min-height:1.6em; line-height:1.6em; overflow:hidden !important; }
 #status *{ overflow:hidden !important; margin:0 !important; }
 #status .prose,#status .markdown,#status .gr-prose{ white-space:nowrap; text-overflow:ellipsis; }
@@ -106,6 +88,5 @@ CSS = r"""
   background:var(--search-bg-focus) !important; border-color:#2563EB !important;
   box-shadow:0 0 0 3px var(--search-outline) !important; outline:none !important;
 }
-"""
 
 
