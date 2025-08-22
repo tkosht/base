@@ -9,9 +9,9 @@ def write_emoji_svg(
     dest_path: str,
     size: int = 64,
     bg: str | None = "#FFFFFF",
-    pad: int = 6,                 # 余白（白円を相対的に大きく見せる）
-    emoji_scale: float = 0.66,    # 絵文字サイズ（上部欠け防止でやや小さめ）
-    dy_em: float = 0.06           # 視覚中心補正（少し下へ）
+    pad: int = 6,                 # 白円を相対的に大きく見せる余白
+    emoji_scale: float = 0.66,    # 上部欠け防止で少し小さめ
+    dy_em: float = 0.06           # 視覚中心を下に少し補正
 ) -> str:
     inner = max(4, size - 2 * pad)
     cx = cy = size / 2
@@ -31,9 +31,10 @@ def write_emoji_svg(
     return dest_path
 
 
-# ====== 検索ダミー ======
+# ====== ダミー検索 ======
 def _search_users(query: str, top: int = 30) -> list[str]:
-    if not query: return []
+    if not query:
+        return []
     q = query.lower()
     hits = []
     for i in range(1, 400):
@@ -41,7 +42,8 @@ def _search_users(query: str, top: int = 30) -> list[str]:
         label = f"テスト{i}({mail})"
         if q in label.lower() or q in mail.lower():
             hits.append(label)
-        if len(hits) >= top: break
+        if len(hits) >= top:
+            break
     return hits
 
 def chips_html(values):
@@ -62,39 +64,68 @@ def suggest(q, current_dropdown_value, selected_state):
     hint = f"{len(hits)}件ヒット｜候補例: " + ", ".join(neutralize_email(h) for h in hits[:3]) + (" …" if len(hits) > 3 else "")
     return gr.update(choices=merged, value=current_dropdown_value), hint
 
+
 # ====== チャット ======
 def llm_stream(_prompt):
-    for t in ["了解です。 ", "少しずつ返答をストリームします。",
-              "\n\n- 箇条書き\n- もOK\n\n`code` にも対応します."] + (["."] * 20) + ["\n\n", "(回答完了)"]:
-        time.sleep(0.25); yield t
+    for t in [
+        "了解です。 ",
+        "少しずつ返答をストリームします。",
+        "\n\n- 箇条書き\n- もOK\n\n`code` にも対応します。"
+    ] + (["."] * 20) + ["\n\n", "(回答完了)"]:
+        time.sleep(0.25)
+        yield t
 
-# 第1段：ガード＆準備（返り値：chat, status, stop, msg, go_flag, prompt）
+# --- 第1段：ガード＆準備（非ストリーム）
+# 返り値：chat, status, stop, msg, go_flag, prompt
 def guard_and_prep(message: str, history):
     history = history or []
     text = (message or "").strip()
-    if not text:
-        # 空時 → とにかく現状の履歴を返す（これで“表示クリア”は起きない）
-        return history, "メッセージを入力してください。", gr.update(), gr.update(), False, ""
-    # 非空時 → 下書き追加・stop有効化・入力欄クリア
-    history = history + [(message, "⌛ typing...")]
-    return history, "⌛ 回答生成中...", gr.update(interactive=True), "", True, text
 
-# 第2段：ストリーム（go, prompt, history -> chat, status, stop）
+    if not text:
+        # ★ 空のときは完全に“無反応”にする → すべて NO-UPDATE
+        return (
+            gr.update(),  # Chatbot
+            gr.update(),  # Status
+            gr.update(),  # Stop
+            gr.update(),  # Msg
+            False,        # go_flag
+            ""            # prompt
+        )
+
+    # 非空：履歴に下書き・停止ボタン有効化・Textbox 即クリア
+    history = history + [(message, "⌛ typing...")]
+    return (
+        history,
+        "⌛ 回答生成中...",
+        gr.update(interactive=True),
+        "",           # ← ここで即クリア
+        True,         # go_flag
+        text          # prompt
+    )
+
+# --- 第2段：ストリーム（generator）
+# inputs: go_flag, prompt, history
+# outputs: chat, status, stop
 def stream_llm(go: bool, prompt: str, history):
-    history = history or []
+    # ★ 空メッセージ経路：UI を一切変えずに即終了
     if not go:
-        # 空ケース：一度だけ現状返して終了（再描画は最小）
-        yield history, gr.update(), gr.update(); return
+        yield gr.update(), gr.update(), gr.update()
+        return
+
+    history = history or []
     body = ""
     for tok in llm_stream(prompt):
         body += tok
         history[-1] = (history[-1][0], body)
         yield history, "⌛ 回答生成中...", gr.update()
+
+    # 終了時に停止ボタンを無効化
     yield history, "回答生成完了", gr.update(interactive=False)
+
 
 # ====== UI ======
 USER_AVATAR_PATH = write_emoji_svg("💻", "/tmp/gradio_user_avatar.svg", bg="#DBEAFE")
-BOT_AVATAR_PATH  = write_emoji_svg("🦜", "/tmp/gradio_bot_avatar.svg", bg="#E5E7EB")
+BOT_AVATAR_PATH  = write_emoji_svg("🦜",  "/tmp/gradio_bot_avatar.svg",  bg="#E5E7EB")
 
 with gr.Blocks(css=r"""
 :root{
@@ -120,7 +151,8 @@ with gr.Blocks(css=r"""
   box-shadow: none !important;
 }
 .gr-chatbot .message *{ color: var(--text) !important; }
-.gr-chatbot .message pre, .gr-chatbot .message code{
+.gr-chatbot .message pre,
+.gr-chatbot .message code{
   background: var(--code-bg) !important;
   border: 1px solid var(--card-border) !important;
   color: var(--text) !important;
@@ -133,7 +165,7 @@ with gr.Blocks(css=r"""
   height: var(--avatar-size) !important;
   border-radius: 9999px !important;
   background: #fff !important;
-  box-shadow: 0 0 0 var(--avatar-ring) #fff;
+  box-shadow: 0 0 0 var(--avatar-ring) #fff;  /* 白い背景円を“ひと回り”拡張 */
   overflow: hidden;
 }
 .gr-chatbot .avatar > img, .gr-chatbot .avatar-image > img{
@@ -148,36 +180,37 @@ with gr.Blocks(css=r"""
 .combo-field .chip{ background:var(--chip-bg); border-radius:9999px; padding:.2rem .6rem; font-size:.9rem; }
 .combo-hint{ opacity:.8; margin-top:.25rem; }
 
-/* 入力欄内の停止ボタン */
+/* 入力欄内の停止ボタン配置（少し左へ逃がす） */
 #msgrow { position: relative; display: inline-block; width: 100%; }
 #msgrow .gr-button > button { min-width: 0 !important; }
 #stopbtn{
-  position: absolute; top:50%; transform: translateY(-50%);
+  position: absolute; top: 50%; transform: translateY(-50%);
   right: calc(var(--chat-btn-gap) + var(--chat-btn-size) * 0.2 + var(--stop-nudge));
-  margin:0 !important; padding:0 !important; width:auto !important; z-index:5;
+  margin: 0 !important; padding: 0 !important; width: auto !important; z-index: 5;
 }
 #stopbtn > button{
-  width: var(--chat-btn-size) !important; height: var(--chat-btn-size) !important;
-  padding:0 !important; border-radius:6px !important;
-  display:inline-flex; align-items:center; justify-content:center;
-  font-size:14px; line-height:1;
+  width: var(--chat-btn-size) !important;
+  height: var(--chat-btn-size) !important;
+  padding: 0 !important; border-radius: 6px !important;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 14px; line-height: 1;
   background: var(--stop-bg) !important; color:#fff !important;
 }
-/* 右側の余白（ボタンと重ならないように） */
+/* ボタンとテキストが重ならないよう右パディングを確保 */
 #msgrow input, #msgrow textarea{
   padding-right: calc(var(--chat-btn-size) * 2 + var(--chat-btn-gap) * 4 + var(--stop-nudge)) !important;
 }
-#msgrow .gr-textbox{ margin-bottom:0 !important; }
+#msgrow .gr-textbox{ margin-bottom: 0 !important; }
 
-/* ステータスは1行・スクロール禁止 */
-#status{ min-height:1.6em; line-height:1.6em; overflow:hidden !important; }
-#status *{ overflow:hidden !important; margin:0 !important; }
-#status .prose, #status .markdown, #status .gr-prose{ white-space:nowrap; text-overflow:ellipsis; }
+/* ステータス：1行・スクロール禁止 */
+#status{ min-height: 1.6em; line-height: 1.6em; overflow: hidden !important; }
+#status *{ overflow: hidden !important; margin: 0 !important; }
+#status .prose, #status .markdown, #status .gr-prose{ white-space: nowrap; text-overflow: ellipsis; }
 """) as demo:
     gr.Markdown("### デモアプリ")
 
     with gr.Tabs():
-        # ---- チャット ----
+        # ---- タブ1: チャット ----
         with gr.TabItem("チャット"):
             chat = gr.Chatbot(height=420, avatar_images=(USER_AVATAR_PATH, BOT_AVATAR_PATH), label="Bot")
 
@@ -191,7 +224,7 @@ with gr.Blocks(css=r"""
 
             status = gr.Markdown("準備OK! いつでもチャットを開始できます。", elem_id="status")
 
-            # 送信フロー：Enter で guard → stream（空は guard が“現状返して”終了）
+            # Enter → guard（空はNO-UPDATE）→ stream（go=FalseはNO-UPDATE 1回だけ）
             go_flag   = gr.State(False)
             prompt_st = gr.State("")
             guard_evt = msg.submit(
@@ -205,57 +238,19 @@ with gr.Blocks(css=r"""
                 outputs=[chat, status, stop],
             )
 
-            # 停止：実行中をキャンセル
             def stop_chat():
                 return gr.update(interactive=False), "実行中の処理を停止しました。"
             stop.click(stop_chat, None, [stop, status], cancels=[stream_evt])
 
-            # ★ 空 Enter をフォーム層で完全抑止（非空は素通し）
-            # gr.HTML("""
-# <script>
-# (function blockEmptySubmit(){
-#   function stopAll(e){ e.preventDefault(); e.stopPropagation(); if(e.stopImmediatePropagation) e.stopImmediatePropagation(); }
-#   function wire(){
-    # const app  = (window.gradioApp && window.gradioApp()) || document;
-    # const box  = app.querySelector('#msgrow textarea, #msgrow input');
-    # if(!box){ setTimeout(wire, 150); return; }
-    # if(box.__wiredEmpty) return;
-    # box.__wiredEmpty = true;
-# 
-    # let composing = false;
-    # box.addEventListener('compositionstart', ()=> composing = true);
-    # box.addEventListener('compositionend',   ()=> composing = false);
-# 
-    # const form = box.closest('form');
-    # if(form && !form.__wired){
-    #   form.__wired = true;
-    #   form.addEventListener('submit', (e)=>{
-        # if(composing || e.isComposing) return;
-        # const val = (box.value || '').trim();
-        # if(!val) stopAll(e);             // 空 → 完全キャンセル（Gradio へ届かない）
-    #   }, {capture:true});
-    # }
-# 
-    # // 見た目のチラつき防止（任意）
-    # box.addEventListener('keydown', (e)=>{
-    #   if(e.key !== 'Enter' || e.shiftKey) return;
-    #   if(composing || e.isComposing) return;
-    #   const val = (box.value || '').trim();
-    #   if(!val) stopAll(e);
-    # }, {capture:true});
-#   }
-#   document.addEventListener('gradio:ready', wire);
-#   wire();
-# })();
-# </script>
-# """)
-# 
-        # ---- 設定（検索） ----
+        # ---- タブ2: 検索 ----
         with gr.TabItem("設定"):
             with gr.Group(elem_classes=["combo-field"]):
                 gr.Markdown("**検索フォーム**")
                 with gr.Row(equal_height=True):
-                    search_box = gr.Textbox(placeholder="キーワードを入力して Enter or 検索ボタンを押してください（2文字以上） ", show_label=False, scale=4)
+                    search_box = gr.Textbox(
+                        placeholder="キーワードを入力して Enter or 検索ボタンを押してください（2文字以上） ",
+                        show_label=False, scale=4
+                    )
                     search_btn = gr.Button("検索", scale=1)
 
                 selected = ["テスト1(test1@test.com)", "テスト2(test2@test.com)", "テスト3(test3@test.com)"]
