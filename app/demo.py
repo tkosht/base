@@ -64,6 +64,27 @@ def make_favicon_data_uri(
     return f"data:image/svg+xml;utf8,{data}"
 
 
+def build_favicon_svg(
+    emoji: str = "💻",
+    size: int = 64,
+    circle_fill: str = "#111827",
+    ring_color: str = "#ffffff",
+    ring_width: int = 2,
+    emoji_scale: float = 0.80,
+    dy_em: float = 0.00,
+) -> str:
+    cx = cy = size / 2
+    r = (size - ring_width * 2) / 2
+    font_px = int(size * emoji_scale)
+    return (
+        f"<svg xmlns='http://www.w3.org/2000/svg' width='{size}' height='{size}' viewBox='0 0 {size} {size}'>"
+        f"<circle cx='{cx}' cy='{cy}' r='{r}' fill='{circle_fill}' stroke='{ring_color}' stroke-width='{ring_width}'/>"
+        f"<text x='50%' y='50%' dominant-baseline='central' text-anchor='middle' font-size='{font_px}' dy='{dy_em}em' "
+        "style='font-family: Noto Color Emoji, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Twemoji Mozilla, EmojiOne Color, Android Emoji, sans-serif'>"
+        f"{emoji}</text></svg>"
+    )
+
+
 # ====== ダミー検索 ======
 def _search_users(query: str, top: int = 30) -> list[str]:
     if not query:
@@ -411,6 +432,10 @@ with gr.Blocks(
                 outputs=[out],
             )
 
+    # Gradio Queue はマウント前に有効化（重要）
+    # 併走数は default_concurrency_limit で指定（各イベント未指定時のデフォルト）
+    demo.queue(max_size=16, default_concurrency_limit=4)
+
     # --- Static manifest setup (extensible) ---
     public_dir = Path(__file__).resolve().parent.parent / "public"
     manifest_path = public_dir / "manifest.json"
@@ -452,7 +477,19 @@ with gr.Blocks(
     def _root():
         return RedirectResponse(url="/gradio")
 
-    demo.queue(max_size=16)
+    # /favicon.ico を提供（gunicornなどで自動アクセスされるため）
+    favicon_path = public_dir / "favicon.ico"
+    if not favicon_path.exists():
+        # SVG → ICO 変換は避け、SVGを .ico として返す簡易対応（Chromium系はOK）
+        svg = build_favicon_svg("🦜", size=64, circle_fill="#1f2937", ring_color="#fff", ring_width=2)
+        (public_dir / "favicon.svg").write_text(svg, encoding="utf-8")
+        # 拡張子 .ico にも同内容を置く（多くのブラウザはSVGを受理）
+        favicon_path.write_text(svg, encoding="utf-8")
+
+    @api.get("/favicon.ico")
+    def _favicon():
+        # SVGを ICO として返す（互換性十分、必要なら本物のICOに差し替え可能）
+        return FileResponse(str(favicon_path), media_type="image/svg+xml")
 
 if __name__ == "__main__":
     uvicorn.run(api, host="0.0.0.0", port=7860)

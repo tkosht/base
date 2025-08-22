@@ -10,6 +10,17 @@ install-poetry:
 install-agent-cli:
 	docker compose exec app bash bin/install_agentcli.sh
 
+webapp:
+	poetry run gunicorn app.demo:api -k uvicorn.workers.UvicornWorker -b 0.0.0.0:7860 \
+	-w 1 --threads 8 --timeout 0 --graceful-timeout 0 --keep-alive 65 \
+	--forwarded-allow-ips="*"
+
+container-webapp:
+	docker compose exec app \
+	poetry run gunicorn app.demo:api -k uvicorn.workers.UvicornWorker -b 0.0.0.0:7860 \
+	-w 1 --threads 8 --timeout 0 --graceful-timeout 0 --keep-alive 65 \
+	--forwarded-allow-ips="*"
+
 # ==========
 # interaction tasks
 bash:
