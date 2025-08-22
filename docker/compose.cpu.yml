@@ -16,4 +16,5 @@ services:
     working_dir: /home/$user_name/workspace
     ports:
       - "8000:8000"
+      - "7860:7860"
 
