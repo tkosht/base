@@ -161,7 +161,10 @@ def guard_and_prep(message: str, history):
             False,
             "",
         )
-    history = history + [(message, "⌛ typing...")]
+    # messages 形式: {role, content}
+    user_msg = {"role": "user", "content": text}
+    assistant_placeholder = {"role": "assistant", "content": "⌛ typing..."}
+    history = history + [user_msg, assistant_placeholder]
     return (
         history,
         "⌛ 回答生成中...",
@@ -181,7 +184,9 @@ def stream_llm(go: bool, prompt: str, history):
     body = ""
     for tok in llm_stream(prompt):
         body += tok
-        history[-1] = (history[-1][0], body)
+        # 最後の assistant メッセージを書き換え
+        if history and history[-1].get("role") == "assistant":
+            history[-1]["content"] = body
         yield history, "⌛ 回答生成中...", gr.update(
             visible=True, interactive=True
         ), gr.update(visible=False)
@@ -323,6 +328,7 @@ with gr.Blocks(
                 height=420,
                 avatar_images=(USER_AVATAR_PATH, BOT_AVATAR_PATH),
                 label="Bot",
+                type="messages",
             )
 
             gr.Markdown("**User**")
