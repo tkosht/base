@@ -81,6 +81,9 @@ jobs:
           if [ -d "src" ]; then
             poetry run ruff check src/ tests/ || echo "Ruff not available, skipping"
             poetry run black --check src/ tests/ || echo "Black not available, skipping"
+          elif [ -d "app" ]; then
+            poetry run ruff check app/ tests/ || echo "Ruff not available, skipping"
+            poetry run black --check app/ tests/ || echo "Black not available, skipping"
           else
             echo "No src directory found, skipping linters"
           fi
@@ -89,6 +92,8 @@ jobs:
         run: |
           if [ -d "src" ]; then
             poetry run mypy src/ --ignore-missing-imports --explicit-package-bases || echo "Mypy not available, skipping"
+          elif [ -d "app" ]; then
+            poetry run mypy app/ --ignore-missing-imports --explicit-package-bases || echo "Mypy not available, skipping"
           else
             echo "No src directory found, skipping type checking"
           fi
@@ -97,12 +102,16 @@ jobs:
         run: |
           if [ -d "tests" ]; then
             # Run only unit tests in CI to avoid timeout issues with integration tests
-            poetry run pytest tests/unit/ \
-              --cov=src \
-              --cov-report=xml \
-              --cov-report=term-missing \
-              --cov-fail-under=85 \
-              -v || echo "No unit tests found"
+            if [ -d "src" ]; then
+              poetry run pytest tests/unit/ \
+                --cov=src \
+                --cov-report=xml \
+                --cov-report=term-missing \
+                --cov-fail-under=85 \
+                -v || echo "No unit tests found"
+            else
+              poetry run pytest -v || echo "No unit tests found"
+            fi
           else
             echo "No tests directory found"
           fi
@@ -122,7 +131,7 @@ jobs:
     strategy:
       matrix:
         python-version: ['3.11']  # Run integration tests only on one Python version
-        subsystem: ['app/ams']  # Only run for subsystems with integration tests
+        subsystem: ['.']  # Single root subsystem in this repo
     defaults:
       run:
         working-directory: ${{ matrix.subsystem }}
@@ -160,11 +169,15 @@ jobs:
       - name: Run integration tests
         if: env.OPENAI_API_KEY != '' || env.ANTHROPIC_API_KEY != '' || env.GOOGLE_API_KEY != ''
         run: |
-          poetry run pytest tests/integration/ \
-            -v \
-            --tb=short \
-            --timeout=300 \
-            -k "not test_performance_baseline" || true
+          if [ -d "tests/integration" ]; then
+            poetry run pytest tests/integration/ \
+              -v \
+              --tb=short \
+              --timeout=300 \
+              -k "not test_performance_baseline" || true
+          else
+            echo "No integration tests directory, skipping"
+          fi
         continue-on-error: true
 
   summary:
