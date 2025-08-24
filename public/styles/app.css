@@ -13,6 +13,27 @@
   --search-bg:#EEF2FF; --search-text:#111827; --search-border:#BFDBFE; --search-ph:#6B7280;
   --search-bg-focus:#fff; --search-outline:rgba(37,99,235,.25);
 }
+/* ===== Theme bridge enforced styles (ui-light/ui-dark set by theme_bridge.js) ===== */
+html.ui-light #threads_list, html.ui-light #threads_list_tab{ color:#111827 !important; }
+html.ui-light #threads_list .thread-link, html.ui-light #threads_list_tab .thread-link{ opacity:1 !important; filter:none !important; }
+html.ui-light #threads_list .thread-link *, html.ui-light #threads_list_tab .thread-link *{ opacity:1 !important; }
+html.ui-light #threads_list .thread-link:hover, html.ui-light #threads_list_tab .thread-link:hover{ background:#f3f4f6 !important; }
+html.ui-light #threads_list .thread-link.selected, html.ui-light #threads_list_tab .thread-link.selected{ background:#e5e7eb !important; outline:1px solid #9ca3af !important; }
+html.ui-light #threads_list .thread-title, html.ui-light #threads_list_tab .thread-title{ color:#111827 !important; }
+html.ui-light #threads_list .thread-link.selected .thread-title, html.ui-light #threads_list_tab .thread-link.selected .thread-title{ color:#111827 !important; }
+html.ui-light #threads_list .thread-link:not(.selected) .thread-title, html.ui-light #threads_list_tab .thread-link:not(.selected) .thread-title{ color:#1f2937 !important; font-weight:700 !important; }
+html.ui-light #threads_list .thread-summary, html.ui-light #threads_list_tab .thread-summary{ color:#4b5563 !important; }
+
+html.ui-dark #threads_list, html.ui-dark #threads_list_tab{ color:#e5e7eb !important; }
+html.ui-dark #threads_list .thread-link, html.ui-dark #threads_list_tab .thread-link{ opacity:1 !important; filter:none !important; }
+html.ui-dark #threads_list .thread-link *, html.ui-dark #threads_list_tab .thread-link *{ opacity:1 !important; }
+html.ui-dark #threads_list .thread-link:hover, html.ui-dark #threads_list_tab .thread-link:hover{ background:#374151 !important; }
+html.ui-dark #threads_list .thread-link.selected, html.ui-dark #threads_list_tab .thread-link.selected{ background:#1f2937 !important; outline:1px solid #6b7280 !important; }
+html.ui-dark #threads_list .thread-title, html.ui-dark #threads_list_tab .thread-title{ color:#e5e7eb !important; }
+html.ui-dark #threads_list .thread-link.selected .thread-title, html.ui-dark #threads_list_tab .thread-link.selected .thread-title{ color:#e5e7eb !important; }
+html.ui-dark #threads_list .thread-link:not(.selected) .thread-title, html.ui-dark #threads_list_tab .thread-link:not(.selected) .thread-title{ color:#e5e7eb !important; font-weight:700 !important; }
+html.ui-dark #threads_list .thread-summary, html.ui-dark #threads_list_tab .thread-summary{ color:#9ca3af !important; }
+
 
 /* ===== Chat bubbles ===== */
 .gr-chatbot .message{

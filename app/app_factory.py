@@ -58,6 +58,7 @@ def create_blocks() -> gr.Blocks:
   <link rel=\"icon\" href=\"{make_favicon_data_uri('🦜', size=64, circle_fill='#1f2937', ring_color='#fff', ring_width=2)}\" />
   <link rel=\"stylesheet\" href=\"/public/styles/app.css\" />
   <script src=\"/public/scripts/threads_ui.js\" defer></script>
+  <script src=\"/public/scripts/theme_bridge.js\" defer></script>
   <style>
     .v-sep{{width:1px;height:calc(100vh - 180px);background:#9ca3af;margin:6px 8px;}}
     #sidebar-toggle-row button{{min-width:36px;}}
@@ -66,12 +67,12 @@ def create_blocks() -> gr.Blocks:
     #sidebar_col{{overflow:hidden;}}
     #threads_list{{overflow-y:auto; max-height:calc(100vh - 220px);}}
     .thread-link{{padding:8px 10px; cursor:pointer; border-radius:6px; position:relative;}}
-    .thread-link:hover{{background:#374151}}
-    .thread-link.selected{{background:#1f2937; outline:1px solid #6b7280}}
-    .thread-title{{display:block; text-align:left; color:#e5e7eb; font-weight:600; font-size:14px}}
+    .thread-link:hover{{background:#f3f4f6}}
+    .thread-link.selected{{background:#e5e7eb; outline:1px solid #9ca3af}}
+    .thread-title{{display:block; text-align:left; color:#111827; font-weight:600; font-size:14px}}
     .thread-row{{display:flex; align-items:flex-start; gap:8px}}
     .thread-main{{flex:1; min-width:0}}
-    .thread-summary{{display:block; color:#9ca3af; font-size:11px; margin-top:2px; text-align:left; word-break:break-word}}
+    .thread-summary{{display:block; color:#4b5563; font-size:11px; margin-top:2px; text-align:left; word-break:break-word}}
     .thread-actions{{display:flex; gap:6px; align-items:center}}
     .thread-btn{{background:#111827; border:1px solid #374151; color:#e5e7eb; padding:4px 6px; border-radius:6px; font-size:12px}}
     .thread-btn:hover{{background:#1f2937}}
@@ -84,6 +85,7 @@ def create_blocks() -> gr.Blocks:
     .ctx-item:hover{{background:#374151}}
     .hidden-trigger{{display:none !important; visibility:hidden !important; width:0; height:0;}}
     /* 一時対策は効果が薄かったため削除（シンプル維持） */
+    /* テーマ上書きは /public/styles/app.css に集約 */
   </style>
 """,
     ) as demo:
