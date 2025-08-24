@@ -7,6 +7,10 @@ from __future__ import annotations
 
 import time
 import gradio as gr
+from app.services.thread_service import ThreadService
+
+
+STATUS_GENERATING = "⌛ 回答生成中..."
 
 
 def llm_stream(_prompt):
@@ -23,7 +27,7 @@ def llm_stream(_prompt):
         yield t
 
 
-def guard_and_prep(message: str, history):
+def guard_and_prep(message: str, history, thread_id: str = ""):
     history = history or []
     text = (message or "").strip()
     if not text:
@@ -39,9 +43,15 @@ def guard_and_prep(message: str, history):
     user_msg = {"role": "user", "content": text}
     assistant_placeholder = {"role": "assistant", "content": "⌛ typing..."}
     history = history + [user_msg, assistant_placeholder]
+    # persist user message if thread selected
+    if thread_id:
+        try:
+            ThreadService().add_user_message(thread_id, text)
+        except Exception:
+            pass
     return (
         history,
-        "⌛ 回答生成中...",
+        STATUS_GENERATING,
         gr.update(visible=True, interactive=True),
         gr.update(visible=False),
         "",
@@ -50,7 +60,7 @@ def guard_and_prep(message: str, history):
     )
 
 
-def stream_llm(go: bool, prompt: str, history):
+def stream_llm(go: bool, prompt: str, history, thread_id: str = ""):
     if not go:
         yield gr.update(), gr.update(), gr.update(), gr.update()
         return
@@ -60,9 +70,15 @@ def stream_llm(go: bool, prompt: str, history):
         body += tok
         if history and history[-1].get("role") == "assistant":
             history[-1]["content"] = body
-        yield history, "⌛ 回答生成中...", gr.update(
+        yield history, STATUS_GENERATING, gr.update(
             visible=True, interactive=True
         ), gr.update(visible=False)
+    # persist assistant final content
+    if thread_id and body:
+        try:
+            ThreadService().add_assistant_message(thread_id, body)
+        except Exception:
+            pass
     yield history, "回答生成完了", gr.update(
         visible=False, interactive=False
     ), gr.update(visible=True)
