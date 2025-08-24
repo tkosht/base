@@ -519,8 +519,9 @@
     });
 
     // 選択中かつ非空スレッドだけに「…」を表示（右端固定）
+    // スレッドタブにはインライン操作ボタンがあるため「…」はサイドバー(#threads_list)のみに適用
     const updateDotsVisibility = () => {
-      ['#threads_list', '#threads_list_tab'].forEach((sel) => {
+      ['#threads_list'].forEach((sel) => {
         const root = qs(sel);
         if (!root) return;
         const selected = root.querySelector('.thread-link.selected');

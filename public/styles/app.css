@@ -2,8 +2,9 @@
 #vsep .v-sep{width:1px;height:calc(100vh - 180px);background:#9ca3af;margin:6px 8px;}
 #threads_list .ctx-dots,
 #threads_list_tab .ctx-dots{position:absolute; right:8px; top:8px; display:none; background:#111827; border:1px solid #374151; color:#e5e7eb; padding:2px 6px; border-radius:6px; font-size:12px; line-height:1}
-#threads_list .thread-link.selected .ctx-dots,
-#threads_list_tab .thread-link.selected .ctx-dots{display:inline-flex}
+#threads_list .thread-link.selected .ctx-dots{display:inline-flex}
+/* スレッドタブではインライン操作ボタンがあるため「…」は非表示 */
+#threads_list_tab .ctx-dots{display:none !important}
 #threads_list .thread-link[data-empty='1'] .ctx-dots,
 #threads_list_tab .thread-link[data-empty='1'] .ctx-dots{display:none}
 #threads_list .mark-pill,
