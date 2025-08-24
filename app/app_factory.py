@@ -315,6 +315,7 @@ def create_blocks() -> gr.Blocks:
 
                 demo.load(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
 
+                # コンテキストメニューのアクション設定
                 # ここでのみ1本のバインド（kind変更）でディスパッチし、両方の一覧を更新（同一HTML）
                 _evt_kind = action_kind.change(
                     _dispatch_action_both,
