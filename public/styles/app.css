@@ -1,3 +1,48 @@
+/* v-sep: wrapper(id=vsep) → inner(.v-sep). Use descendant selector */
+#vsep .v-sep{width:1px;height:calc(100vh - 180px);background:#9ca3af;margin:6px 8px;}
+#threads_list .ctx-dots,
+#threads_list_tab .ctx-dots{position:absolute; right:8px; top:8px; display:none; background:#111827; border:1px solid #374151; color:#e5e7eb; padding:2px 6px; border-radius:6px; font-size:12px; line-height:1}
+#threads_list .thread-link.selected .ctx-dots,
+#threads_list_tab .thread-link.selected .ctx-dots{display:inline-flex}
+#threads_list .thread-link[data-empty='1'] .ctx-dots,
+#threads_list_tab .thread-link[data-empty='1'] .ctx-dots{display:none}
+#threads_list .mark-pill,
+#threads_list_tab .mark-pill{display:inline-block; padding:1px 6px; margin-right:6px; border:1px solid #374151; border-radius:9999px; font-size:10px; color:#9ca3af; background:#111827}
+/* ctx-menu is appended to document.body → needs global rules */
+.ctx-menu{position:fixed; z-index:9999; background:#111827; border:1px solid #374151; border-radius:8px; box-shadow:0 8px 16px rgba(0,0,0,.35);}
+.ctx-item{padding:8px 12px; color:#e5e7eb; cursor:pointer;}
+.ctx-item:hover{background:#374151}
+/* hidden trigger components should be hidden globally (not only in lists) */
+.hidden-trigger{display:none !important; visibility:hidden !important; width:0 !important; height:0 !important;}
+/* improve dots click affordance */
+#threads_list .ctx-dots, #threads_list_tab .ctx-dots{ cursor:pointer; }
+/* threads list (scoped by ids where applicable) */
+#sidebar-toggle-row button{min-width:36px;}
+#sidebar_toggle_btn{margin-left:auto;}
+.threads-list{display:block}
+#sidebar_col{overflow:hidden;}
+#threads_list{overflow-y:auto; max-height:calc(100vh - 220px);}
+#threads_list .thread-link:hover,
+#threads_list_tab .thread-link:hover{background:#f3f4f6}
+#threads_list .thread-link.selected,
+#threads_list_tab .thread-link.selected{background:#e5e7eb; outline:1px solid #9ca3af}
+#threads_list .thread-title,
+#threads_list_tab .thread-title{display:block; text-align:left; color:#111827; font-weight:600; font-size:14px}
+#threads_list .thread-row,
+#threads_list_tab .thread-row{display:flex; align-items:flex-start; gap:8px}
+#threads_list .thread-main,
+#threads_list_tab .thread-main{flex:1; min-width:0}
+#threads_list .thread-summary,
+#threads_list_tab .thread-summary{display:block; color:#4b5563; font-size:11px; margin-top:2px; text-align:left; word-break:break-word}
+#threads_list .thread-actions,
+#threads_list_tab .thread-actions{display:flex; gap:6px; align-items:center}
+#threads_list .thread-btn,
+#threads_list_tab .thread-btn{background:#111827; border:1px solid #374151; color:#e5e7eb; padding:4px 6px; border-radius:6px; font-size:12px}
+#threads_list .thread-btn:hover,
+#threads_list_tab .thread-btn:hover{background:#1f2937}
+/* thread-link base (migrated from inline in app_factory.py) */
+#threads_list .thread-link,
+#threads_list_tab .thread-link{padding:8px 10px; cursor:pointer; border-radius:6px; position:relative;}
 /* =================== Tokens =================== */
 :root{
   --avatar-base: 32px;
