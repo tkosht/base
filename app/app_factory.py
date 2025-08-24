@@ -15,7 +15,7 @@ import gradio as gr
 
 from app.svg_utils import make_favicon_data_uri, build_favicon_svg, write_emoji_svg
 from app.chat_feature import guard_and_prep, stream_llm, stop_chat
-from app.search_feature import suggest, on_change, chips_html
+from app.search_feature import suggest, on_change, chips_html, neutralize_email
 from app.db.bootstrap import bootstrap_schema_and_seed
 from app.db.session import db_session
 from app.repositories.thread_repo import ThreadRepository
@@ -23,8 +23,6 @@ from app.services.thread_service import ThreadService
 from app.services.settings_service import SettingsService
 from app.services.title_service import TitleService
 from app.ui.threads_ui import (
-    get_app_settings,
-    update_app_settings,
     list_threads as ui_list_threads,
     create_thread as ui_create_thread,
     rename_thread as ui_rename_thread,
@@ -49,7 +47,7 @@ def create_blocks() -> gr.Blocks:
         "🦜", "/tmp/gradio_bot_avatar.svg", bg="#E5E7EB"
     )
 
-    settings = get_app_settings()
+    settings = SettingsService().get()
     with gr.Blocks(
         title="でもあぷり",
         head=f"""
@@ -57,7 +55,7 @@ def create_blocks() -> gr.Blocks:
   <link rel=\"stylesheet\" href=\"/public/styles/app.css\" />
   <script src=\"/public/scripts/threads_ui.js\" defer></script>
   <style>
-    .v-sep{{width:2px;height:calc(100vh - 180px);background:#9ca3af;margin:6px 8px;}}
+    .v-sep{{width:1px;height:calc(100vh - 180px);background:#9ca3af;margin:6px 8px;}}
     #sidebar-toggle-row button{{min-width:36px;}}
     #sidebar_toggle_btn{{margin-left:auto;}}
     .threads-list{{display:block}}
@@ -100,8 +98,8 @@ def create_blocks() -> gr.Blocks:
         with gr.Tabs():
             with gr.TabItem("チャット"):
                 with gr.Row():
-                    # 左サイドバー（スレッド一覧、設定で表示切替）
-                    sidebar_col = gr.Column(scale=1, min_width=260, visible=True, elem_id="sidebar_col")  # type: ignore[index]
+                    # 左サイドバー（スレッド一覧）
+                    sidebar_col = gr.Column(scale=1, min_width=260, visible=settings.show_thread_sidebar, elem_id="sidebar_col")  # type: ignore[index]
                     with sidebar_col:
                         with gr.Row(elem_id="sidebar-toggle-row"):
                             new_btn = gr.Button("＋ 新規", scale=1, elem_id="new_btn_main")
@@ -110,7 +108,7 @@ def create_blocks() -> gr.Blocks:
                         threads_html = gr.HTML("", elem_id="threads_list")
 
                     # サイドバー非表示時にだけ表示されるエッジトグル
-                    edge_col = gr.Column(scale=0, min_width=24, visible=False, elem_id="edge_col")  # type: ignore[index]
+                    edge_col = gr.Column(scale=0, min_width=24, visible=not settings.show_thread_sidebar, elem_id="edge_col")  # type: ignore[index]
                     with edge_col:
                         toggle_btn_edge = gr.Button("≡", scale=0, min_width=24)
                         new_btn_edge = gr.Button("＋", scale=0, min_width=24, elem_id="new_btn_edge")
@@ -421,7 +419,7 @@ def create_blocks() -> gr.Blocks:
                 # ここではバインドしない（threads_html_tab 定義後に1本化してバインド）
                 demo.load(lambda: None, None, None, js="()=>{ try { if (window.threadsSetup) { window.threadsSetup(); } } catch(e) { try{console.error('[threads-ui] init error', e);}catch(_){} } }")
 
-            threads_tab = gr.TabItem("スレッド", visible=settings["show_threads_tab"])  # type: ignore[index]
+            threads_tab = gr.TabItem("スレッド")  # type: ignore[index]
             with threads_tab:
                 # サイドバーと同様の縦並び
                 threads_state2 = gr.State([])
@@ -509,28 +507,28 @@ def create_blocks() -> gr.Blocks:
                 combo.change(
                     on_change, [combo, selected_state], [selected_state, chips]
                 )
-
-                gr.Markdown("**表示設定**")
-                display_mode = gr.Radio(
-                    choices=["サイドバー", "タブ"],
-                    value=("サイドバー" if settings["show_thread_sidebar"] else "タブ"),
-                    label="スレッドの表示方法",
-                )
+                # 保存ボタン: 選択の差分（追加/削除）を表示
+                saved_state = gr.State(selected_state.value)
                 save_btn = gr.Button("保存")
-                hint = gr.Markdown("")
+                save_hint = gr.Markdown("")
 
-                def _apply_settings(mode):
-                    s = update_app_settings(
-                        show_thread_sidebar=(mode == "サイドバー"),
-                        show_threads_tab=(mode == "タブ"),
-                    )
-                    return (
-                        gr.update(visible=s["show_thread_sidebar"]),
-                        gr.update(visible=s["show_threads_tab"]),
-                        "設定を保存しました。",
-                    )
+                def _save_selected(current_list, previous_list):
+                    cur = [str(x) for x in (current_list or [])]
+                    prev = [str(x) for x in (previous_list or [])]
+                    added = [x for x in cur if x not in prev]
+                    removed = [x for x in prev if x not in cur]
+                    added_cnt = len(added)
+                    removed_cnt = len(removed)
+                    added_part = f"｜追加 {added_cnt} 件" + (": " + ", ".join(neutralize_email(x) for x in added) if added_cnt else "")
+                    removed_part = f"｜削除 {removed_cnt} 件" + (": " + ", ".join(neutralize_email(x) for x in removed) if removed_cnt else "")
+                    summary = "保存しました" + added_part + removed_part
+                    try:
+                        gr.Info(summary)
+                    except Exception:
+                        pass
+                    return cur, summary
 
-                save_btn.click(_apply_settings, [display_mode], [sidebar_col, threads_tab, hint])
+                save_btn.click(_save_selected, [selected_state, saved_state], [saved_state, save_hint])
 
         demo.queue(max_size=16, default_concurrency_limit=4)
     return demo
