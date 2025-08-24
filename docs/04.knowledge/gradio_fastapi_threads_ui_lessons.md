@@ -231,3 +231,80 @@ def list_recent(self, limit: int = 50) -> list[Thread]:
 ```
 
 
+---
+
+## JS↔Python 連携の実体と拡張手順（変更時の迷い防止ガイド）
+
+本節は、JS から Python へ処理を橋渡しする「実体の場所」と「正しい変更手順」をまとめた実運用ガイド。変更時はここを出発点に確認する。
+
+### どこで連携しているか（実体）
+- 橋渡しコンポーネント（Gradio 隠し要素, `app/app_factory.py` 内）
+  - `.th_action_id`（対象スレッドID, Textbox）
+  - `.th_action_kind`（実行アクション, Textbox: open/rename/share/delete など）
+  - `.th_action_arg`（追加引数, Textbox: rename の新タイトル等）
+  - `.th_open_trigger`（open実行トリガ, Button）
+
+- JS 側のディスパッチ（`public/scripts/threads_ui.js`）
+  - open: `th_action_kind=''` → `th_action_id=tid` → `th_action_kind='open'` → `th_open_trigger.click()`
+  - rename/share/delete: `th_action_kind=''` → `th_action_arg/id` → `th_action_kind='rename|share|delete'`
+  - 右クリックメニュー（ensureCtx）で `data-act` ごとに上記の値セット手順を実行
+
+- Python 側の受け口（`app/app_factory.py`）
+  - open: `open_trigger.click(lambda tid: _open_by_id(tid), [action_thread_id], [current_thread_id, chat])`
+  - kind change: `action_kind.change(_dispatch_action_both, inputs=[...], outputs=[...])`
+  - 処理本体: `_dispatch_action_common(kind, tid, cur_tid, arg)`
+    - rename → `ThreadRepository.rename(...)` → HTML再構築
+    - delete → `ThreadRepository.archive(...)` → 選択解除/履歴再取得 → HTML再構築
+    - open → `_open_by_id(tid)` で履歴取得
+  - タブ側の確実な反映: `_evt_kind.then(_refresh_threads_tab, ...)`
+
+### 拡張手順チェックリスト（新しいアクション追加時）
+1) UIメニューに項目追加
+   - `public/scripts/threads_ui.js` の `ensureCtx` 内 `innerHTML` に `<div class='ctx-item' data-act='your_action'>表示名</div>` を追加
+   - クリックハンドラに `else if (act === 'your_action') { ... }` を追加
+2) 値の設定順序を厳守（change を1回に集約）
+   - `setValueC('th_action_kind', '')` → `setValueC('th_action_arg', ...)` → `setValueC('th_action_id', ...)` → `setValueC('th_action_kind', 'your_action')`
+3) Python 側の分岐を実装
+   - `app/app_factory.py` の `_dispatch_action_common` に `your_action` 分岐を追加
+   - 必要に応じてリポジトリ/サービス層（`app/repositories/*`, `app/services/*`）を拡張
+4) タブ/サイドバーの反映を確認
+   - HTML再構築（`_build_threads_html`）で両 UI が同時に更新される設計を維持
+   - `_evt_kind.then(_refresh_threads_tab, ...)` の後段が必要かチェック
+5) ショートカット（任意）
+   - キーボード操作（例: Delete キーで削除）を追加する場合は `document.addEventListener('keydown', ...)` に分岐を追加し、同じ順序で hidden 値を設定
+6) テスト/動作確認
+   - 2回目以降の操作やタブ遷移の安定性、DOM即時反映 → サーバ再フェッチで最終整合、を確認
+
+### 処理フロー（Mermaid）
+```mermaid
+sequenceDiagram
+  autonumber
+  participant U as User
+  participant J as JS (threads_ui.js)
+  participant G as Gradio Hidden Widgets
+  participant P as Python (app_factory)
+  participant R as Repo/Service
+
+  U->>J: クリック/右クリック/F2
+  J->>G: setValueC(kind='') → arg/id → kind='action'
+  alt action == open
+    J->>G: click(.th_open_trigger)
+    G->>P: open_trigger.click(...)
+    P->>P: _open_by_id(tid)
+  else action in {rename, delete, share}
+    G->>P: action_kind.change(...)
+    P->>P: _dispatch_action_common(kind, tid, arg)
+    P->>R: rename/archive ...
+  end
+  P->>P: HTML再構築 / 履歴再取得
+  P-->>J: gr.update(...)
+  J->>J: （必要に応じ）即時DOM反映
+```
+
+### よくある迷い/落とし穴（要点だけ再掲）
+- kind の設定順序を誤ると change が発火せず「2回目以降が反応しない」
+- Threads → Chat のタブ名が変わると `includes('チャット')` の検出に失敗（i18n時に注意）
+- DOM 直書きは補助。最終整合はサーバ側の再フェッチ（`_refresh_threads_tab` など）で担保
+- Shadow DOM のため通常の `querySelector` は不十分。deep query を必ず用意して使う
+
+
