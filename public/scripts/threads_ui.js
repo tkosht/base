@@ -258,9 +258,27 @@
       const el = qs(rootSel);
       if (!el || el.__observerInstalled) return;
       const obs = new MutationObserver(() => {
-        const tid = (window.__selectedTid || '').trim();
-        // tid が空でも選択解除を確実に反映する
-        setTimeout(() => markSelectedLists(tid), 30);
+        // DOM差し替え後、data-selected を優先して選択を復元
+        setTimeout(() => {
+          const container = qsWithin(el, '.threads-list');
+          let sel = '';
+          if (container && container.getAttribute) {
+            sel = (container.getAttribute('data-selected') || '').trim();
+          }
+          if (!sel) {
+            // フォールバック: DOM上の .thread-link.selected から取得
+            try {
+              const picked = qsWithin(el, '.thread-link.selected');
+              if (picked) sel = picked.getAttribute('data-tid') || '';
+            } catch (e) {}
+          }
+          if (sel) {
+            markSelectedLists(sel);
+          } else {
+            const tid = (window.__selectedTid || '').trim();
+            markSelectedLists(tid);
+          }
+        }, 30);
       });
       try {
         obs.observe(el, { childList: true, subtree: true });
@@ -274,11 +292,26 @@
     installAllObservers();
     // タブ遷移後などにも復元し、直近選択を強制適用
     const reapplySelectionSoon = () => {
-      const tid = (window.__selectedTid || '').trim();
-      if (!tid) return;
-      setTimeout(() => markSelectedLists(tid), 60);
-      setTimeout(() => markSelectedLists(tid), 150);
-      setTimeout(() => markSelectedLists(tid), 300);
+      // data-selected を最優先して復元し、なければ window.__selectedTid を使用
+      const applyFromContainer = () => {
+        let sel = '';
+        try {
+          const containers = [qs('#threads_list'), qs('#threads_list_tab')].filter(Boolean);
+          for (const root of containers) {
+            const list = root ? qsWithin(root, '.threads-list') : null;
+            if (list && list.getAttribute) {
+              const v = (list.getAttribute('data-selected') || '').trim();
+              if (v) { sel = v; break; }
+            }
+          }
+        } catch (e) {}
+        const fallback = (window.__selectedTid || '').trim();
+        const target = sel || fallback;
+        if (target) markSelectedLists(target);
+      };
+      setTimeout(applyFromContainer, 60);
+      setTimeout(applyFromContainer, 150);
+      setTimeout(applyFromContainer, 300);
     };
     document.addEventListener('click', () => { setTimeout(installAllObservers, 100); reapplySelectionSoon(); });
 

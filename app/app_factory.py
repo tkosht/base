@@ -191,7 +191,7 @@ def create_blocks() -> gr.Blocks:
                                         renamed = True
                             # サイドバー一覧を常に再構築（軽量）。タブ側は後段で別途更新される。
                             items = ui_list_threads()
-                            html = _build_threads_html(items)
+                            html = _build_threads_html(items, tid)
                             return gr.update(value=html)
 
                         rename_evt_enter = guard_evt_enter.then(
@@ -234,7 +234,7 @@ def create_blocks() -> gr.Blocks:
                         )
 
                 # サイドバーイベント
-                def _build_threads_html(items: list[dict]) -> str:
+                def _build_threads_html(items: list[dict], selected_tid: str = "") -> str:
                     def esc(s: str) -> str:
                         return (
                             s.replace("&", "&amp;")
@@ -247,10 +247,14 @@ def create_blocks() -> gr.Blocks:
                         tid = esc(it.get("id") or "")
                         has_msgs = bool(it.get("has_messages"))
                         disabled = " data-empty='1'" if not has_msgs else ""
-                        rows.append(f"<div class='thread-link' data-tid='{tid}'{disabled}><span class='thread-title'>{title}</span></div>")
-                    return f"<div class='threads-list'>{''.join(rows)}</div>"
+                        sel_cls = " selected" if selected_tid and (tid == esc(selected_tid)) else ""
+                        rows.append(
+                            f"<div class='thread-link{sel_cls}' data-tid='{tid}'{disabled}><span class='thread-title'>{title}</span></div>"
+                        )
+                    sel_attr = f" data-selected='{esc(selected_tid)}'" if selected_tid else ""
+                    return f"<div class='threads-list'{sel_attr}>{''.join(rows)}</div>"
 
-                def _build_threads_html_tab(items: list[dict]) -> str:
+                def _build_threads_html_tab(items: list[dict], selected_tid: str = "") -> str:
                     def esc(s: str) -> str:
                         return (
                             s.replace("&", "&amp;")
@@ -271,8 +275,9 @@ def create_blocks() -> gr.Blocks:
                             + (btn("owner", tid, "オーナー変更") if has_msgs else "")
                             + btn("delete", tid, "削除")
                         )
+                        sel_cls = " selected" if selected_tid and (tid == esc(selected_tid)) else ""
                         row_html = (
-                            "<div class='thread-link' data-tid='" + tid + "'" + (" data-empty='1'" if not bool(it.get("has_messages")) else "") + ">"
+                            "<div class='thread-link" + sel_cls + "' data-tid='" + tid + "'" + (" data-empty='1'" if not bool(it.get("has_messages")) else "") + ">"
                             + "<div class='thread-row'>"
                             + "<div class='thread-main'>"
                             + f"<span class='thread-title'>{title}</span>"
@@ -283,17 +288,18 @@ def create_blocks() -> gr.Blocks:
                             + "</div>"
                         )
                         rows.append(row_html)
-                    return f"<div class='threads-list'>{''.join(rows)}</div>"
+                    sel_attr = f" data-selected='{esc(selected_tid)}'" if selected_tid else ""
+                    return f"<div class='threads-list'{sel_attr}>{''.join(rows)}</div>"
 
-                def _refresh_threads():
+                def _refresh_threads(selected_tid: str = ""):
                     items = ui_list_threads()
-                    html = _build_threads_html(items)
+                    html = _build_threads_html(items, selected_tid)
                     return gr.update(value=html), items
 
                 def _on_new():
                     # スレッドは作成しない。空チャットにリセットし、選択も解除。
                     items = ui_list_threads()
-                    html = _build_threads_html(items)
+                    html = _build_threads_html(items, "")
                     return gr.update(value=html), items, "", []
 
                 _evt_new = new_btn.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
@@ -325,8 +331,8 @@ def create_blocks() -> gr.Blocks:
                             repo = ThreadRepository(s)
                             repo.rename(tid, arg)
                         items = ui_list_threads()
-                        html = _build_threads_html(items)
-                        html_tab = _build_threads_html_tab(items)
+                        html = _build_threads_html(items, cur_tid)
+                        html_tab = _build_threads_html_tab(items, cur_tid)
                         return cur_tid, gr.update(), gr.update(value=html)
 
                     if kind == "share" and tid:
@@ -354,7 +360,8 @@ def create_blocks() -> gr.Blocks:
                             return html.replace(f"<div class='thread-link' data-tid='{tid}'", "<div class='thread-link removed' data-tid='REMOVED-" + tid + "'")
                         # サイドバー側は再フェッチで更新。
                         items = ui_list_threads()
-                        html = _build_threads_html(items)
+                        new_cur = cur_tid if cur_tid != tid else ""
+                        html = _build_threads_html(items, new_cur)
                         new_cur = cur_tid if cur_tid != tid else ""
                         new_history = [] if new_cur == "" else ui_list_messages(new_cur)
                         return new_cur, new_history, gr.update(value=html)
@@ -383,7 +390,7 @@ def create_blocks() -> gr.Blocks:
                 # 初期ロードで一覧を表示
                 # JS初期化は外部ファイルで実施（/public/scripts/threads_ui.js）
                 
-                demo.load(_refresh_threads, None, [threads_html, threads_state])
+                demo.load(_refresh_threads, [current_thread_id], [threads_html, threads_state])
                 # open/rename/share/delete の隠しトリガ（常に存在・反応させる）
                 def _ctx_rename(tid: str):
                     from app.ui.threads_ui import dummy_rename
@@ -425,9 +432,9 @@ def create_blocks() -> gr.Blocks:
                 threads_state2 = gr.State([])
                 threads_html_tab = gr.HTML("", elem_id="threads_list_tab")
 
-                def _refresh_threads_tab():
+                def _refresh_threads_tab(selected_tid: str = ""):
                     items = ui_list_threads()
-                    html = _build_threads_html_tab(items)
+                    html = _build_threads_html_tab(items, selected_tid)
                     return gr.update(value=html), items
 
                 def _open_by_index_tab(items, idx: int):
@@ -437,7 +444,7 @@ def create_blocks() -> gr.Blocks:
                     history = ui_list_messages(tid) if tid else []
                     return tid, history
 
-                demo.load(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+                demo.load(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
 
                 # コンテキストメニューのアクション設定
                 # ここでのみ1本のバインド（kind変更）でディスパッチし、両方の一覧を更新（同一HTML）
@@ -447,11 +454,11 @@ def create_blocks() -> gr.Blocks:
                     outputs=[current_thread_id, chat, threads_html, threads_html_tab],
                 )
                 # 念のため、rename/delete直後も確実にタブ側を再フェッチ
-                _evt_kind.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+                _evt_kind.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
                 # サイドバー側のリネーム即時反映に追随して、タブ側も定期的に追従
-                threads_html.change(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+                threads_html.change(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
                 # サイドバーの「＋ 新規」後にタブ側の一覧も即更新
-                _evt_new.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+                _evt_new.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
 
                 # サイドバーの「＋ 新規」後にタブ側の一覧も即更新
                 _evt_new.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
@@ -459,13 +466,13 @@ def create_blocks() -> gr.Blocks:
                 # エッジ列の「＋」で新規作成
                 try:
                     new_btn_edge.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
-                    new_btn_edge.click(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+                    new_btn_edge.click(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
                 except Exception:
                     pass
 
                 # current_thread_id が変更されたら、両方の一覧を即時更新（自動作成時の即時反映）
-                current_thread_id.change(_refresh_threads, None, [threads_html, threads_state]).then(
-                    _refresh_threads_tab, None, [threads_html_tab, threads_state2]
+                current_thread_id.change(_refresh_threads, [current_thread_id], [threads_html, threads_state]).then(
+                    _refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2]
                 )
 
             with gr.TabItem("設定"):
