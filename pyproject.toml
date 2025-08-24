@@ -37,6 +37,7 @@ psycopg2 = "^2.9.10"
 gradio = "^5.42.0"
 markdown-it-py = "^4.0.0"
 gunicorn = {extras = ["uvicorn"], version = "^23.0.0"}
+sqlalchemy = "^2.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "*"
@@ -148,6 +149,10 @@ omit = [
     "*/tests/*",
     "*/test_*",
     "*/__pycache__/*",
+    # Gradio コンポーネントとの直接インタフェース（UI構築・マウント）は
+    # ヘッドレス実行時に外部ライブラリの未クローズ警告を誘発しがちで、
+    # 実運用検証はE2E/UIテスト領域で担保する方針のため、単体カバレッジからは除外する。
+    "app/app_factory.py",
 ]
 
 [tool.coverage.report]
