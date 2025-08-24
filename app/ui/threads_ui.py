@@ -39,13 +39,38 @@ def list_threads() -> list[dict]:
     with db_session() as s:
         repo = ThreadRepository(s)
         items = repo.list_recent(limit=100)
+        def build_summary_and_flag(thread_id: str) -> tuple[str, bool]:
+            # 最新メッセージの先頭部分を概要として返し、空スレッドかのフラグも返す
+            msgs = repo.list_messages(thread_id, limit=3)
+            if not msgs:
+                return "", False
+            # 末尾から user/assistant 優先で拾う。なければ最後のメッセージ。
+            pick = None
+            for m in reversed(msgs):
+                if m.role in ("user", "assistant"):
+                    pick = m
+                    break
+            if pick is None:
+                pick = msgs[-1]
+            text = (pick.content or "").strip()
+            if len(text) > 120:
+                return text[:120] + "…", True
+            return text, True
+
         return [
-            {"id": t.id, "title": t.title, "archived": t.archived}
+            {
+                "id": t.id,
+                "title": t.title,
+                "archived": t.archived,
+                "summary": build_summary_and_flag(t.id)[0],
+                "has_messages": build_summary_and_flag(t.id)[1],
+            }
             for t in items
         ]
 
 
 def create_thread(title_hint: str | None = None) -> dict:
+    # スレッドはユーザーが最初のメッセージを送る直前にのみ作成する（無駄な空スレッドを作らない）
     created = ThreadService().create_thread(title_hint=title_hint)
     with db_session() as s:
         repo = ThreadRepository(s)
@@ -108,6 +133,11 @@ def dummy_share(thread_id: str) -> dict:
 
 def dummy_delete(thread_id: str) -> dict:
     return {"ok": True, "action": "delete", "thread_id": thread_id}
+
+
+
+def dummy_change_owner(thread_id: str) -> dict:
+    return {"ok": True, "action": "change_owner", "thread_id": thread_id}
 
 
 

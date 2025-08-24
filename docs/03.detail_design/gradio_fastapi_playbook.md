@@ -276,3 +276,46 @@ sequenceDiagram
 ```
 
 
+---
+
+## 13. Threads UI/UX 詳細設計（補遺）
+
+本セクションは `docs/04.knowledge/gradio_fastapi_threads_ui_lessons.md` の知見を、設計に反映するための要点のみをまとめる。
+
+### 13.1 スレッド生成タイミング
+- 新規タブ表示時は作成しない。ユーザーの初回「非空メッセージ」送信時のみ作成。
+- 「＋新規」はスレッドを作らず、`current_thread_id=""` にリセットして空チャットを見せる。
+- 空メッセージ送信時は作成/保存を行わない。
+
+### 13.2 UI 表示制御
+- 空スレッド: サイドバー/タブとも「…」メニューを非表示。タブのアクションは削除のみ許可。
+- 選択状態: 単一選択。＋新規直後は DOM の `.selected` を一括除去して表示のみ解除。
+
+### 13.3 コンテキストメニュー/「…」
+- 表示条件: 「選択中 かつ 非空」行のみ。右クリックメニューと動作は等価（rename/share/owner/delete）。
+- 共有/オーナー変更は未実装トーストで明示（I/Fは分離）。
+
+### 13.4 タイトル自動命名
+- `TitleService.suggest_title_via_llm(text)`（現状スタブ: 先頭40文字＋…）。
+- 初回（user 1件のみ）時に一度だけ rename を行う。
+
+### 13.5 スクロール責務（構造で安定化）
+- サイドバーコンテナ `#sidebar_col` は `overflow: hidden`。
+- 一覧 `#threads_list` は `overflow-y: auto; max-height: calc(100vh - 220px)`（値はUI余白で調整可）。
+
+### 13.6 キー操作
+- 新規ショートカットは Alt+N のみ（Ctrl/Cmd+N はブラウザ予約により非対応）。
+
+### 13.7 API/データ契約
+- `list_threads()` は `id/title/archived` に加え `summary`（最新 user/assistant 優先、最大120）と `has_messages` を返す。UI はこれに依存。
+
+### 13.8 アンチパターン（禁止）
+- 送信前の多重自動作成や pending 状態の増加。
+- タイミング依存の display:none やポーリング抑止。
+- 選択状態の二重管理（状態＋DOM）。
+
+### 13.9 テスト観点
+- E2E: 初回送信でのみ作成、＋新規で選択解除、空スレッドでメニュー/ボタン非表示、一覧スクロールがチャットに被らない。
+- 単体: TitleService の切詰め、`list_threads()` の `summary/has_messages` 生成。
+
+

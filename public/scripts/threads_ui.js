@@ -159,15 +159,17 @@
         m = document.createElement('div');
         m.className = 'ctx-menu';
         m.style.display = 'none';
-        m.innerHTML = "<div class='ctx-item' data-act='rename'>名前変更</div><div class='ctx-item' data-act='share'>共有</div><div class='ctx-item' data-act='delete'>削除</div>";
+        m.innerHTML = "<div class='ctx-item' data-act='rename'>名前変更</div><div class='ctx-item' data-act='share'>共有</div><div class='ctx-item' data-act='owner'>オーナー変更</div><div class='ctx-item' data-act='delete'>削除</div>";
         document.body.appendChild(m);
         m.addEventListener('click', (e) => {
           const act = e.target.getAttribute('data-act');
           const id = m.getAttribute('data-tid') || '';
           const curTitle = m.getAttribute('data-title') || '';
+          const isEmpty = m.getAttribute('data-empty') === '1';
           // 設定順序: kindクリア → arg → id → kind （change発火を1回に）
           setValueC('th_action_kind', '');
           if (act === 'rename') {
+            if (isEmpty) return; // 空スレッドはリネーム禁止
             const newTitle = window.prompt('新しいスレッド名を入力', curTitle);
             if (!newTitle || !newTitle.trim()) {
               m.style.display = 'none';
@@ -177,9 +179,15 @@
             setValueC('th_action_id', id);
             setValueC('th_action_kind', 'rename');
           } else if (act === 'share') {
+            if (isEmpty) return; // 空スレッドは共有禁止
             setValueC('th_action_arg', '');
             setValueC('th_action_id', id);
             setValueC('th_action_kind', 'share');
+          } else if (act === 'owner') {
+            if (isEmpty) return; // 空スレッドはオーナー変更禁止
+            setValueC('th_action_arg', '');
+            setValueC('th_action_id', id);
+            setValueC('th_action_kind', 'owner');
           } else if (act === 'delete') {
             const ok = window.confirm(`「${curTitle || '無題'}」を削除しますか？`);
             if (!ok) {
@@ -196,12 +204,14 @@
         });
       }
     };
-    // メニュー外クリックやESCで閉じる
+    // メニュー外クリックやESCで閉じる（ただし .ctx-menu 内や .ctx-dots クリックは維持）
     document.addEventListener('click', (e) => {
       const m = document.querySelector('.ctx-menu');
       if (!m || m.style.display === 'none') return;
       const path = e.composedPath ? e.composedPath() : [e.target];
-      if (!path.some((n) => n === m)) {
+      const withinMenu = path.some((n) => n === m);
+      const onDots = !!(e.target && e.target.closest && e.target.closest('.ctx-dots'));
+      if (!withinMenu && !onDots) {
         m.style.display = 'none';
       }
     });
@@ -223,6 +233,84 @@
         if (el) el.textContent = title;
       });
     };
+    // 選択ハイライトを両リストへ反映（タブ→チャット遷移時の明示用）
+    const markSelectedLists = (id) => {
+      try { window.__selectedTid = id || ''; } catch (e) {}
+      ['#threads_list', '#threads_list_tab'].forEach((sel) => {
+        const root = qs(sel);
+        if (!root) return;
+        const items = root.querySelectorAll('.thread-link');
+        if (!id) {
+          items.forEach((it) => it.classList.remove('selected'));
+        } else {
+          items.forEach((it) => {
+            const match = it.getAttribute('data-tid') === id;
+            it.classList[match ? 'add' : 'remove']('selected');
+          });
+        }
+      });
+      // dots の表示も更新
+      try { updateDotsVisibility(); } catch (e) {}
+    };
+
+    // リストDOMが差し替わったときに、最後の選択を復元
+    const installListObserver = (rootSel) => {
+      const el = qs(rootSel);
+      if (!el || el.__observerInstalled) return;
+      const obs = new MutationObserver(() => {
+        const tid = (window.__selectedTid || '').trim();
+        // tid が空でも選択解除を確実に反映する
+        setTimeout(() => markSelectedLists(tid), 30);
+      });
+      try {
+        obs.observe(el, { childList: true, subtree: true });
+        el.__observerInstalled = true;
+      } catch (e) {}
+    };
+    const installAllObservers = () => {
+      installListObserver('#threads_list');
+      installListObserver('#threads_list_tab');
+    };
+    installAllObservers();
+    // タブ遷移後などにも復元し、直近選択を強制適用
+    const reapplySelectionSoon = () => {
+      const tid = (window.__selectedTid || '').trim();
+      if (!tid) return;
+      setTimeout(() => markSelectedLists(tid), 60);
+      setTimeout(() => markSelectedLists(tid), 150);
+      setTimeout(() => markSelectedLists(tid), 300);
+    };
+    document.addEventListener('click', () => { setTimeout(installAllObservers, 100); reapplySelectionSoon(); });
+
+    // 「＋ 新規」押下時は選択記憶をクリアして誤解を避ける
+    const hookNewButtons = () => {
+      const hook = (id) => {
+        const root = gi(id);
+        if (!root) return;
+        const b = qsWithin(root, 'button, [role="button"], .gr-button');
+        if (!b || b.__hookedSelClear) return;
+        b.addEventListener('click', () => {
+          try { window.__selectedTid = ''; } catch (e) {}
+          setTimeout(() => markSelectedLists(''), 40);
+          setTimeout(() => markSelectedLists(''), 120);
+          setTimeout(() => markSelectedLists(''), 240);
+        });
+        b.__hookedSelClear = true;
+      };
+      hook('new_btn_main');
+      hook('new_btn_edge');
+      // 隠しトリガの click による新規遷移等があれば同様に解除
+      document.querySelectorAll('.th_open_trigger').forEach((n) => {
+        if (n.__hookedSelClear) return;
+        n.addEventListener('click', () => {
+          const tid = (window.__selectedTid || '').trim();
+          if (!tid) return; // open 用なので解除はしない
+        });
+        n.__hookedSelClear = true;
+      });
+    };
+    hookNewButtons();
+    document.addEventListener('click', () => setTimeout(hookNewButtons, 120));
     const removeThreadDom = (tid) => {
       ['#threads_list', '#threads_list_tab'].forEach((sel) => {
         const root = qs(sel);
@@ -291,6 +379,53 @@
     // スレッド項目クリック: open をディスパッチ。2回目以降でも change を確実に発火させるため、
     // いったん kind を空にしてから id→kind の順で設定する。
     document.addEventListener('click', (e) => {
+      // インラインアクションボタンの処理（共通ディスパッチ）
+      const ipath = e.composedPath ? e.composedPath() : [e.target];
+      let btnEl = null;
+      for (const n of ipath) {
+        if (n && n.closest) {
+          btnEl = n.closest('.thread-btn');
+          if (btnEl) break;
+        }
+      }
+      if (!btnEl && e.target && e.target.closest) btnEl = e.target.closest('.thread-btn');
+      // dots UI の導入前の挙動へ一旦復帰
+      if (btnEl) {
+        e.preventDefault();
+        e.stopPropagation();
+        const act = btnEl.getAttribute('data-act') || '';
+        const id = btnEl.getAttribute('data-tid') || '';
+        setValueC('th_action_kind', '');
+        if (act === 'rename') {
+          // タイトル初期値を近傍DOMから取得
+          const container = btnEl.closest('.thread-link');
+          const curTitle = (container && container.querySelector('.thread-title') ? container.querySelector('.thread-title').textContent : '') || '';
+          const newTitle = window.prompt('新しいスレッド名を入力', curTitle.trim());
+          if (!newTitle || !newTitle.trim()) return;
+          setValueC('th_action_arg', newTitle.trim());
+          setValueC('th_action_id', id);
+          setValueC('th_action_kind', 'rename');
+        } else if (act === 'share') {
+          setValueC('th_action_arg', '');
+          setValueC('th_action_id', id);
+          setValueC('th_action_kind', 'share');
+        } else if (act === 'owner') {
+          setValueC('th_action_arg', '');
+          setValueC('th_action_id', id);
+          setValueC('th_action_kind', 'owner');
+        } else if (act === 'delete') {
+          const container = btnEl.closest('.thread-link');
+          const curTitle = (container && container.querySelector('.thread-title') ? container.querySelector('.thread-title').textContent : '') || '';
+          const ok = window.confirm(`「${(curTitle || '無題').trim()}」を削除しますか？`);
+          if (!ok) return;
+          setValueC('th_action_arg', '');
+          setValueC('th_action_id', id);
+          setValueC('th_action_kind', 'delete');
+          removeThreadDom(id);
+        }
+        return; // インラインボタン処理した場合は以降の open 処理をスキップ
+      }
+
       const path = e.composedPath ? e.composedPath() : [e.target];
       let el = null;
       for (const n of path) {
@@ -303,6 +438,9 @@
         el = e.target.closest('.thread-link');
       if (!el) return;
       const id = el.getAttribute('data-tid') || '';
+      const isEmpty = el.getAttribute('data-empty') === '1';
+      // 空スレッドはコンテキストメニュー/rename等を無効化（open は許容）
+      // ここは item クリックなので open は通す
       // 2回目以降のクリックでも change を確実化: 一旦kindをクリアしてから id→kind の順で設定
       setValueC('th_action_kind', '');
       setTimeout(() => {
@@ -311,25 +449,16 @@
         triggerC('th_open_trigger');
       }, 0);
       // 可視選択状態の反映（サイドバー/タブの両方）
-      const markSelected = (rootList) => {
-        if (!rootList) return;
-        const items = rootList.querySelectorAll('.thread-link');
-        items.forEach((it) =>
-          it.classList[it.getAttribute('data-tid') === id ? 'add' : 'remove'](
-            'selected'
-          )
-        );
-      };
-      const sidebar = qs('#threads_list');
-      const tab = qs('#threads_list_tab');
-      markSelected(sidebar);
-      markSelected(tab);
+      markSelectedLists(id);
       const isInThreadsTab = (path || []).some((n) => n && n.id === 'threads_list_tab');
       if (isInThreadsTab) {
         ensureChatTab(8);
+        // タブ遷移完了後にも念のため再マーキング（描画の前後差吸収）
+        setTimeout(() => markSelectedLists(id), 120);
+        setTimeout(() => markSelectedLists(id), 220);
       }
     });
-    // スレッドの右クリックでメニューを開く。項目追加/改名は ensureCtx 内の定義を編集。
+    // 右クリックでのメニュー復活（空スレッドでは表示しない）
     document.addEventListener('contextmenu', (e) => {
       const path = e.composedPath ? e.composedPath() : [e.target];
       let el = null;
@@ -343,6 +472,8 @@
         el = e.target.closest('.thread-link');
       if (!el) return;
       e.preventDefault();
+      const isEmpty = el.getAttribute('data-empty') === '1';
+      if (isEmpty) return;
       ensureCtx();
       const m = document.querySelector('.ctx-menu');
       m.style.left = e.pageX + 'px';
@@ -350,13 +481,79 @@
       m.setAttribute('data-tid', el.getAttribute('data-tid') || '');
       const curTitle = (el.querySelector('.thread-title')?.textContent || '').trim();
       m.setAttribute('data-title', curTitle);
+      m.setAttribute('data-empty', el.getAttribute('data-empty') || '0');
       m.style.display = 'block';
     });
+
+    // 選択中かつ非空スレッドだけに「…」を表示（右端固定）
+    const updateDotsVisibility = () => {
+      ['#threads_list', '#threads_list_tab'].forEach((sel) => {
+        const root = qs(sel);
+        if (!root) return;
+        const selected = root.querySelector('.thread-link.selected');
+        // 既存の dots を一旦全て隠す
+        root.querySelectorAll('.ctx-dots').forEach((b) => (b.style.display = 'none'));
+        if (!selected) return;
+        const isEmpty = selected.getAttribute('data-empty') === '1';
+        if (isEmpty) return;
+        let dots = selected.querySelector('.ctx-dots');
+        if (!dots) {
+          dots = document.createElement('button');
+          dots.className = 'ctx-dots';
+          dots.textContent = '…';
+          dots.addEventListener('click', (ev) => {
+            ev.preventDefault();
+            ev.stopPropagation();
+            ensureCtx();
+            const m = document.querySelector('.ctx-menu');
+            const rect = dots.getBoundingClientRect();
+            m.style.left = Math.round(rect.left + window.scrollX) + 'px';
+            m.style.top = Math.round(rect.bottom + window.scrollY + 6) + 'px';
+            m.setAttribute('data-tid', selected.getAttribute('data-tid') || '');
+            const curTitle = (selected.querySelector('.thread-title')?.textContent || '').trim();
+            m.setAttribute('data-title', curTitle);
+            m.setAttribute('data-empty', selected.getAttribute('data-empty') || '0');
+            m.style.display = 'block';
+          });
+          selected.appendChild(dots);
+        }
+        dots.style.display = 'inline-flex';
+      });
+    };
+    document.addEventListener('click', () => setTimeout(updateDotsVisibility, 60));
+    document.addEventListener('keydown', () => setTimeout(updateDotsVisibility, 60));
+    setTimeout(updateDotsVisibility, 250);
+
+    // 明示的に選択を全解除
+    window.clearSelection = () => {
+      try { window.__selectedTid = ''; } catch (e) {}
+      // selected を即時削除（DOM書き換えに依存しない）
+      try {
+        document.querySelectorAll('.thread-link.selected').forEach((n) => n.classList.remove('selected'));
+      } catch (e) {}
+      setTimeout(() => markSelectedLists(''), 0);
+      setTimeout(() => markSelectedLists(''), 60);
+      setTimeout(() => markSelectedLists(''), 180);
+    };
     // メニュー選択の実行は Textbox change 経由でPython側にディスパッチ
     // グローバル関数を公開（デバッグ・手動呼出用）
     // - DevTools から ShadowRoot 越しの探索・動作確認が容易。
     window.qsDeep = qsDeep;
     window.qsWithin = qsWithin;
+    const triggerById = (id) => {
+      const root = gi(id);
+      if (!root) return false;
+      const b = qsWithin(root, 'button, [role="button"], .gr-button');
+      const tgt = b || root;
+      try {
+        tgt.click();
+      } catch (e) {
+        try {
+          tgt.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+        } catch (_) {}
+      }
+      return true;
+    };
     setTimeout(() => {
       // 簡易デバッグログ（必要に応じて削除や抑制が可能）
       const dbg_list = gi('threads_list');
@@ -370,7 +567,28 @@
         input_found: !!dbg_inp,
         open_button_found: !!dbg_btn,
       });
+      // 余計な抑止は削除（シンプル維持）
+
+      // 無意味なタイミング抑止は削除（シンプル維持）
     }, 300);
+
+    // Ctrl+N / Cmd+N ショートカットで新規作成（Chromeの新規ウィンドウオープンを抑止）
+    // Ctrl/Cmd+N はブラウザ予約のためサポートしない（Alt+N のみ）
+    // Alt+N フォールバック（企業環境等で Ctrl/Cmd+N を奪われる場合の代替）
+    document.addEventListener('keydown', (e) => {
+      const key = (e.key || '').toLowerCase();
+      if (e.altKey && key === 'n') {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!triggerById('new_btn_main')) {
+          triggerById('new_btn_edge');
+        }
+      }
+    });
+
+    // 既存の送信操作に対して、current_thread_id が空なら自動で作成するための kind='send' を付与
+    // - JS側では送信時（Enterボタン/送信ボタン）に特別なフックは難しいため、ここでは何もしない。
+    // - Python側 _dispatch_action_common に "send" 分岐を追加済み。
   };
 })();
 

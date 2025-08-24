@@ -21,6 +21,7 @@ from app.db.session import db_session
 from app.repositories.thread_repo import ThreadRepository
 from app.services.thread_service import ThreadService
 from app.services.settings_service import SettingsService
+from app.services.title_service import TitleService
 from app.ui.threads_ui import (
     get_app_settings,
     update_app_settings,
@@ -60,14 +61,27 @@ def create_blocks() -> gr.Blocks:
     #sidebar-toggle-row button{{min-width:36px;}}
     #sidebar_toggle_btn{{margin-left:auto;}}
     .threads-list{{display:block}}
-    .thread-link{{padding:8px 10px; cursor:pointer; border-radius:6px;}}
+    #sidebar_col{{overflow:hidden;}}
+    #threads_list{{overflow-y:auto; max-height:calc(100vh - 220px);}}
+    .thread-link{{padding:8px 10px; cursor:pointer; border-radius:6px; position:relative;}}
     .thread-link:hover{{background:#374151}}
     .thread-link.selected{{background:#1f2937; outline:1px solid #6b7280}}
-    .thread-title{{display:block; text-align:left; color:#e5e7eb}}
+    .thread-title{{display:block; text-align:left; color:#e5e7eb; font-weight:600; font-size:14px}}
+    .thread-row{{display:flex; align-items:flex-start; gap:8px}}
+    .thread-main{{flex:1; min-width:0}}
+    .thread-summary{{display:block; color:#9ca3af; font-size:11px; margin-top:2px; text-align:left; word-break:break-word}}
+    .thread-actions{{display:flex; gap:6px; align-items:center}}
+    .thread-btn{{background:#111827; border:1px solid #374151; color:#e5e7eb; padding:4px 6px; border-radius:6px; font-size:12px}}
+    .thread-btn:hover{{background:#1f2937}}
+    .ctx-dots{{position:absolute; right:8px; top:8px; display:none; background:#111827; border:1px solid #374151; color:#e5e7eb; padding:2px 6px; border-radius:6px; font-size:12px; line-height:1}}
+    .thread-link.selected .ctx-dots{{display:inline-flex}}
+    .thread-link[data-empty='1'] .ctx-dots{{display:none}}
+    .mark-pill{{display:inline-block; padding:1px 6px; margin-right:6px; border:1px solid #374151; border-radius:9999px; font-size:10px; color:#9ca3af; background:#111827}}
     .ctx-menu{{position:fixed; z-index:9999; background:#111827; border:1px solid #374151; border-radius:8px; box-shadow:0 8px 16px rgba(0,0,0,.35);}}
     .ctx-item{{padding:8px 12px; color:#e5e7eb; cursor:pointer;}}
     .ctx-item:hover{{background:#374151}}
     .hidden-trigger{{display:none !important; visibility:hidden !important; width:0; height:0;}}
+    /* 一時対策は効果が薄かったため削除（シンプル維持） */
   </style>
 """,
     ) as demo:
@@ -87,18 +101,19 @@ def create_blocks() -> gr.Blocks:
             with gr.TabItem("チャット"):
                 with gr.Row():
                     # 左サイドバー（スレッド一覧、設定で表示切替）
-                    sidebar_col = gr.Column(scale=1, min_width=260, visible=settings["show_thread_sidebar"])  # type: ignore[index]
+                    sidebar_col = gr.Column(scale=1, min_width=260, visible=True, elem_id="sidebar_col")  # type: ignore[index]
                     with sidebar_col:
                         with gr.Row(elem_id="sidebar-toggle-row"):
-                            new_btn = gr.Button("＋ 新規", scale=1)
+                            new_btn = gr.Button("＋ 新規", scale=1, elem_id="new_btn_main")
                             toggle_btn_left = gr.Button("≡", scale=0, min_width=36, elem_id="sidebar_toggle_btn")
                         threads_state = gr.State([])
                         threads_html = gr.HTML("", elem_id="threads_list")
 
                     # サイドバー非表示時にだけ表示されるエッジトグル
-                    edge_col = gr.Column(scale=0, min_width=24, visible=not bool(settings["show_thread_sidebar"]))  # type: ignore[index]
+                    edge_col = gr.Column(scale=0, min_width=24, visible=False, elem_id="edge_col")  # type: ignore[index]
                     with edge_col:
                         toggle_btn_edge = gr.Button("≡", scale=0, min_width=24)
+                        new_btn_edge = gr.Button("＋", scale=0, min_width=24, elem_id="new_btn_edge")
 
                     gr.HTML("<div class='v-sep'></div>", elem_id="vsep")
 
@@ -129,23 +144,85 @@ def create_blocks() -> gr.Blocks:
                         go_flag = gr.State(False)
                         prompt_st = gr.State("")
 
-                        guard_evt_enter = msg.submit(
+                        # 初回メッセージ時のみスレッドを作成（＋新規でも同様の挙動）
+                        def _ensure_thread_on_message(message_text: str, cur_tid: str):
+                            text = (message_text or "").strip()
+                            tid = (cur_tid or "").strip()
+                            if tid or not text:
+                                return tid
+                            created = ui_create_thread(None)
+                            return created.get('id') or ''
+
+                        # 多重バインド防止: 既存ハンドラがあれば一旦キャンセルするため、専用hiddenトリガでderegは不要（gradioの特性）。
+                        pre_enter = msg.submit(
+                            _ensure_thread_on_message,
+                            inputs=[msg, current_thread_id],
+                            outputs=[current_thread_id],
+                        )
+                        guard_evt_enter = pre_enter.then(
                             guard_and_prep,
                             inputs=[msg, chat, current_thread_id],
                             outputs=[chat, status, stop, send, msg, go_flag, prompt_st],
                         )
-                        stream_evt_enter = guard_evt_enter.then(
+                        # 初回メッセージ時の自動タイトルリネーム（軽量ヘューリスティック版）
+                        def _maybe_rename_title(prompt_text: str, tid: str):
+                            tid = (tid or "").strip()
+                            if not tid:
+                                return
+                            from app.db.session import db_session
+                            from app.repositories.thread_repo import ThreadRepository
+                            with db_session() as s:
+                                repo = ThreadRepository(s)
+                                msgs = repo.list_messages(tid, limit=2)
+                                # user 1件のみ（assistantレスが無い）= 初回とみなす
+                                if len(msgs) == 1 and msgs[0].role == "user":
+                                    title = TitleService().suggest_title_via_llm(prompt_text)
+                                    repo.rename(tid, title)
+                        def _maybe_rename_title_and_refresh(prompt_text: str, tid: str):
+                            tid = (tid or "").strip()
+                            from app.db.session import db_session
+                            from app.repositories.thread_repo import ThreadRepository
+                            renamed = False
+                            if tid:
+                                with db_session() as s:
+                                    repo = ThreadRepository(s)
+                                    msgs = repo.list_messages(tid, limit=2)
+                                    if len(msgs) == 1 and msgs[0].role == "user":
+                                        title = TitleService().suggest_title_via_llm(prompt_text)
+                                        repo.rename(tid, title)
+                                        renamed = True
+                            # サイドバー一覧を常に再構築（軽量）。タブ側は後段で別途更新される。
+                            items = ui_list_threads()
+                            html = _build_threads_html(items)
+                            return gr.update(value=html)
+
+                        rename_evt_enter = guard_evt_enter.then(
+                            _maybe_rename_title_and_refresh,
+                            inputs=[prompt_st, current_thread_id],
+                            outputs=[threads_html],
+                        )
+                        stream_evt_enter = rename_evt_enter.then(
                             stream_llm,
                             inputs=[go_flag, prompt_st, chat, current_thread_id],
                             outputs=[chat, status, stop, send],
                         )
 
-                        guard_evt_send = send.click(
+                        pre_send = send.click(
+                            _ensure_thread_on_message,
+                            inputs=[msg, current_thread_id],
+                            outputs=[current_thread_id],
+                        )
+                        guard_evt_send = pre_send.then(
                             guard_and_prep,
                             inputs=[msg, chat, current_thread_id],
                             outputs=[chat, status, stop, send, msg, go_flag, prompt_st],
                         )
-                        stream_evt_send = guard_evt_send.then(
+                        rename_evt_send = guard_evt_send.then(
+                            _maybe_rename_title_and_refresh,
+                            inputs=[prompt_st, current_thread_id],
+                            outputs=[threads_html],
+                        )
+                        stream_evt_send = rename_evt_send.then(
                             stream_llm,
                             inputs=[go_flag, prompt_st, chat, current_thread_id],
                             outputs=[chat, status, stop, send],
@@ -170,7 +247,44 @@ def create_blocks() -> gr.Blocks:
                     for it in items:
                         title = esc(it.get("title") or "(新規)")
                         tid = esc(it.get("id") or "")
-                        rows.append(f"<div class='thread-link' data-tid='{tid}'><span class='thread-title'>{title}</span></div>")
+                        has_msgs = bool(it.get("has_messages"))
+                        disabled = " data-empty='1'" if not has_msgs else ""
+                        rows.append(f"<div class='thread-link' data-tid='{tid}'{disabled}><span class='thread-title'>{title}</span></div>")
+                    return f"<div class='threads-list'>{''.join(rows)}</div>"
+
+                def _build_threads_html_tab(items: list[dict]) -> str:
+                    def esc(s: str) -> str:
+                        return (
+                            s.replace("&", "&amp;")
+                            .replace("<", "&lt;")
+                            .replace(">", "&gt;")
+                        )
+                    def btn(act: str, tid: str, label: str) -> str:
+                        return f"<button class='thread-btn' data-act='{esc(act)}' data-tid='{esc(tid)}'>{esc(label)}</button>"
+                    rows: list[str] = []
+                    for it in items:
+                        tid = esc(it.get("id") or "")
+                        title = esc(it.get("title") or "(新規)")
+                        summary = esc(it.get("summary") or "")
+                        has_msgs = bool(it.get("has_messages"))
+                        actions = (
+                            (btn("rename", tid, "名前変更") if has_msgs else "")
+                            + (btn("share", tid, "共有") if has_msgs else "")
+                            + (btn("owner", tid, "オーナー変更") if has_msgs else "")
+                            + btn("delete", tid, "削除")
+                        )
+                        row_html = (
+                            "<div class='thread-link' data-tid='" + tid + "'" + (" data-empty='1'" if not bool(it.get("has_messages")) else "") + ">"
+                            + "<div class='thread-row'>"
+                            + "<div class='thread-main'>"
+                            + f"<span class='thread-title'>{title}</span>"
+                            + (f"<span class='thread-summary'>{summary}</span>" if summary else "")
+                            + "</div>"
+                            + f"<div class='thread-actions'>{actions}</div>"
+                            + "</div>"
+                            + "</div>"
+                        )
+                        rows.append(row_html)
                     return f"<div class='threads-list'>{''.join(rows)}</div>"
 
                 def _refresh_threads():
@@ -179,14 +293,14 @@ def create_blocks() -> gr.Blocks:
                     return gr.update(value=html), items
 
                 def _on_new():
-                    created = ui_create_thread(None)
+                    # スレッドは作成しない。空チャットにリセットし、選択も解除。
                     items = ui_list_threads()
                     html = _build_threads_html(items)
-                    tid = created.get('id') or ''
-                    history = ui_list_messages(tid) if tid else []
-                    return gr.update(value=html), items, tid, history
+                    return gr.update(value=html), items, "", []
 
                 _evt_new = new_btn.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
+                # JSで選択解除（視覚のみ DRY/YAGNI）
+                _evt_new.then(lambda: None, None, None, js="()=>{ try { if (window.clearSelection) window.clearSelection(); } catch(_){} }")
 
                 def _open_by_id(tid: str):
                     tid = (tid or "").strip()
@@ -204,6 +318,7 @@ def create_blocks() -> gr.Blocks:
                     if kind == "open" and tid:
                         new_tid, history = _open_by_id(tid)
                         return new_tid, history, gr.update()
+                    # send 分岐はメッセージ送信直前に作成する方針へ移行したため不要
 
                     if kind == "rename" and tid and arg:
                         from app.repositories.thread_repo import ThreadRepository
@@ -213,10 +328,21 @@ def create_blocks() -> gr.Blocks:
                             repo.rename(tid, arg)
                         items = ui_list_threads()
                         html = _build_threads_html(items)
+                        html_tab = _build_threads_html_tab(items)
                         return cur_tid, gr.update(), gr.update(value=html)
 
                     if kind == "share" and tid:
-                        gr.Info(f"共有: {tid}")
+                        try:
+                            gr.Info("共有は現在未対応です。後日提供予定です。")
+                        except Exception:
+                            pass
+                        return no_changes()
+
+                    if kind == "owner" and tid:
+                        try:
+                            gr.Info("オーナー変更は現在未対応です。後日提供予定です。")
+                        except Exception:
+                            pass
                         return no_changes()
 
                     if kind == "delete" and tid:
@@ -303,7 +429,7 @@ def create_blocks() -> gr.Blocks:
 
                 def _refresh_threads_tab():
                     items = ui_list_threads()
-                    html = _build_threads_html(items)
+                    html = _build_threads_html_tab(items)
                     return gr.update(value=html), items
 
                 def _open_by_index_tab(items, idx: int):
@@ -324,11 +450,25 @@ def create_blocks() -> gr.Blocks:
                 )
                 # 念のため、rename/delete直後も確実にタブ側を再フェッチ
                 _evt_kind.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+                # サイドバー側のリネーム即時反映に追随して、タブ側も定期的に追従
+                threads_html.change(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
                 # サイドバーの「＋ 新規」後にタブ側の一覧も即更新
                 _evt_new.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
 
                 # サイドバーの「＋ 新規」後にタブ側の一覧も即更新
                 _evt_new.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+
+                # エッジ列の「＋」で新規作成
+                try:
+                    new_btn_edge.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
+                    new_btn_edge.click(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+                except Exception:
+                    pass
+
+                # current_thread_id が変更されたら、両方の一覧を即時更新（自動作成時の即時反映）
+                current_thread_id.change(_refresh_threads, None, [threads_html, threads_state]).then(
+                    _refresh_threads_tab, None, [threads_html_tab, threads_state2]
+                )
 
             with gr.TabItem("設定"):
                 with gr.Group(elem_classes=["combo-field"]):
