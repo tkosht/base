@@ -10,6 +10,9 @@ import gradio as gr
 from app.services.thread_service import ThreadService
 
 
+STATUS_GENERATING = "⌛ 回答生成中..."
+
+
 def llm_stream(_prompt):
     for t in (
         [
@@ -48,7 +51,7 @@ def guard_and_prep(message: str, history, thread_id: str = ""):
             pass
     return (
         history,
-        "⌛ 回答生成中...",
+        STATUS_GENERATING,
         gr.update(visible=True, interactive=True),
         gr.update(visible=False),
         "",
@@ -67,7 +70,7 @@ def stream_llm(go: bool, prompt: str, history, thread_id: str = ""):
         body += tok
         if history and history[-1].get("role") == "assistant":
             history[-1]["content"] = body
-        yield history, "⌛ 回答生成中...", gr.update(
+        yield history, STATUS_GENERATING, gr.update(
             visible=True, interactive=True
         ), gr.update(visible=False)
     # persist assistant final content

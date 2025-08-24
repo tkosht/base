@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+import time
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, RedirectResponse
@@ -32,6 +33,9 @@ from app.ui.threads_ui import (
     list_messages as ui_list_messages,
 )
 from typing import Literal
+
+
+DEFAULT_STATUS_TEXT = "準備OK! いつでもチャットを開始できます。"
 
 
 def create_blocks() -> gr.Blocks:
@@ -136,7 +140,7 @@ def create_blocks() -> gr.Blocks:
                             send = gr.Button("↑", elem_id="sendbtn", visible=True)
 
                         status = gr.Markdown(
-                            "準備OK! いつでもチャットを開始できます。", elem_id="status"
+                            DEFAULT_STATUS_TEXT, elem_id="status"
                         )
 
                         go_flag = gr.State(False)
@@ -204,6 +208,15 @@ def create_blocks() -> gr.Blocks:
                             inputs=[go_flag, prompt_st, chat, current_thread_id],
                             outputs=[chat, status, stop, send],
                         )
+                        # 回答生成完了の数秒後にステータスを初期表示へ戻す
+                        def _reset_status_after_delay():
+                            time.sleep(3)
+                            return DEFAULT_STATUS_TEXT
+                        stream_evt_enter.then(
+                            _reset_status_after_delay,
+                            None,
+                            [status],
+                        )
 
                         pre_send = send.click(
                             _ensure_thread_on_message,
@@ -224,6 +237,11 @@ def create_blocks() -> gr.Blocks:
                             stream_llm,
                             inputs=[go_flag, prompt_st, chat, current_thread_id],
                             outputs=[chat, status, stop, send],
+                        )
+                        stream_evt_send.then(
+                            _reset_status_after_delay,
+                            None,
+                            [status],
                         )
 
                         stop.click(
