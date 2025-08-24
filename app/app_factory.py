@@ -121,7 +121,7 @@ def create_blocks() -> gr.Blocks:
 
                     with gr.Column(scale=4):
                         chat = gr.Chatbot(
-                            height=420,
+                            height=580,
                             avatar_images=(USER_AVATAR_PATH, BOT_AVATAR_PATH),
                             label="Bot",
                             type="messages",
