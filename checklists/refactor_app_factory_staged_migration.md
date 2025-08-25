@@ -239,10 +239,56 @@
 
 ---
 
+## Step 11: レガシーファイル撤去とUI再確認（最終整合）
+実施項目
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-11`
+- [x] 参照洗い出し: `grep -R "chat_feature\|search_feature\|svg_utils" app tests`
+- [x] 参照置換（コード/テスト）:
+  - `app.chat_feature` → `app.features.chat`
+  - `app.search_feature` → `app.features.search`
+  - `app.svg_utils` → `app.utils.svg`
+- [x] 旧ファイル削除: `app/chat_feature.py`, `app/search_feature.py`, `app/svg_utils.py`
+- [x] UI再確認: `.hidden-trigger` のグローバル適用と `:root` 変数により、不要UI（Textbox/Run）およびアバター巨大化が解消
+- [x] `public/styles/app.css` を最終形へ整理（`@import` 非採用、`<link>` のみ）
+
+検証（受け入れ基準）
+- [x] `grep -R "chat_feature\|search_feature\|svg_utils"` がゼロヒット（コード/テストとも）
+- [x] 主要経路（新規/送信/停止/削除/リネーム/切替/検索/保存）が同等
+- [x] 不要UI非表示、アバターサイズが正常
+
+完了フック（このステップが合格したら）
+- [x] Pull Request 作成（宛先: main）
+- [ ] レビュー＆マージ完了を待つ（完了）
+
+ロールバック
+- 旧ファイルを復元し、import を元に戻す
+
+---
+
+## Step 12: テスト移行と整備（別ステップ）
+実施項目
+- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-12-tests`
+- [ ] 依存準備: pytest/ruff/mypy をCI/ローカルで動かす手順を確認
+- [ ] 旧前提のテスト名・import の改名/整理（必要に応じリネーム）
+- [ ] 主要経路のE2E/統合テストを軽量に補強（モック禁止方針に従う）
+- [ ] `pytest -q` 緑化
+
+検証（受け入れ基準）
+- [ ] 全テストパス
+- [ ] 主要経路のリグレッション検出に有効
+
+完了フック（このステップが合格したら）
+- [ ] Pull Request 作成（宛先: main）
+- [ ] レビュー＆マージ完了
+
+ロールバック
+- 変更前のテスト構成に戻す（改名/パスの巻き戻し）
+
+---
+
 ## 完了条件（DoD）
 - [ ] `app/app_factory.py` は 300LoC 未満（目安）で読みやすい
 - [ ] すべてのステップで受け入れ基準を満たす
 - [ ] Black/Ruff/Mypy を通過
 - [ ] ユーザー確認完了
-
 

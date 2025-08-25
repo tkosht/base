@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.search_feature import _search_users, chips_html, neutralize_email, suggest, on_change
-from app.svg_utils import build_favicon_svg, make_favicon_data_uri, write_emoji_svg
+from app.features.search import _search_users, chips_html, neutralize_email, suggest, on_change
+from app.utils.svg import build_favicon_svg, make_favicon_data_uri, write_emoji_svg
 import gradio as gr
 
 

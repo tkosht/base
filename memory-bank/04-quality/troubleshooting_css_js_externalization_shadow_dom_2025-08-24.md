@@ -97,3 +97,17 @@ getComputedStyle(document.querySelector('#threads_list .thread-link')).borderRad
 - JS 初期化: `public/scripts/threads_ui.js`（ctx-menu/dots の動作に影響）
 
 
+## 2025-08-26 フォローアップ（Step 11 再発対応）
+
+- 症状: 最終薄型化後、隠しトリガが表示され Textbox/Run が再出現。
+- 原因: グローバルで効くべき `.hidden-trigger` の定義が効かない画面があり、スコープ/適用順の影響で可視化。
+- 対応:
+  - `app/public/styles/app.css` に `.hidden-trigger` をグローバルで再定義（display:none/visibility:hidden/width,height=0, `!important`）。
+  - 兄弟画面の複合セレクタ（`#threads_list`, `#threads_list_tab`）および `.ctx-menu` のグローバル定義を維持。
+  - head は `<link rel="stylesheet" href="/public/styles/app.css" />` のみとし、`<style>@import</style>` は最終的に撤去。
+
+### 運用ルール（確定）
+- 最終系は「linkのみ」。`@import` はデバッグ時の一時手段に限定し、マージ前に必ず削除する。
+- 隠しコンポーネントは `.hidden-trigger` をグローバル定義で制御する（スコープ内に閉じない）。
+
+
