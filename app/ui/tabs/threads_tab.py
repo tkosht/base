@@ -49,17 +49,20 @@ def setup_threads_tab(
 
     if new_btn_edge is not None:
         try:
-            # 新規作成: チャット側の _on_new を直接呼ぶ（チャットリフレッシュ/選択解除を実施）
+            # 新規作成の処理をサイドバー開時と同一シーケンスで実行
             if on_new is not None:
-                new_btn_edge.click(on_new, None, [threads_html, threads_state, current_thread_id, chat])
-                # DOM上の選択ハイライトと data-selected を即時解除（視覚的不整合の解消）
-                new_btn_edge.click(
+                edge_new = new_btn_edge.click(on_new, None, [threads_html, threads_state, current_thread_id, chat])
+                # 選択状態の即時解除（スレッドタブ/サイドバーの両方を対象）
+                edge_new.then(
                     lambda: None,
                     None,
                     None,
-                    js="()=>{ try {\n+                      const sels=['#threads_list','#threads_list_tab'];\n+                      for (const id of sels) {\n+                        const root = (window.qsDeep?window.qsDeep(id):document.querySelector(id));\n+                        if (!root) continue;\n+                        const cont = (window.qsWithin?window.qsWithin(root,'.threads-list'):root.querySelector('.threads-list'));\n+                        if (cont && cont.removeAttribute) cont.removeAttribute('data-selected');\n+                        try { root.querySelectorAll('.thread-link.selected').forEach(el=>el.classList.remove('selected')); } catch(e){}\n+                      }\n+                      if (window.clearSelection) window.clearSelection();\n+                    } catch(_){} }",
+                    js="()=>{ try {\n                      const sels=['#threads_list','#threads_list_tab'];\n                      for (const id of sels) {\n                        const root = (window.qsDeep?window.qsDeep(id):document.querySelector(id));\n                        if (!root) continue;\n                        const cont = (window.qsWithin?window.qsWithin(root,'.threads-list'):root.querySelector('.threads-list'));\n                        if (cont && cont.removeAttribute) cont.removeAttribute('data-selected');\n                        try { root.querySelectorAll('.thread-link.selected').forEach(el=>el.classList.remove('selected')); } catch(e){}\n                      }\n                      if (window.clearSelection) window.clearSelection();\n                    } catch(_){} }",
                 )
-            new_btn_edge.click(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
+                # タブ側の一覧をリフレッシュ
+                edge_new.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
+            else:
+                new_btn_edge.click(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
         except Exception:
             pass
 
