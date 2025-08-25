@@ -201,8 +201,8 @@
 
 ## Step 9: タブ分割（settings_tab）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-9`
-- [ ] `app/ui/tabs/settings_tab.py` に UI/イベント（検索/選択/保存）
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-9`
+- [x] `app/ui/tabs/settings_tab.py` に UI/イベント（検索/選択/保存）
 
 検証（受け入れ基準）
 - [ ] ヒット件数/候補表示/チップ/差分保存表示が同等
