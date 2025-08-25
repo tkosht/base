@@ -37,6 +37,7 @@ from app.web.assets import ensure_public_assets, mount_public_and_routes
 from app.web.routers.threads import router as threads_router
 from app.web.routers.settings import router as settings_router
 from app.web.assets import ensure_public_assets, mount_public_and_routes
+from app.ui.html.threads_html import build_threads_html, build_threads_html_tab
 
 
 DEFAULT_STATUS_TEXT = "準備OK! いつでもチャットを開始できます。"
@@ -155,7 +156,7 @@ def create_blocks() -> gr.Blocks:
                                         renamed = True
                             # サイドバー一覧を常に再構築（軽量）。タブ側は後段で別途更新される。
                             items = ui_list_threads()
-                            html = _build_threads_html(items, tid)
+                            html = build_threads_html(items, tid)
                             return gr.update(value=html)
 
                         rename_evt_enter = guard_evt_enter.then(
@@ -212,72 +213,17 @@ def create_blocks() -> gr.Blocks:
                         )
 
                 # サイドバーイベント
-                def _build_threads_html(items: list[dict], selected_tid: str = "") -> str:
-                    def esc(s: str) -> str:
-                        return (
-                            s.replace("&", "&amp;")
-                            .replace("<", "&lt;")
-                            .replace(">", "&gt;")
-                        )
-                    rows = []
-                    for it in items:
-                        title = esc(it.get("title") or "(新規)")
-                        tid = esc(it.get("id") or "")
-                        has_msgs = bool(it.get("has_messages"))
-                        disabled = " data-empty='1'" if not has_msgs else ""
-                        sel_cls = " selected" if selected_tid and (tid == esc(selected_tid)) else ""
-                        rows.append(
-                            f"<div class='thread-link{sel_cls}' data-tid='{tid}'{disabled}><span class='thread-title'>{title}</span></div>"
-                        )
-                    sel_attr = f" data-selected='{esc(selected_tid)}'" if selected_tid else ""
-                    return f"<div class='threads-list'{sel_attr}>{''.join(rows)}</div>"
-
-                def _build_threads_html_tab(items: list[dict], selected_tid: str = "") -> str:
-                    def esc(s: str) -> str:
-                        return (
-                            s.replace("&", "&amp;")
-                            .replace("<", "&lt;")
-                            .replace(">", "&gt;")
-                        )
-                    def btn(act: str, tid: str, label: str) -> str:
-                        return f"<button class='thread-btn' data-act='{esc(act)}' data-tid='{esc(tid)}'>{esc(label)}</button>"
-                    rows: list[str] = []
-                    for it in items:
-                        tid = esc(it.get("id") or "")
-                        title = esc(it.get("title") or "(新規)")
-                        summary = esc(it.get("summary") or "")
-                        has_msgs = bool(it.get("has_messages"))
-                        actions = (
-                            (btn("rename", tid, "名前変更") if has_msgs else "")
-                            + (btn("share", tid, "共有") if has_msgs else "")
-                            + (btn("owner", tid, "オーナー変更") if has_msgs else "")
-                            + btn("delete", tid, "削除")
-                        )
-                        sel_cls = " selected" if selected_tid and (tid == esc(selected_tid)) else ""
-                        row_html = (
-                            "<div class='thread-link" + sel_cls + "' data-tid='" + tid + "'" + (" data-empty='1'" if not bool(it.get("has_messages")) else "") + ">"
-                            + "<div class='thread-row'>"
-                            + "<div class='thread-main'>"
-                            + f"<span class='thread-title'>{title}</span>"
-                            + (f"<span class='thread-summary'>{summary}</span>" if summary else "")
-                            + "</div>"
-                            + f"<div class='thread-actions'>{actions}</div>"
-                            + "</div>"
-                            + "</div>"
-                        )
-                        rows.append(row_html)
-                    sel_attr = f" data-selected='{esc(selected_tid)}'" if selected_tid else ""
-                    return f"<div class='threads-list'{sel_attr}>{''.join(rows)}</div>"
+                # HTMLビルダー（純関数）呼び出しに置換
 
                 def _refresh_threads(selected_tid: str = ""):
                     items = ui_list_threads()
-                    html = _build_threads_html(items, selected_tid)
+                    html = build_threads_html(items, selected_tid)
                     return gr.update(value=html), items
 
                 def _on_new():
                     # スレッドは作成しない。空チャットにリセットし、選択も解除。
                     items = ui_list_threads()
-                    html = _build_threads_html(items, "")
+                    html = build_threads_html(items, "")
                     return gr.update(value=html), items, "", []
 
                 _evt_new = new_btn.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
@@ -309,8 +255,8 @@ def create_blocks() -> gr.Blocks:
                             repo = ThreadRepository(s)
                             repo.rename(tid, arg)
                         items = ui_list_threads()
-                        html = _build_threads_html(items, cur_tid)
-                        html_tab = _build_threads_html_tab(items, cur_tid)
+                        html = build_threads_html(items, cur_tid)
+                        html_tab = build_threads_html_tab(items, cur_tid)
                         return cur_tid, gr.update(), gr.update(value=html)
 
                     if kind == "share" and tid:
@@ -339,7 +285,7 @@ def create_blocks() -> gr.Blocks:
                         # サイドバー側は再フェッチで更新。
                         items = ui_list_threads()
                         new_cur = cur_tid if cur_tid != tid else ""
-                        html = _build_threads_html(items, new_cur)
+                        html = build_threads_html(items, new_cur)
                         new_cur = cur_tid if cur_tid != tid else ""
                         new_history = [] if new_cur == "" else ui_list_messages(new_cur)
                         return new_cur, new_history, gr.update(value=html)
@@ -412,7 +358,7 @@ def create_blocks() -> gr.Blocks:
 
                 def _refresh_threads_tab(selected_tid: str = ""):
                     items = ui_list_threads()
-                    html = _build_threads_html_tab(items, selected_tid)
+                    html = build_threads_html_tab(items, selected_tid)
                     return gr.update(value=html), items
 
                 def _open_by_index_tab(items, idx: int):
