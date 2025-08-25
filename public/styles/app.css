@@ -157,3 +157,14 @@ html.ui-dark #threads_list .thread-summary, html.ui-dark #threads_list_tab .thre
 }
 
 
+/* ===== Light mode: reinforce readable text for labels/sliders (Gradio controls) ===== */
+html.ui-light .gradio-container label,
+html.ui-light .gradio-container [data-testid="block-label"],
+html.ui-light .gradio-container .label{
+  color:#111827 !important;
+}
+html.ui-light .gradio-container [role="slider"],
+html.ui-light .gradio-container [role="slider"] ~ *,
+html.ui-light .gradio-container input[type="range"] ~ *{
+  color:#111827 !important;
+}
