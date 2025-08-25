@@ -305,7 +305,13 @@ def create_blocks() -> gr.Blocks:
                         pass
                     return
 
-                open_trigger.click(lambda tid: _open_by_id(tid), [action_thread_id], [current_thread_id, chat])
+                def _open_and_mark(tid: str):
+                    new_tid, history = _open_by_id(tid)
+                    items = ui_list_threads()
+                    html = build_threads_html(items, new_tid)
+                    return new_tid, history, gr.update(value=html)
+
+                open_trigger.click(_open_and_mark, [action_thread_id], [current_thread_id, chat, threads_html])
                 rename_trigger.click(_ctx_rename, [action_thread_id], None)
                 share_trigger.click(_ctx_share, [action_thread_id], None)
                 delete_trigger.click(_ctx_delete, [action_thread_id], None)
