@@ -72,7 +72,10 @@
 
 完了フック（このステップが合格したら）
 - [x] Pull Request 作成（宛先: develop）
-- [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+- [x] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+
+補足メモ
+- サイドバー初期表示はサーバ起動時の `show_thread_sidebar` に依存。UIトグル/再アクセスで永続値が反映され、起動時スナップショットと整合することを確認（今回のリファクタの影響なし）。
 
 ロールバック
 - ルーター定義を `app_factory.py` に戻し、新規ファイル削除
@@ -81,16 +84,17 @@
 
 ## Step 3: 共通ユーティリティの移行（SVG）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-3`
-- [ ] `app/svg_utils.py` → `app/utils/svg.py` へ移動
-- [ ] 参照元（favicon/アバター生成部）のimport差し替え
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-3`
+- [x] `app/svg_utils.py` → `app/utils/svg.py` へ移動
+- [x] 参照元（favicon/アバター生成部）のimport差し替え
 
 検証（受け入れ基準）
 - [ ] すべてのアイコン/アバター表示が現行同等
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+  - PR: https://github.com/tkosht/base/pull/8
 
 ロールバック
 - ファイル名/インポートを元に戻す
