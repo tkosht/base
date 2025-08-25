@@ -12,7 +12,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 import gradio as gr
 
-from app.utils.svg import make_favicon_data_uri, write_emoji_svg
+from app.ui.head import build_head_html
+from app.ui.avatars import prepare_avatars
 from app.features.chat import guard_and_prep, stream_llm, stop_chat
 from app.features.search import suggest, on_change, chips_html, neutralize_email
 from app.db.bootstrap import bootstrap_schema_and_seed
@@ -42,28 +43,10 @@ DEFAULT_STATUS_TEXT = "準備OK! いつでもチャットを開始できます�
 
 
 def create_blocks() -> gr.Blocks:
-    USER_AVATAR_PATH = write_emoji_svg(
-        "💻",
-        "/tmp/gradio_user_avatar.svg",
-        bg="#DBEAFE",
-        pad=6,
-        emoji_scale=0.82,
-        dy_em=0.02,
-    )
-    BOT_AVATAR_PATH = write_emoji_svg(
-        "🦜", "/tmp/gradio_bot_avatar.svg", bg="#E5E7EB"
-    )
+    USER_AVATAR_PATH, BOT_AVATAR_PATH = prepare_avatars()
 
     settings = SettingsService().get()
-    with gr.Blocks(
-        title="でもあぷり",
-        head=f"""
-  <link rel=\"icon\" href=\"{make_favicon_data_uri('🦜', size=64, circle_fill='#1f2937', ring_color='#fff', ring_width=2)}\" />
-  <link rel=\"stylesheet\" href=\"/public/styles/app.css\" />
-  <script src=\"/public/scripts/threads_ui.js\" defer></script>
-  <script src=\"/public/scripts/theme_bridge.js\" defer></script>
-""",
-    ) as demo:
+    with gr.Blocks(title="でもあぷり", head=build_head_html()) as demo:
         gr.Markdown("### デモアプリ")
 
         # グローバル（全タブ共通）で利用する隠しトリガとスレッドID/アクション保持
