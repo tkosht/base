@@ -12,7 +12,8 @@ from app.web.routers.settings import router as settings_router
 
 
 def create_api_app() -> FastAPI:
-    public_dir = Path(__file__).resolve().parent.parent / "public"
+    # /public はリポジトリ直下の public/ を配信する
+    public_dir = Path(__file__).resolve().parents[2] / "public"
 
     # Ensure DB schema and seed data are prepared on startup
     bootstrap_schema_and_seed()
