@@ -144,16 +144,17 @@
 
 ## Step 6: スレッドHTML生成の純関数化
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-6`
-- [ ] `app/ui/html/threads_html.py` に `_build_threads_html` / `_build_threads_html_tab` を移設
-- [ ] 参照側差し替え
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-6`
+- [x] `app/ui/html/threads_html.py` に `_build_threads_html` / `_build_threads_html_tab` を移設
+- [x] 参照側差し替え
 
 検証（受け入れ基準）
 - [ ] サイドバー/タブの一覧表示が同等（選択状態/disabled含む）
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+  - PR: https://github.com/tkosht/base/pull/11
 
 ロールバック
 - 関数を元の場所に戻す
