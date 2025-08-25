@@ -52,6 +52,8 @@ def setup_threads_tab(
             # 新規作成: チャット側の _on_new を直接呼ぶ（チャットリフレッシュ/選択解除を実施）
             if on_new is not None:
                 new_btn_edge.click(on_new, None, [threads_html, threads_state, current_thread_id, chat])
+                # DOM上の選択ハイライトを即時解除（視覚的不整合の解消）
+                new_btn_edge.click(lambda: None, None, None, js="()=>{ try { if (window.clearSelection) window.clearSelection(); } catch(_){} }")
             new_btn_edge.click(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
         except Exception:
             pass
