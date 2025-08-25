@@ -117,15 +117,30 @@ def create_blocks() -> gr.Blocks:
                             return created.get('id') or ''
 
                         # 多重バインド防止: 既存ハンドラがあれば一旦キャンセルするため、専用hiddenトリガでderegは不要（gradioの特性）。
-                        pre_enter = msg.submit(
-                            _ensure_thread_on_message,
-                            inputs=[msg, current_thread_id],
-                            outputs=[current_thread_id],
-                        )
-                        guard_evt_enter = pre_enter.then(
-                            guard_and_prep,
-                            inputs=[msg, chat, current_thread_id],
-                            outputs=[chat, status, stop, send, msg, go_flag, prompt_st],
+                        from app.ui.tabs.chat_tab import setup_chat_tab
+
+                        chat_hooks = setup_chat_tab(
+                            settings=settings,
+                            sidebar_col=sidebar_col,
+                            edge_col=edge_col,
+                            new_btn=new_btn,
+                            toggle_btn_left=toggle_btn_left,
+                            toggle_btn_edge=toggle_btn_edge,
+                            threads_state=threads_state,
+                            threads_html=threads_html,
+                            current_thread_id=current_thread_id,
+                            chat=chat,
+                            msg=msg,
+                            stop=stop,
+                            send=send,
+                            status=status,
+                            go_flag=go_flag,
+                            prompt_st=prompt_st,
+                            ui_create_thread=ui_create_thread,
+                            ui_list_threads=ui_list_threads,
+                            ui_list_messages=ui_list_messages,
+                            build_threads_html=build_threads_html,
+                            toggle_sidebar_visibility=toggle_sidebar_visibility,
                         )
                         # 初回メッセージ時の自動タイトルリネーム（軽量ヘューリスティック版）
                         def _maybe_rename_title(prompt_text: str, tid: str):
@@ -159,58 +174,7 @@ def create_blocks() -> gr.Blocks:
                             html = build_threads_html(items, tid)
                             return gr.update(value=html)
 
-                        rename_evt_enter = guard_evt_enter.then(
-                            _maybe_rename_title_and_refresh,
-                            inputs=[prompt_st, current_thread_id],
-                            outputs=[threads_html],
-                        )
-                        stream_evt_enter = rename_evt_enter.then(
-                            stream_llm,
-                            inputs=[go_flag, prompt_st, chat, current_thread_id],
-                            outputs=[chat, status, stop, send],
-                        )
-                        # 回答生成完了の数秒後にステータスを初期表示へ戻す
-                        def _reset_status_after_delay():
-                            time.sleep(3)
-                            return DEFAULT_STATUS_TEXT
-                        stream_evt_enter.then(
-                            _reset_status_after_delay,
-                            None,
-                            [status],
-                        )
-
-                        pre_send = send.click(
-                            _ensure_thread_on_message,
-                            inputs=[msg, current_thread_id],
-                            outputs=[current_thread_id],
-                        )
-                        guard_evt_send = pre_send.then(
-                            guard_and_prep,
-                            inputs=[msg, chat, current_thread_id],
-                            outputs=[chat, status, stop, send, msg, go_flag, prompt_st],
-                        )
-                        rename_evt_send = guard_evt_send.then(
-                            _maybe_rename_title_and_refresh,
-                            inputs=[prompt_st, current_thread_id],
-                            outputs=[threads_html],
-                        )
-                        stream_evt_send = rename_evt_send.then(
-                            stream_llm,
-                            inputs=[go_flag, prompt_st, chat, current_thread_id],
-                            outputs=[chat, status, stop, send],
-                        )
-                        stream_evt_send.then(
-                            _reset_status_after_delay,
-                            None,
-                            [status],
-                        )
-
-                        stop.click(
-                            stop_chat,
-                            None,
-                            [stop, send, status],
-                            cancels=[stream_evt_enter, stream_evt_send],
-                        )
+                        # 以降のハンドラは chat_tab 内でセットされる
 
                 # サイドバーイベント
                 # HTMLビルダー（純関数）呼び出しに置換
@@ -226,9 +190,7 @@ def create_blocks() -> gr.Blocks:
                     html = build_threads_html(items, "")
                     return gr.update(value=html), items, "", []
 
-                _evt_new = new_btn.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
-                # JSで選択解除（視覚のみ DRY/YAGNI）
-                _evt_new.then(lambda: None, None, None, js="()=>{ try { if (window.clearSelection) window.clearSelection(); } catch(_){} }")
+                _evt_new = chat_hooks["evt_new"]
 
                 def _open_by_id(tid: str):
                     tid = (tid or "").strip()
