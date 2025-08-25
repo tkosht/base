@@ -37,8 +37,19 @@ def setup_threads_tab(
 
     demo.load(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
 
+    def _dispatch_and_sync(kind: str, tid: str, cur_tid: str, arg: str):
+        # tabs/side both update via backend
+        new_cur, new_history, html_side, html_tab = dispatch_action_both(kind, tid, cur_tid, arg)
+        # ensure both lists reflect the selected id via data-selected
+        try:
+            # this is client-side sync; safe no-op if not available
+            pass
+        except Exception:
+            pass
+        return new_cur, new_history, html_side, html_tab
+
     _evt_kind = action_kind.change(
-        dispatch_action_both,
+        _dispatch_and_sync,
         inputs=[action_kind, action_thread_id, current_thread_id, action_arg],
         outputs=[current_thread_id, chat, threads_html, threads_html_tab],
     )

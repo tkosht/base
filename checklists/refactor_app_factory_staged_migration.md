@@ -182,16 +182,17 @@
 
 ## Step 8: タブ分割（chat_tab）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-8`
-- [ ] `app/ui/tabs/chat_tab.py` に UI/イベント（submit→guard→rename→stream→reset, stop, sidebar toggle）
-- [ ] `TitleService` の初回リネーム条件維持（userのみ1件時）
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-8`
+- [x] `app/ui/tabs/chat_tab.py` に UI/イベント（submit→guard→rename→stream→reset, stop, sidebar toggle）
+- [x] `TitleService` の初回リネーム条件維持（userのみ1件時）
 
 検証（受け入れ基準）
 - [ ] 新規/送信/停止/タイトル自動更新/サイドバー表示切替が同等
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+  - PR: https://github.com/tkosht/base/pull/13
 
 ロールバック
 - タブ内ロジックを `app_factory.py` 側へ一時的に戻す
