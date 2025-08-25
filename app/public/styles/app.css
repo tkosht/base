@@ -45,7 +45,7 @@
 #threads_list .thread-link,
 #threads_list_tab .thread-link{padding:8px 10px; cursor:pointer; border-radius:6px; position:relative;}
 /* =================== Tokens =================== */
-::root{
+:root{
   --avatar-base: 32px;
   --avatar-zoom: 1.1;
   --avatar-gap: .3rem;
@@ -116,16 +116,7 @@ html.ui-dark #threads_list .thread-summary, html.ui-dark #threads_list_tab .thre
   border-radius:9999px !important;
 }
 
-/* Enforce within Chatbot (higher specificity to defeat upstream rules) */
-.gradio-container .gr-chatbot .avatar-container{
-  width: calc(var(--avatar-base) * var(--avatar-zoom)) !important;
-  height: calc(var(--avatar-base) * var(--avatar-zoom)) !important;
-  min-width: calc(var(--avatar-base) * var(--avatar-zoom)) !important;
-  min-height: calc(var(--avatar-base) * var(--avatar-zoom)) !important;
-}
-.gradio-container .gr-chatbot .avatar-container > :is(img,svg){
-  width:100% !important; height:100% !important;
-}
+/* (removed) Chatbot-specific enforcement was temporary; :root variables now apply correctly */
 
 /* ===== 入力行 ===== */
 #msgrow{ position:relative; width:100%; }
