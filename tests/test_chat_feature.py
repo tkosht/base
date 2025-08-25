@@ -4,7 +4,7 @@ import itertools
 
 import gradio as gr
 
-from app.chat_feature import guard_and_prep, stream_llm, stop_chat, llm_stream
+from app.features.chat import guard_and_prep, stream_llm, stop_chat, llm_stream
 
 
 def test_guard_and_prep_empty_and_nonempty():
