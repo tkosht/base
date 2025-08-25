@@ -24,9 +24,10 @@ def build_head_html(
     )
     return (
         f"\n  <link rel=\"icon\" href=\"{favicon}\" />\n"
-        "  <link rel=\"stylesheet\" href=\"/public/styles/app.css\" />\n"
+        "  <style id=\"app_css_import\">@import url('/public/styles/app.css');</style>\n"
         "  <script src=\"/public/scripts/threads_ui.js\" defer></script>\n"
         "  <script src=\"/public/scripts/theme_bridge.js\" defer></script>\n"
+        "  <link rel=\"stylesheet\" href=\"/public/styles/app.css\" />\n"
     )
 
 
