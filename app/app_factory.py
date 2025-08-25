@@ -366,12 +366,14 @@ def create_blocks() -> gr.Blocks:
                     chat=chat,
                     threads_html=threads_html,
                     evt_new=_evt_new,
+                    threads_state=threads_state,
                     ui_list_threads=ui_list_threads,
                     ui_list_messages=ui_list_messages,
                     dispatch_action_both=_dispatch_action_both,
                     threads_html_tab=threads_html_tab,
                     threads_state2=threads_state2,
                     new_btn_edge=new_btn_edge,
+                    on_new=_on_new,
                 )
 
             with gr.TabItem("設定"):

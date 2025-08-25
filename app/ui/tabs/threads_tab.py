@@ -14,12 +14,14 @@ def setup_threads_tab(
     chat: gr.Chatbot,
     threads_html: gr.HTML,
     evt_new,
+    threads_state: gr.State,
     ui_list_threads,
     ui_list_messages,
     dispatch_action_both,
     threads_html_tab: gr.HTML,
     threads_state2: gr.State,
     new_btn_edge: gr.Button | None = None,
+    on_new=None,
 ):
     def _refresh_threads_tab(selected_tid: str = ""):
         items = ui_list_threads()
@@ -47,7 +49,9 @@ def setup_threads_tab(
 
     if new_btn_edge is not None:
         try:
-            new_btn_edge.click(lambda: None, None, None)  # no-op to ensure binding exists
+            # 新規作成: チャット側の _on_new を直接呼ぶ（チャットリフレッシュ/選択解除を実施）
+            if on_new is not None:
+                new_btn_edge.click(on_new, None, [threads_html, threads_state, current_thread_id, chat])
             new_btn_edge.click(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
         except Exception:
             pass
