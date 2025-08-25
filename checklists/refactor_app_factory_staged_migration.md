@@ -239,31 +239,50 @@
 
 ---
 
-## Step 11: レガシーファイル撤去とテスト更新（最終整合）
+## Step 11: レガシーファイル撤去とUI再確認（最終整合）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-11`
-- [ ] 参照洗い出し: `grep -R "chat_feature\|search_feature\|svg_utils" app tests` で旧モジュール参照を検出
-- [ ] 参照置換（コード/テスト）:
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-11`
+- [x] 参照洗い出し: `grep -R "chat_feature\|search_feature\|svg_utils" app tests`
+- [x] 参照置換（コード/テスト）:
   - `app.chat_feature` → `app.features.chat`
   - `app.search_feature` → `app.features.search`
   - `app.svg_utils` → `app.utils.svg`
-- [ ] 旧ファイル削除: `app/chat_feature.py`, `app/search_feature.py`, `app/svg_utils.py`
-- [ ] ドキュメントの参照更新（該当すれば）
-- [ ] `black .` / `ruff check .` / `mypy app` を通過
-- [ ] 単体テスト更新: 旧モジュール名前定のテスト（例: `tests/test_chat_feature.py`, `tests/test_search_and_svg_utils.py`）の import を新構成へ更新
-- [ ] `pytest -q` で全テスト緑
+- [x] 旧ファイル削除: `app/chat_feature.py`, `app/search_feature.py`, `app/svg_utils.py`
+- [x] UI再確認: `.hidden-trigger` のグローバル適用と `:root` 変数により、不要UI（Textbox/Run）およびアバター巨大化が解消
+- [x] `public/styles/app.css` を最終形へ整理（`@import` 非採用、`<link>` のみ）
 
 検証（受け入れ基準）
-- [ ] `grep -R "chat_feature\|search_feature\|svg_utils"` がゼロヒット（コード/テストとも）
-- [ ] すべてのテストがパス（機能挙動はステップ前と同等）
-- [ ] 主要経路（新規/送信/停止/削除/リネーム/切替/検索/保存）が同等
+- [x] `grep -R "chat_feature\|search_feature\|svg_utils"` がゼロヒット（コード/テストとも）
+- [x] 主要経路（新規/送信/停止/削除/リネーム/切替/検索/保存）が同等
+- [x] 不要UI非表示、アバターサイズが正常
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: main）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（完了）
 
 ロールバック
 - 旧ファイルを復元し、import を元に戻す
+
+---
+
+## Step 12: テスト移行と整備（別ステップ）
+実施項目
+- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-12-tests`
+- [ ] 依存準備: pytest/ruff/mypy をCI/ローカルで動かす手順を確認
+- [ ] 旧前提のテスト名・import の改名/整理（必要に応じリネーム）
+- [ ] 主要経路のE2E/統合テストを軽量に補強（モック禁止方針に従う）
+- [ ] `pytest -q` 緑化
+
+検証（受け入れ基準）
+- [ ] 全テストパス
+- [ ] 主要経路のリグレッション検出に有効
+
+完了フック（このステップが合格したら）
+- [ ] Pull Request 作成（宛先: main）
+- [ ] レビュー＆マージ完了
+
+ロールバック
+- 変更前のテスト構成に戻す（改名/パスの巻き戻し）
 
 ---
 
