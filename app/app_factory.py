@@ -31,6 +31,10 @@ from app.ui.threads_ui import (
     list_messages as ui_list_messages,
 )
 from typing import Literal
+from fastapi import APIRouter
+from app.web.assets import ensure_public_assets, mount_public_and_routes
+from app.web.routers.threads import router as threads_router
+from app.web.routers.settings import router as settings_router
 from app.web.assets import ensure_public_assets, mount_public_and_routes
 
 
@@ -546,93 +550,11 @@ def create_api_app() -> FastAPI:
     def _root():
         return RedirectResponse(url="/gradio")
 
-    # --- REST API (minimum) ---
-
-    @api.get("/api/threads")
-    def list_threads():
-        with db_session() as s:
-            repo = ThreadRepository(s)
-            items = repo.list_recent(limit=100)
-            return [
-                {"id": t.id, "title": t.title, "archived": t.archived}
-                for t in items
-            ]
-
-    @api.post("/api/threads", status_code=201)
-    def create_thread(payload: dict):  # {title?: str}
-        title = (payload.get("title") or "").strip() or None
-        svc = ThreadService()
-        created = svc.create_thread(title_hint=title)
-        with db_session() as s:
-            repo = ThreadRepository(s)
-            t = repo.get(created.thread_id)
-            return {"id": t.id, "title": t.title, "archived": t.archived}
-
-    @api.get("/api/threads/{thread_id}/messages")
-    def list_messages(thread_id: str):
-        with db_session() as s:
-            repo = ThreadRepository(s)
-            t = repo.get(thread_id)
-            if t is None:
-                raise HTTPException(status_code=404, detail="thread not found")
-            msgs = repo.list_messages(thread_id)
-            return [{"role": m.role, "content": m.content} for m in msgs]
-
-    @api.post("/api/threads/{thread_id}/messages", status_code=201)
-    def add_message(thread_id: str, payload: dict):  # {role, content}
-        role: str = payload.get("role")
-        content: str = payload.get("content")
-        if role not in ("user", "assistant", "system"):
-            raise HTTPException(status_code=422, detail="invalid role")
-        svc = ThreadService()
-        if role == "user":
-            svc.add_user_message(thread_id, content)
-        else:
-            svc.add_assistant_message(thread_id, content)
-        return {"ok": True}
-
-    @api.patch("/api/threads/{thread_id}")
-    def update_thread(thread_id: str, payload: dict):  # {title?, archived?}
-        with db_session() as s:
-            repo = ThreadRepository(s)
-            t = repo.get(thread_id)
-            if t is None:
-                raise HTTPException(status_code=404, detail="thread not found")
-            if "title" in payload and payload["title"] is not None:
-                repo.rename(thread_id, (payload["title"] or "").strip())
-            if payload.get("archived") is True:
-                repo.archive(thread_id)
-            return {"id": t.id, "title": t.title, "archived": t.archived}
-
-    @api.delete("/api/threads/{thread_id}", status_code=204)
-    def delete_thread(thread_id: str):
-        with db_session() as s:
-            repo = ThreadRepository(s)
-            ok = repo.delete(thread_id)
-            if not ok:
-                raise HTTPException(status_code=404, detail="thread not found")
-            return None
-
-    @api.get("/api/settings/app")
-    def get_settings():
-        svc = SettingsService()
-        s = svc.get()
-        return {
-            "show_thread_sidebar": s.show_thread_sidebar,
-            "show_threads_tab": s.show_threads_tab,
-        }
-
-    @api.patch("/api/settings/app")
-    def patch_settings(payload: dict):  # {show_thread_sidebar?, show_threads_tab?}
-        svc = SettingsService()
-        s = svc.update(
-            show_thread_sidebar=payload.get("show_thread_sidebar"),
-            show_threads_tab=payload.get("show_threads_tab"),
-        )
-        return {
-            "show_thread_sidebar": s.show_thread_sidebar,
-            "show_threads_tab": s.show_threads_tab,
-        }
+    # --- REST API (via routers) ---
+    api_router = APIRouter(prefix="/api")
+    api_router.include_router(threads_router)
+    api_router.include_router(settings_router)
+    api.include_router(api_router)
 
     return api
 
