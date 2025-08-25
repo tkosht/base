@@ -53,3 +53,10 @@
 ## 今後の改善候補
 - 新規作成直後（発話前）からの即選択切替の仕様可否を検討（`_on_new` での選択反映）
 - E2E テスト（Playwright 等）でのUI選択状態の自動検証の追加
+
+## リファクタリング進捗（app_factory スリム化・再配置）
+- チェックリスト: `checklists/refactor_app_factory_staged_migration.md`（段階移行の手順・受け入れ基準・PRフローを記載）
+- 現在のステータス:
+  - Step 0: 完了（ベースライン検証、/gradio 307許容に更新）
+  - Step 1: 実装中（assets抽出、`app/web/assets.py` 追加し `create_api_app()` から委譲）
+  - 次ステップ: Step 1 のPR作成・マージ後に Step 2（APIルーター分離）
