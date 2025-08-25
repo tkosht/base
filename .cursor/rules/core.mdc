@@ -14,13 +14,13 @@ alwaysApply: true
 尚、同様の問題が発生していないか、Web上で検索して調査できないかも対応の検討スコープにいれてください。
 同じような修正誤りを繰り返さないように、これまでの修正とその結果をまとめてから、次のアクションを定めてください。
 
-**追加原則: `CLAUDE.md` に基づく行動規範**
-- **根本原則:** AIエージェントの全ての思考と行動は、[CLAUDE.md](mdc:CLAUDE.md) に定義された根本的な行動規範 (`MINDSET`, `FORBIDDEN BEHAVIORS` 等) に基づかなければなりません。
+**追加原則: `AGENTS.md` に基づく行動規範**
+- **根本原則:** AIエージェントの全ての思考と行動は、[AGENTS.md](AGENTS.md) に定義された根本的な行動規範 (`MINDSET`, `FORBIDDEN BEHAVIORS` 等) に基づかなければなりません。
 - **ユーザー価値の最大化:** AIの利便性ではなく、常にユーザーの利益を最優先に行動する。
 - **長期的視点の重視:** 短期的な解決策よりも、持続可能で長期的な価値をもたらすアプローチを選択する。
 - **安易な解決策の排除:** 表面的な対応や「手抜き」と見なされる可能性のある解決策を避け、常に最善を尽くす。
 - **事実と検証に基づく判断:** 「おそらく」「たぶん」といった憶測に基づく判断や提案を排除し、常に検証済みの事実とロードされた知識に基づいて行動する。
-- **アクション前の価値評価:** 全てのアクションを実行する前に、[CLAUDE.md VALUE ASSESSMENT MANDATORY](mdc:CLAUDE.md#VALUE-ASSESSMENT-MANDATORY-(価値評価必須)) の観点からその価値と妥当性を評価する:
+- **アクション前の価値評価:** 全てのアクションを実行する前に、[AGENTS.md VALUE ASSESSMENT MANDATORY](mdc:AGENTS.md#VALUE-ASSESSMENT-MANDATORY-(価値評価必須)) の観点からその価値と妥当性を評価する:
     1.  セキュリティ: 機密情報漏洩のリスクはないか？ (あれば即時停止)
     2.  ユーザー価値: 真にユーザーのニーズに応えるものか？
     3.  長期的影響: 持続可能な解決策か、一時しのぎではないか？
@@ -34,7 +34,7 @@ alwaysApply: true
 
 ### 2.1 指示の分析と計画
    <タスク分析>
-   - **知識ロード戦略の実行:** [CLAUDE.md PRE-TASK KNOWLEDGE PROTOCOL](mdc:CLAUDE.md#PRE-TASK-KNOWLEDGE-PROTOCOL-(タスク前必須ナレッジ参照)) に従い、`smart_knowledge_load()` または `comprehensive_knowledge_load()` を適切に選択・実行し、必要な情報を収集せよ。
+   - **知識ロード戦略の実行:** [AGENTS.md PRE-TASK KNOWLEDGE PROTOCOL](AGENTS.md#PRE-TASK-KNOWLEDGE-PROTOCOL-(タスク前必須ナレッジ参照)) に従い、`smart_knowledge_load()` または `comprehensive_knowledge_load()` を適切に選択・実行し、必要な情報を収集せよ。
    - 主要なタスクを簡潔に要約
    - 技術スタック ([project.md](mdc:.cursor/rules/project.md) 参照) の制約内での実装検討
    - 重要な要件と制約を特定
@@ -46,7 +46,7 @@ alwaysApply: true
 ### 2.2 タスクの実行
    - 特定したステップを一つずつ実行し、進捗を報告
    - 実装時はディレクトリ構造・命名規則・共通処理配置に注意 ([project.md](mdc:.cursor/rules/project.md) 参照)
-   - **実行前チェックリスト:** アクションを実行する前に、[CLAUDE.md PRE_EXECUTION_MANDATORY](mdc:CLAUDE.md#CORE-OPERATING-PRINCIPLES-(基本動作原則)) および [CLAUDE.md VALUE ASSESSMENT MANDATORY](mdc:CLAUDE.md#VALUE-ASSESSMENT-MANDATORY-(価値評価必須)) に基づき、以下のような項目をセルフチェックする。
+   - **実行前チェックリスト:** アクションを実行する前に、[AGENTS.md PRE_EXECUTION_MANDATORY](AGENTS.md#CORE-OPERATING-PRINCIPLES-(基本動作原則)) および [AGENTS.md VALUE ASSESSMENT MANDATORY](AGENTS.md#VALUE-ASSESSMENT-MANDATORY-(価値評価必須)) に基づき、以下のような項目をセルフチェックする。
      - AIコンプライアンス (`pre_action_check.py` 等)
      - 作業ブランチの妥当性 (main/masterでないこと)
      - テスト駆動開発の準備 (テストを先に書く)
@@ -93,7 +93,7 @@ alwaysApply: true
 - **UI/UXデザイン変更禁止。** 必要なら理由示し承認後に実施。
 - **技術スタック (バージョン含む) の勝手な変更禁止。** 必要なら理由示し承認後に実施。
 - **編集ツールの限界:** `edit_file` や `reapply` は、複雑な変更やファイル全体の書き換え時に失敗することがあります。編集が適用されない場合は、編集内容を簡略化する、ステップを分割する、またはルールに記載の代替手段を試してください。
-- **`CLAUDE.md` の絶対的優先:** 本 `core.md` および他のルールファイルは `CLAUDE.md` のプロトコルを補完・具体化するものです。解釈に迷う場合や、より根本的な運用指針については、常に `CLAUDE.md` ([CLAUDE.md](mdc:CLAUDE.md)) の記述を正としてください。
+- **`AGENTS.md` の絶対的優先:** 本 `core.md` および他のルールファイルは `AGENTS.md` のプロトコルを補完・具体化するものです。解釈に迷う場合や、より根本的な運用指針については、常に `AGENTS.md` ([AGENTS.md](AGENTS.md)) の記述を正としてください。
 
 ## 3.1 ディレクトリ構造の変更と追加
 - **原則:** `project.md` に定義されたディレクトリ構造を遵守する。
@@ -156,7 +156,7 @@ alwaysApply: true
 ## 6. ワークフロー定義
 
 ### 6.1 ルール読み込み（必須）
-1. **マスタープロトコルの確認:** まず、AIエージェント運用の最上位プロトコルである `CLAUDE.md` ([CLAUDE.md](mdc:CLAUDE.md)) の存在を認識し、特にタスク開始時の知識ロード戦略 (`PRE-TASK KNOWLEDGE PROTOCOL`)、基本動作原則 (`CORE OPERATING PRINCIPLES`)、およびセキュリティ絶対ルール (`SECURITY ABSOLUTE`) の概要を把握する。以降のルール解釈およびタスク実行は、これらの `CLAUDE.md` の指示を最優先とする。
+1. **マスタープロトコルの確認:** まず、AIエージェント運用の最上位プロトコルである `AGENTS.md` ([AGENTS.md](AGENTS.md)) の存在を認識し、特にタスク開始時の知識ロード戦略 (`PRE-TASK KNOWLEDGE PROTOCOL`)、基本動作原則 (`CORE OPERATING PRINCIPLES`)、およびセキュリティ絶対ルール (`SECURITY ABSOLUTE`) の概要を把握する。以降のルール解釈およびタスク実行は、これらの `AGENTS.md` の指示を最優先とする。
 2. コアルール (`core.md`、このファイル) を読み込む。
 3. プロジェクトルール (`project.md`) を読み込む。
 4. ルール体系定義 (`rules.md`) を読み込む。
@@ -322,7 +322,7 @@ alwaysApply: true
 
 ## 🚨 **絶対的セキュリティ違反防止ルール** - **最優先**
 
-このルールは [CLAUDE.md SECURITY ABSOLUTE](mdc:CLAUDE.md#SECURITY-ABSOLUTE-(セキュリティ絶対)) の指示に基づくものです。違反検知時は即座に操作を停止してください。
+このルールは [AGENTS.md SECURITY ABSOLUTE](AGENTS.md#SECURITY-ABSOLUTE-(セキュリティ絶対)) の指示に基づくものです。違反検知時は即座に操作を停止してください。
 
 ### **機密情報表示の完全禁止**
 - **`.env`ファイルの内容表示**: `cat .env`, `less .env`, `head .env`, `tail .env` 等の実行を**絶対禁止**
