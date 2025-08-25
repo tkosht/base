@@ -124,17 +124,18 @@
 
 ## Step 5: UIヘッダー/アバター抽出
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-5`
-- [ ] `app/ui/head.py` に `<head>` 構築（favicon Data URI/CSS/JSリンク）
-- [ ] `app/ui/avatars.py` にアバターSVG生成
-- [ ] `create_blocks()`（後述）から利用
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-5`
+- [x] `app/ui/head.py` に `<head>` 構築（favicon Data URI/CSS/JSリンク）
+- [x] `app/ui/avatars.py` にアバターSVG生成
+- [x] `create_blocks()`（後述）から利用
 
 検証（受け入れ基準）
 - [ ] ページタイトル/アイコン/外部JSの動作が同等（`threads_ui.js` が機能）
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+  - PR: https://github.com/tkosht/base/pull/10
 
 ロールバック
 - 直前のimport差分を元に戻す
