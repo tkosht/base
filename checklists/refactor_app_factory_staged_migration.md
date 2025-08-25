@@ -103,18 +103,19 @@
 
 ## Step 4: featuresへの移行（chat/search）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-4`
-- [ ] `app/chat_feature.py` → `app/features/chat.py`
-- [ ] `app/search_feature.py` → `app/features/search.py`
-- [ ] Gradio側のimport差し替え（関数名は不変）
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-4`
+- [x] `app/chat_feature.py` → `app/features/chat.py`
+- [x] `app/search_feature.py` → `app/features/search.py`
+- [x] Gradio側のimport差し替え（関数名は不変）
 
 検証（受け入れ基準）
 - [ ] チャットの送受信/停止/ステータス復帰が現行同等
 - [ ] 設定タブの検索/選択/保存が現行同等
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+  - PR: https://github.com/tkosht/base/pull/9
 
 ロールバック
 - ファイル/インポートを元に戻す

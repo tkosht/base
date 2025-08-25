@@ -13,8 +13,8 @@ from fastapi.responses import RedirectResponse
 import gradio as gr
 
 from app.utils.svg import make_favicon_data_uri, write_emoji_svg
-from app.chat_feature import guard_and_prep, stream_llm, stop_chat
-from app.search_feature import suggest, on_change, chips_html, neutralize_email
+from app.features.chat import guard_and_prep, stream_llm, stop_chat
+from app.features.search import suggest, on_change, chips_html, neutralize_email
 from app.db.bootstrap import bootstrap_schema_and_seed
 from app.db.session import db_session
 from app.repositories.thread_repo import ThreadRepository
