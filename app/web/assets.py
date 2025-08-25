@@ -6,11 +6,7 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-try:
-    # Step 3 以降に utils/svg.py へ移行予定
-    from app.utils import svg as svg_utils  # type: ignore
-except Exception:  # pragma: no cover - 互換のためのフォールバック
-    from app import svg_utils  # type: ignore
+from app.utils import svg as svg_utils
 
 
 def ensure_public_assets(public_dir: Path) -> None:
