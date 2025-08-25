@@ -19,16 +19,16 @@
 ---
 
 ## Step 0: 準備
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-0`
-- [ ] 変更影響の把握（現行動作のスクリーンショット/メモ）
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-0`
+- [x] 変更影響の把握（現行動作のスクリーンショット/メモ）
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop など適切なベース）
-- [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+- [x] Pull Request 作成（宛先: develop など適切なベース）
+- [x] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
 
 検証（受け入れ基準）
-- [ ] `uvicorn app.demo:api --reload` で起動し、現行UI/RESTが正常
-- [ ] `/gradio` は `200 OK` または `307 → /gradio/` のいずれかを許容（環境差異によるリダイレクトを仕様として認容）
+- [x] `uvicorn app.demo:api --reload` で起動し、現行UI/RESTが正常
+- [x] `/gradio` は `200 OK` または `307 → /gradio/` のいずれかを許容（環境差異によるリダイレクトを仕様として認容）
 
 ロールバック
 - ブランチを破棄
@@ -37,18 +37,18 @@
 
 ## Step 1: 静的・PWAの抽出（assets）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-1`
-- [ ] `app/web/assets.py` を新規作成し、`/public` マウント、`/manifest.json`、`/favicon.ico` の提供関数を作成
-- [ ] `create_api_app()` から上記関数を呼び出す形に置換（挙動は等価）
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-1`
+- [x] `app/web/assets.py` を新規作成し、`/public` マウント、`/manifest.json`、`/favicon.ico` の提供関数を作成
+- [x] `create_api_app()` から上記関数を呼び出す形に置換（挙動は等価）
 
 検証（受け入れ基準）
-- [ ] `GET /public/...` が配信される
-- [ ] `GET /manifest.json` が200で現行と同じ内容
-- [ ] `GET /favicon.ico` が200（MIME/中身は現行同等）
+- [x] `GET /public/...` が配信される
+- [x] `GET /manifest.json` が200で現行と同じ内容
+- [x] `GET /favicon.ico` が200（MIME/中身は現行同等）
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
-- [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+- [x] Pull Request 作成（宛先: develop）
+- [x] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
 
 ロールバック
 - 置換前の `app_factory.py` に戻す / 新規ファイル削除
@@ -57,21 +57,21 @@
 
 ## Step 2: APIルーター分離
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-2`
-- [ ] `app/web/routers/threads.py` に `/api/threads*` を移設
-- [ ] `app/web/routers/settings.py` に `/api/settings/app` を移設
-- [ ] `create_api_app()` は `include_router(...)` のみ呼ぶ
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-2`
+- [x] `app/web/routers/threads.py` に `/api/threads*` を移設
+- [x] `app/web/routers/settings.py` に `/api/settings/app` を移設
+- [x] `create_api_app()` は `include_router(...)` のみ呼ぶ
 
 検証（受け入れ基準）
-- [ ] `GET /api/threads` 200（件数/shape 既存同等）
-- [ ] `POST /api/threads` 201 + 作成結果
-- [ ] `GET /api/threads/{id}/messages` 200/404
-- [ ] `PATCH /api/threads/{id}` 200（タイトル/アーカイブ）
-- [ ] `DELETE /api/threads/{id}` 204/404
-- [ ] `GET/PATCH /api/settings/app` 200
+- [x] `GET /api/threads` 200（件数/shape 既存同等）
+- [x] `POST /api/threads` 201 + 作成結果
+- [x] `GET /api/threads/{id}/messages` 200/404
+- [x] `PATCH /api/threads/{id}` 200（タイトル/アーカイブ）
+- [x] `DELETE /api/threads/{id}` 204/404
+- [x] `GET/PATCH /api/settings/app` 200
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: develop）
 - [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
 
 ロールバック
