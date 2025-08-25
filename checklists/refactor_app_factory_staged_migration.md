@@ -163,16 +163,17 @@
 
 ## Step 7: タブ分割（threads_tab）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-7`
-- [ ] `app/ui/tabs/threads_tab.py` に UI 構築/イベント配線（open/rename/share/owner/delete, refresh）
-- [ ] `threads_ui.py` を内部で再利用
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-7`（実施: step-6 ブランチ上で同時実装）
+- [x] `app/ui/tabs/threads_tab.py` に UI 構築/イベント配線（open/rename/share/owner/delete, refresh）
+- [x] `threads_ui.py` を内部で再利用
 
 検証（受け入れ基準）
 - [ ] 一覧の更新/選択/コンテキスト操作（rename/delete 等）が同等
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+  - PR: https://github.com/tkosht/base/pull/12
 
 ロールバック
 - タブ内ロジックを `app_factory.py` 側へ一時的に戻す

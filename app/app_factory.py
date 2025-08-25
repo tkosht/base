@@ -352,51 +352,28 @@ def create_blocks() -> gr.Blocks:
 
             threads_tab = gr.TabItem("スレッド")  # type: ignore[index]
             with threads_tab:
-                # サイドバーと同様の縦並び
                 threads_state2 = gr.State([])
                 threads_html_tab = gr.HTML("", elem_id="threads_list_tab")
 
-                def _refresh_threads_tab(selected_tid: str = ""):
-                    items = ui_list_threads()
-                    html = build_threads_html_tab(items, selected_tid)
-                    return gr.update(value=html), items
+                from app.ui.tabs.threads_tab import setup_threads_tab
 
-                def _open_by_index_tab(items, idx: int):
-                    if not items or idx >= len(items):
-                        return "", []
-                    tid = items[idx].get('id') or ''
-                    history = ui_list_messages(tid) if tid else []
-                    return tid, history
-
-                demo.load(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-
-                # コンテキストメニューのアクション設定
-                # ここでのみ1本のバインド（kind変更）でディスパッチし、両方の一覧を更新（同一HTML）
-                _evt_kind = action_kind.change(
-                    _dispatch_action_both,
-                    inputs=[action_kind, action_thread_id, current_thread_id, action_arg],
-                    outputs=[current_thread_id, chat, threads_html, threads_html_tab],
-                )
-                # 念のため、rename/delete直後も確実にタブ側を再フェッチ
-                _evt_kind.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-                # サイドバー側のリネーム即時反映に追随して、タブ側も定期的に追従
-                threads_html.change(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-                # サイドバーの「＋ 新規」後にタブ側の一覧も即更新
-                _evt_new.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-
-                # サイドバーの「＋ 新規」後にタブ側の一覧も即更新
-                _evt_new.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
-
-                # エッジ列の「＋」で新規作成
-                try:
-                    new_btn_edge.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
-                    new_btn_edge.click(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-                except Exception:
-                    pass
-
-                # current_thread_id が変更されたら、両方の一覧を即時更新（自動作成時の即時反映）
-                current_thread_id.change(_refresh_threads, [current_thread_id], [threads_html, threads_state]).then(
-                    _refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2]
+                setup_threads_tab(
+                    demo=demo,
+                    current_thread_id=current_thread_id,
+                    action_kind=action_kind,
+                    action_thread_id=action_thread_id,
+                    action_arg=action_arg,
+                    chat=chat,
+                    threads_html=threads_html,
+                    evt_new=_evt_new,
+                    threads_state=threads_state,
+                    ui_list_threads=ui_list_threads,
+                    ui_list_messages=ui_list_messages,
+                    dispatch_action_both=_dispatch_action_both,
+                    threads_html_tab=threads_html_tab,
+                    threads_state2=threads_state2,
+                    new_btn_edge=new_btn_edge,
+                    on_new=_on_new,
                 )
 
             with gr.TabItem("設定"):
