@@ -6,15 +6,13 @@
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 import time
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import RedirectResponse
 import gradio as gr
 
-from app.svg_utils import make_favicon_data_uri, build_favicon_svg, write_emoji_svg
+from app.svg_utils import make_favicon_data_uri, write_emoji_svg
 from app.chat_feature import guard_and_prep, stream_llm, stop_chat
 from app.search_feature import suggest, on_change, chips_html, neutralize_email
 from app.db.bootstrap import bootstrap_schema_and_seed
@@ -33,6 +31,7 @@ from app.ui.threads_ui import (
     list_messages as ui_list_messages,
 )
 from typing import Literal
+from app.web.assets import ensure_public_assets, mount_public_and_routes
 
 
 DEFAULT_STATUS_TEXT = "準備OK! いつでもチャットを開始できます。"
@@ -535,48 +534,17 @@ def create_blocks() -> gr.Blocks:
 
 def create_api_app() -> FastAPI:
     public_dir = Path(__file__).resolve().parent.parent / "public"
-    manifest_path = public_dir / "manifest.json"
-    os.makedirs(public_dir, exist_ok=True)
-
-    if not manifest_path.exists():
-        manifest_path.write_text(
-            (
-                '{\n'
-                '  "name": "でもあぷり",\n'
-                '  "short_name": "でもあぷり",\n'
-                '  "start_url": ".",\n'
-                '  "display": "standalone",\n'
-                '  "background_color": "#111827",\n'
-                '  "theme_color": "#111827",\n'
-                '  "icons": []\n'
-                '}\n'
-            ),
-            encoding="utf-8",
-        )
 
     # Ensure DB schema and seed data are prepared on startup
     bootstrap_schema_and_seed()
 
     api = FastAPI()
-    api.mount("/public", StaticFiles(directory=str(public_dir)), name="public")
-
-    @api.get("/manifest.json")
-    def _manifest_file():
-        return FileResponse(str(manifest_path), media_type="application/manifest+json")
+    ensure_public_assets(public_dir)
+    mount_public_and_routes(api, public_dir)
 
     @api.get("/")
     def _root():
         return RedirectResponse(url="/gradio")
-
-    favicon_path = public_dir / "favicon.ico"
-    if not favicon_path.exists():
-        svg = build_favicon_svg("🦜", size=64, circle_fill="#1f2937", ring_color="#fff", ring_width=2)
-        (public_dir / "favicon.svg").write_text(svg, encoding="utf-8")
-        favicon_path.write_text(svg, encoding="utf-8")
-
-    @api.get("/favicon.ico")
-    def _favicon():
-        return FileResponse(str(favicon_path), media_type="image/svg+xml")
 
     # --- REST API (minimum) ---
 
