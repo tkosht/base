@@ -172,7 +172,7 @@
 
 完了フック（このステップが合格したら）
 - [x] Pull Request 作成（宛先: main）
-- [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+- [x] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
   - PR: https://github.com/tkosht/base/pull/12
 
 ロールバック
@@ -205,11 +205,12 @@
 - [x] `app/ui/tabs/settings_tab.py` に UI/イベント（検索/選択/保存）
 
 検証（受け入れ基準）
-- [ ] ヒット件数/候補表示/チップ/差分保存表示が同等
+- [x] ヒット件数/候補表示/チップ/差分保存表示が同等
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
-- [ ] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+- [x] Pull Request 作成（宛先: main）
+- [x] レビュー＆マージ完了を待つ（マージ後に次ステップへ）
+  - PR: https://github.com/tkosht/base/pull/14
 
 ロールバック
 - タブ内ロジックを `app_factory.py` 側へ一時的に戻す
@@ -218,19 +219,20 @@
 
 ## Step 10: 最終薄型化/委譲
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-10`
-- [ ] `app/ui/app_ui.py` に `create_blocks()` を集約
-- [ ] `app/web/factory.py` に `create_api_app()` と最小ロジックを集約
-- [ ] `create_app()` は統合のみ
-- [ ] `app/app_factory.py` は薄い委譲を残す（外部互換）
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-10`
+- [x] `app/ui/app_ui.py` に `create_blocks()` を集約
+- [x] `app/web/factory.py` に `create_api_app()` と最小ロジックを集約
+- [x] `create_app()` は統合のみ
+- [x] `app/app_factory.py` は薄い委譲を残す（外部互換）
 
 検証（受け入れ基準）
 - [ ] 主要経路がすべて現行同等（新規/送信/停止/削除/リネーム/切替/検索/保存）
 - [ ] ルーティング/パス/HTTPコード/文言/イベント順序の差分なし
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: develop）
+- [x] Pull Request 作成（宛先: main）
 - [ ] レビュー＆マージ完了を待つ（完了）
+  - PR: https://github.com/tkosht/base/pull/15
 
 ロールバック
 - ファイル構成の一時巻き戻し（委譲レイヤは残しておくと復旧容易）
