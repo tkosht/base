@@ -363,7 +363,7 @@ def create_blocks() -> gr.Blocks:
                         "テスト3(test3@test.com)",
                     ]
                     selected_state = gr.State(selected)
-                    hit_info = gr.Markdown("", elem_classes=["combo-hint"])
+                    hit_info = gr.Markdown("", elem_classes=["combo-hint"]) 
                     combo = gr.Dropdown(
                         choices=selected_state.value,
                         value=selected_state.value,
@@ -373,38 +373,26 @@ def create_blocks() -> gr.Blocks:
                     )
                     chips = gr.HTML(chips_html([]))
 
-                search_box.submit(
-                    suggest, [search_box, combo, selected_state], [combo, hit_info]
-                )
-                search_btn.click(
-                    suggest, [search_box, combo, selected_state], [combo, hit_info]
-                )
-
-                combo.change(
-                    on_change, [combo, selected_state], [selected_state, chips]
-                )
                 # 保存ボタン: 選択の差分（追加/削除）を表示
                 saved_state = gr.State(selected_state.value)
                 save_btn = gr.Button("保存")
                 save_hint = gr.Markdown("")
 
-                def _save_selected(current_list, previous_list):
-                    cur = [str(x) for x in (current_list or [])]
-                    prev = [str(x) for x in (previous_list or [])]
-                    added = [x for x in cur if x not in prev]
-                    removed = [x for x in prev if x not in cur]
-                    added_cnt = len(added)
-                    removed_cnt = len(removed)
-                    added_part = f"｜追加 {added_cnt} 件" + (": " + ", ".join(neutralize_email(x) for x in added) if added_cnt else "")
-                    removed_part = f"｜削除 {removed_cnt} 件" + (": " + ", ".join(neutralize_email(x) for x in removed) if removed_cnt else "")
-                    summary = "保存しました" + added_part + removed_part
-                    try:
-                        gr.Info(summary)
-                    except Exception:
-                        pass
-                    return cur, summary
-
-                save_btn.click(_save_selected, [selected_state, saved_state], [saved_state, save_hint])
+                from app.ui.tabs.settings_tab import setup_settings_tab
+                setup_settings_tab(
+                    search_box=search_box,
+                    search_btn=search_btn,
+                    combo=combo,
+                    hit_info=hit_info,
+                    chips=chips,
+                    selected_state=selected_state,
+                    saved_state=saved_state,
+                    save_btn=save_btn,
+                    save_hint=save_hint,
+                    suggest=suggest,
+                    on_change=on_change,
+                    neutralize_email=neutralize_email,
+                )
 
         demo.queue(max_size=16, default_concurrency_limit=4)
     return demo
