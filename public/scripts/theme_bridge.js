@@ -63,19 +63,14 @@
       var styleId = 'ui-theme-bridge';
       var node = sr.getElementById ? sr.getElementById(styleId) : sr.querySelector('#'+styleId);
       var css;
-      var common = ".icon36, .icon36 *{box-sizing:border-box;}\n"
-                 + ".icon36{width:36px;min-width:36px;}\n"
-                 + ".icon36>button{width:36px;min-width:36px;height:36px;padding:0;line-height:36px;display:inline-flex;align-items:center;justify-content:center;}\n";
       if(isLight){
         css = "#threads_list .thread-title, #threads_list_tab .thread-title{color:#111827 !important;}\n"
             + "label, [data-testid='block-label'], .label{color:#111827 !important;}\n"
-            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#111827 !important;}\n"
-            + common;
+            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#111827 !important;}\n";
       } else {
         css = "#threads_list .thread-title, #threads_list_tab .thread-title{color:#e5e7eb !important;}\n"
             + "label, [data-testid='block-label'], .label{color:#e5e7eb !important;}\n"
-            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#e5e7eb !important;}\n"
-            + common;
+            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#e5e7eb !important;}\n";
       }
       if(!node){
         node = document.createElement('style');
