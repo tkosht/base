@@ -28,5 +28,3 @@ def patch_settings(payload: dict):  # {show_thread_sidebar?, show_threads_tab?}
         "show_thread_sidebar": s.show_thread_sidebar,
         "show_threads_tab": s.show_threads_tab,
     }
-
-

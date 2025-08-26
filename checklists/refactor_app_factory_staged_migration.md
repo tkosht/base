@@ -267,22 +267,43 @@
 
 ## Step 12: テスト移行と整備（別ステップ）
 実施項目
-- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-12-tests`
-- [ ] 依存準備: pytest/ruff/mypy をCI/ローカルで動かす手順を確認
-- [ ] 旧前提のテスト名・import の改名/整理（必要に応じリネーム）
-- [ ] 主要経路のE2E/統合テストを軽量に補強（モック禁止方針に従う）
-- [ ] `pytest -q` 緑化
+- [x] 作業ブランチ作成 `feature/refactor-app-factory/step-12-tests`
+- [x] 依存準備: pytest/ruff/mypy をCI/ローカルで動かす手順を確認
+- [x] 旧前提のテスト名・import の改名/整理（必要に応じリネーム）
+- [x] 主要経路のE2E/統合テストを軽量に補強（モック禁止方針に従う）
+- [x] `pytest -q` 緑化
 
 検証（受け入れ基準）
-- [ ] 全テストパス
-- [ ] 主要経路のリグレッション検出に有効
+- [x] 全テストパス（18 passed）
+- [x] 主要経路のリグレッション検出に有効（API/サービス/UIコントローラ）
 
 完了フック（このステップが合格したら）
-- [ ] Pull Request 作成（宛先: main）
-- [ ] レビュー＆マージ完了
+- [x] Pull Request 作成（宛先: main）
+- [x] レビュー＆マージ完了
+  - PR: https://github.com/tkosht/base/pull/18
 
 ロールバック
 - 変更前のテスト構成に戻す（改名/パスの巻き戻し）
+
+---
+
+## Step 13: DoD最終確認とクローズ
+実施項目
+- [ ] 作業ブランチ作成 `feature/refactor-app-factory/step-13-dod`
+- [ ] 本チェックリストの全PR状態確認と未マージ分の対応（マージ or クローズ）
+- [ ] `black .` / `ruff check .` / `mypy app` / `pytest -q` を全て通過
+- [ ] `app/app_factory.py` の行数が 300LoC 未満で読みやすいことを確認
+- [ ] 主要経路の手動確認（/gradio, /public, /api/... のレスポンス/イベント順序/UI契約）
+
+検証（受け入れ基準）
+- [ ] 「完了条件（DoD）」の全チェックが [x] になる
+
+完了フック（このステップが合格したら）
+- [ ] Pull Request 作成（宛先: main）
+- [ ] レビュー＆マージ完了（本リファクタリングのクローズ）
+
+ロールバック
+- 未マージPRはそのまま保留、問題発生PRは個別に revert。委譲レイヤ構成（Step 10/11）に一時復帰可能。
 
 ---
 

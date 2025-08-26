@@ -22,6 +22,3 @@ def test_get_and_update_settings():
 
     s2 = svc.update(show_thread_sidebar=False)
     assert s2.show_thread_sidebar is False and s2.show_threads_tab is True
-
-
-

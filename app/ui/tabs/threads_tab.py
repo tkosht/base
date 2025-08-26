@@ -35,11 +35,17 @@ def setup_threads_tab(
         history = ui_list_messages(tid) if tid else []
         return tid, history
 
-    demo.load(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
+    demo.load(
+        _refresh_threads_tab,
+        [current_thread_id],
+        [threads_html_tab, threads_state2],
+    )
 
     def _dispatch_and_sync(kind: str, tid: str, cur_tid: str, arg: str):
         # tabs/side both update via backend
-        new_cur, new_history, html_side, html_tab = dispatch_action_both(kind, tid, cur_tid, arg)
+        new_cur, new_history, html_side, html_tab = dispatch_action_both(
+            kind, tid, cur_tid, arg
+        )
         # ensure both lists reflect the selected id via data-selected
         try:
             # this is client-side sync; safe no-op if not available
@@ -53,16 +59,34 @@ def setup_threads_tab(
         inputs=[action_kind, action_thread_id, current_thread_id, action_arg],
         outputs=[current_thread_id, chat, threads_html, threads_html_tab],
     )
-    _evt_kind.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-    threads_html.change(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-    evt_new.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
-    evt_new.then(_refresh_threads_tab, None, [threads_html_tab, threads_state2])
+    _evt_kind.then(
+        _refresh_threads_tab,
+        [current_thread_id],
+        [threads_html_tab, threads_state2],
+    )
+    threads_html.change(
+        _refresh_threads_tab,
+        [current_thread_id],
+        [threads_html_tab, threads_state2],
+    )
+    evt_new.then(
+        _refresh_threads_tab,
+        [current_thread_id],
+        [threads_html_tab, threads_state2],
+    )
+    evt_new.then(
+        _refresh_threads_tab, None, [threads_html_tab, threads_state2]
+    )
 
     if new_btn_edge is not None:
         try:
             # 新規作成の処理をサイドバー開時と同一シーケンスで実行
             if on_new is not None:
-                edge_new = new_btn_edge.click(on_new, None, [threads_html, threads_state, current_thread_id, chat])
+                edge_new = new_btn_edge.click(
+                    on_new,
+                    None,
+                    [threads_html, threads_state, current_thread_id, chat],
+                )
                 # 選択状態の即時解除（スレッドタブ/サイドバーの両方を対象）
                 edge_new.then(
                     lambda: None,
@@ -71,10 +95,16 @@ def setup_threads_tab(
                     js="()=>{ try {\n                      const sels=['#threads_list','#threads_list_tab'];\n                      for (const id of sels) {\n                        const root = (window.qsDeep?window.qsDeep(id):document.querySelector(id));\n                        if (!root) continue;\n                        const cont = (window.qsWithin?window.qsWithin(root,'.threads-list'):root.querySelector('.threads-list'));\n                        if (cont && cont.removeAttribute) cont.removeAttribute('data-selected');\n                        try { root.querySelectorAll('.thread-link.selected').forEach(el=>el.classList.remove('selected')); } catch(e){}\n                      }\n                      if (window.clearSelection) window.clearSelection();\n                    } catch(_){} }",
                 )
                 # タブ側の一覧をリフレッシュ
-                edge_new.then(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
+                edge_new.then(
+                    _refresh_threads_tab,
+                    [current_thread_id],
+                    [threads_html_tab, threads_state2],
+                )
             else:
-                new_btn_edge.click(_refresh_threads_tab, [current_thread_id], [threads_html_tab, threads_state2])
+                new_btn_edge.click(
+                    _refresh_threads_tab,
+                    [current_thread_id],
+                    [threads_html_tab, threads_state2],
+                )
         except Exception:
             pass
-
-

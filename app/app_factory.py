@@ -18,5 +18,3 @@ def create_app() -> FastAPI:
     demo = _create_blocks()
     gr.mount_gradio_app(api, demo, path="/gradio")
     return api
-
-

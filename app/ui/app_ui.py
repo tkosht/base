@@ -7,7 +7,12 @@ from app.ui.avatars import prepare_avatars
 from app.ui.html.threads_html import build_threads_html, build_threads_html_tab
 from app.ui.tabs.chat_tab import setup_chat_tab
 from app.ui.tabs.threads_tab import setup_threads_tab
-from app.features.search import suggest, on_change, chips_html, neutralize_email
+from app.features.search import (
+    suggest,
+    on_change,
+    chips_html,
+    neutralize_email,
+)
 from app.ui.threads_ui import (
     list_threads as ui_list_threads,
     create_thread as ui_create_thread,
@@ -44,15 +49,24 @@ def create_blocks() -> gr.Blocks:
                     sidebar_col = gr.Column(scale=1, min_width=260, visible=settings.show_thread_sidebar, elem_id="sidebar_col")  # type: ignore[index]
                     with sidebar_col:
                         with gr.Row(elem_id="sidebar-toggle-row"):
-                            new_btn = gr.Button("＋ 新規", scale=1, elem_id="new_btn_main")
-                            toggle_btn_left = gr.Button("≡", scale=0, min_width=36, elem_id="sidebar_toggle_btn")
+                            new_btn = gr.Button(
+                                "＋ 新規", scale=1, elem_id="new_btn_main"
+                            )
+                            toggle_btn_left = gr.Button(
+                                "≡",
+                                scale=0,
+                                min_width=36,
+                                elem_id="sidebar_toggle_btn",
+                            )
                         threads_state = gr.State([])
                         threads_html = gr.HTML("", elem_id="threads_list")
 
                     edge_col = gr.Column(scale=0, min_width=24, visible=not settings.show_thread_sidebar, elem_id="edge_col")  # type: ignore[index]
                     with edge_col:
                         toggle_btn_edge = gr.Button("≡", scale=0, min_width=24)
-                        new_btn_edge = gr.Button("＋", scale=0, min_width=24, elem_id="new_btn_edge")
+                        new_btn_edge = gr.Button(
+                            "＋", scale=0, min_width=24, elem_id="new_btn_edge"
+                        )
 
                     gr.HTML("<div class='v-sep'></div>", elem_id="vsep")
 
@@ -71,15 +85,26 @@ def create_blocks() -> gr.Blocks:
                                 show_label=False,
                                 lines=1,
                             )
-                            stop = gr.Button("⏹", elem_id="stopbtn", visible=False, interactive=False)
-                            send = gr.Button("↑", elem_id="sendbtn", visible=True)
+                            stop = gr.Button(
+                                "⏹",
+                                elem_id="stopbtn",
+                                visible=False,
+                                interactive=False,
+                            )
+                            send = gr.Button(
+                                "↑", elem_id="sendbtn", visible=True
+                            )
 
-                        status = gr.Markdown(DEFAULT_STATUS_TEXT, elem_id="status")
+                        status = gr.Markdown(
+                            DEFAULT_STATUS_TEXT, elem_id="status"
+                        )
 
                         go_flag = gr.State(False)
                         prompt_st = gr.State("")
 
-                        from app.ui.tabs.chat_tab import setup_chat_tab as _setup_chat
+                        from app.ui.tabs.chat_tab import (
+                            setup_chat_tab as _setup_chat,
+                        )
 
                         chat_hooks = _setup_chat(
                             settings=settings,
@@ -122,7 +147,9 @@ def create_blocks() -> gr.Blocks:
                     history = ui_list_messages(tid) if tid else []
                     return tid, history
 
-                def _dispatch_action_common(kind: str, tid: str, cur_tid: str, arg: str):
+                def _dispatch_action_common(
+                    kind: str, tid: str, cur_tid: str, arg: str
+                ):
                     kind = (kind or "").strip()
                     tid = (tid or "").strip()
                     arg = (arg or "").strip()
@@ -135,8 +162,11 @@ def create_blocks() -> gr.Blocks:
                         return new_tid, history, gr.update()
 
                     if kind == "rename" and tid and arg:
-                        from app.repositories.thread_repo import ThreadRepository
+                        from app.repositories.thread_repo import (
+                            ThreadRepository,
+                        )
                         from app.db.session import db_session
+
                         with db_session() as s:
                             repo = ThreadRepository(s)
                             repo.rename(tid, arg)
@@ -153,30 +183,43 @@ def create_blocks() -> gr.Blocks:
 
                     if kind == "owner" and tid:
                         try:
-                            gr.Info("オーナー変更は現在未対応です。後日提供予定です。")
+                            gr.Info(
+                                "オーナー変更は現在未対応です。後日提供予定です。"
+                            )
                         except Exception:
                             pass
                         return no_changes()
 
                     if kind == "delete" and tid:
-                        from app.repositories.thread_repo import ThreadRepository
+                        from app.repositories.thread_repo import (
+                            ThreadRepository,
+                        )
                         from app.db.session import db_session
+
                         with db_session() as s:
                             repo = ThreadRepository(s)
                             repo.archive(tid)
                         items = ui_list_threads()
                         new_cur = cur_tid if cur_tid != tid else ""
                         html = build_threads_html(items, new_cur)
-                        new_history = [] if new_cur == "" else ui_list_messages(new_cur)
+                        new_history = (
+                            [] if new_cur == "" else ui_list_messages(new_cur)
+                        )
                         return new_cur, new_history, gr.update(value=html)
 
                     return no_changes()
 
-                def _dispatch_action_chat(kind: str, tid: str, cur_tid: str, arg: str):
+                def _dispatch_action_chat(
+                    kind: str, tid: str, cur_tid: str, arg: str
+                ):
                     return _dispatch_action_common(kind, tid, cur_tid, arg)
 
-                def _dispatch_action_both(kind: str, tid: str, cur_tid: str, arg: str):
-                    new_cur, new_history, html = _dispatch_action_common(kind, tid, cur_tid, arg)
+                def _dispatch_action_both(
+                    kind: str, tid: str, cur_tid: str, arg: str
+                ):
+                    new_cur, new_history, html = _dispatch_action_common(
+                        kind, tid, cur_tid, arg
+                    )
                     return new_cur, new_history, html, html
 
                 def _toggle_sidebar_left():
@@ -187,13 +230,22 @@ def create_blocks() -> gr.Blocks:
                     s = toggle_sidebar_visibility()
                     return gr.update(visible=s["show_thread_sidebar"]), gr.update(visible=not s["show_thread_sidebar"])  # type: ignore[index]
 
-                toggle_btn_left.click(_toggle_sidebar_left, None, [sidebar_col, edge_col])
-                toggle_btn_edge.click(_toggle_sidebar_edge, None, [sidebar_col, edge_col])
+                toggle_btn_left.click(
+                    _toggle_sidebar_left, None, [sidebar_col, edge_col]
+                )
+                toggle_btn_edge.click(
+                    _toggle_sidebar_edge, None, [sidebar_col, edge_col]
+                )
 
-                demo.load(_refresh_threads, [current_thread_id], [threads_html, threads_state])
+                demo.load(
+                    _refresh_threads,
+                    [current_thread_id],
+                    [threads_html, threads_state],
+                )
 
                 def _ctx_rename(tid: str):
                     from app.ui.threads_ui import dummy_rename
+
                     dummy_rename(tid)
                     try:
                         gr.Info(f"名前変更(ダミー): {tid}")
@@ -203,6 +255,7 @@ def create_blocks() -> gr.Blocks:
 
                 def _ctx_share(tid: str):
                     from app.ui.threads_ui import dummy_share
+
                     dummy_share(tid)
                     try:
                         gr.Info(f"共有(ダミー): {tid}")
@@ -212,6 +265,7 @@ def create_blocks() -> gr.Blocks:
 
                 def _ctx_delete(tid: str):
                     from app.ui.threads_ui import dummy_delete
+
                     dummy_delete(tid)
                     try:
                         gr.Info(f"削除(ダミー): {tid}")
@@ -225,11 +279,20 @@ def create_blocks() -> gr.Blocks:
                     html = build_threads_html(items, new_tid)
                     return new_tid, history, gr.update(value=html)
 
-                open_trigger.click(_open_and_mark, [action_thread_id], [current_thread_id, chat, threads_html])
+                open_trigger.click(
+                    _open_and_mark,
+                    [action_thread_id],
+                    [current_thread_id, chat, threads_html],
+                )
                 rename_trigger.click(_ctx_rename, [action_thread_id], None)
                 share_trigger.click(_ctx_share, [action_thread_id], None)
                 delete_trigger.click(_ctx_delete, [action_thread_id], None)
-                demo.load(lambda: None, None, None, js="()=>{ try { if (window.threadsSetup) { window.threadsSetup(); } } catch(e) { try{console.error('[threads-ui] init error', e);}catch(_){} } }")
+                demo.load(
+                    lambda: None,
+                    None,
+                    None,
+                    js="()=>{ try { if (window.threadsSetup) { window.threadsSetup(); } } catch(e) { try{console.error('[threads-ui] init error', e);}catch(_){} } }",
+                )
 
             threads_tab = gr.TabItem("スレッド")  # type: ignore[index]
             with threads_tab:
@@ -289,6 +352,7 @@ def create_blocks() -> gr.Blocks:
                 save_hint = gr.Markdown("")
 
                 from app.ui.tabs.settings_tab import setup_settings_tab
+
                 setup_settings_tab(
                     search_box=search_box,
                     search_btn=search_btn,
@@ -306,5 +370,3 @@ def create_blocks() -> gr.Blocks:
 
         demo.queue(max_size=16, default_concurrency_limit=4)
     return demo
-
-

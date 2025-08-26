@@ -19,11 +19,17 @@ def _tmp_db(tmp_path, monkeypatch):
 
 def test_create_thread_and_add_messages_and_read_history():
     svc = ThreadService()
-    created = svc.create_thread(title_hint="My Thread", fixed_id="thread-000000000000000000")
+    created = svc.create_thread(
+        title_hint="My Thread", fixed_id="thread-000000000000000000"
+    )
     assert created.thread_id.startswith("thread-")
 
-    uid = svc.add_user_message(created.thread_id, "hello", fixed_id="msg-u-00000000000000000000")
-    aid = svc.add_assistant_message(created.thread_id, "world", fixed_id="msg-a-00000000000000000000")
+    uid = svc.add_user_message(
+        created.thread_id, "hello", fixed_id="msg-u-00000000000000000000"
+    )
+    aid = svc.add_assistant_message(
+        created.thread_id, "world", fixed_id="msg-a-00000000000000000000"
+    )
 
     assert uid.startswith("msg-u-")
     assert aid.startswith("msg-a-")
@@ -31,5 +37,3 @@ def test_create_thread_and_add_messages_and_read_history():
     hist = svc.get_history(created.thread_id)
     assert [m["role"] for m in hist] == ["user", "assistant"]
     assert [m["content"] for m in hist] == ["hello", "world"]
-
-

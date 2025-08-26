@@ -2,8 +2,18 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.features.search import _search_users, chips_html, neutralize_email, suggest, on_change
-from app.utils.svg import build_favicon_svg, make_favicon_data_uri, write_emoji_svg
+from app.features.search import (
+    _search_users,
+    chips_html,
+    neutralize_email,
+    suggest,
+    on_change,
+)
+from app.utils.svg import (
+    build_favicon_svg,
+    make_favicon_data_uri,
+    write_emoji_svg,
+)
 import gradio as gr
 
 
@@ -36,5 +46,3 @@ def test_svg_utils(tmp_path):
     dest = Path(tmp_path) / "x.svg"
     p = write_emoji_svg("🙂", str(dest))
     assert Path(p).exists()
-
-

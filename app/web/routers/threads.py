@@ -78,5 +78,3 @@ def delete_thread(thread_id: str):
         if not ok:
             raise HTTPException(status_code=404, detail="thread not found")
         return None
-
-

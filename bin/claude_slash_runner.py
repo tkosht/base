@@ -58,7 +58,9 @@ def extract_usage_block(text: str) -> Optional[str]:
     while lines and not lines[-1].strip():
         lines.pop()
     # Determine minimal indent across non-empty lines
-    indents = [len(re.match(r"^[ \t]*", ln).group(0)) for ln in lines if ln.strip()]
+    indents = [
+        len(re.match(r"^[ \t]*", ln).group(0)) for ln in lines if ln.strip()
+    ]
     base = min(indents) if indents else 0
     block = "\n".join(ln[base:] if len(ln) >= base else ln for ln in lines)
     return block.strip() or None
@@ -75,23 +77,33 @@ def extract_meta(text: str) -> Dict[str, str]:
             fm = text[4:end]
     # Search in front matter or whole text
     scope = fm if fm else text
-    m_name = re.search(r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE)
+    m_name = re.search(
+        r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE
+    )
     if m_name:
         meta["name"] = m_name.group(1).strip()
     else:
         # Try meta: name inside nested YAML
-        m2 = re.search(r"^meta:\s*(?:\n|\r\n)([\s\S]*?)\n\S", text, flags=re.MULTILINE)
+        m2 = re.search(
+            r"^meta:\s*(?:\n|\r\n)([\s\S]*?)\n\S", text, flags=re.MULTILINE
+        )
         if m2:
             inner = m2.group(1)
-            m3 = re.search(r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", inner, flags=re.MULTILINE)
+            m3 = re.search(
+                r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", inner, flags=re.MULTILINE
+            )
             if m3:
                 meta["name"] = m3.group(1).strip()
-    m_ver = re.search(r"^\s*version:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE)
+    m_ver = re.search(
+        r"^\s*version:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE
+    )
     if m_ver:
         meta["version"] = m_ver.group(1).strip()
 
     # purpose: may be a pipe-block
-    m_purpose = re.search(r"^\s*purpose:\s*(\|?>)?\s*$", scope, flags=re.MULTILINE)
+    m_purpose = re.search(
+        r"^\s*purpose:\s*(\|?>)?\s*$", scope, flags=re.MULTILINE
+    )
     if m_purpose:
         start = m_purpose.end()
         lines = []
@@ -106,9 +118,15 @@ def extract_meta(text: str) -> Dict[str, str]:
         while lines and not lines[-1].strip():
             lines.pop()
         if lines:
-            indents = [len(re.match(r"^[ \t]*", ln).group(0)) for ln in lines if ln.strip()]
+            indents = [
+                len(re.match(r"^[ \t]*", ln).group(0))
+                for ln in lines
+                if ln.strip()
+            ]
             base = min(indents) if indents else 0
-            block = "\n".join(ln[base:] if len(ln) >= base else ln for ln in lines)
+            block = "\n".join(
+                ln[base:] if len(ln) >= base else ln for ln in lines
+            )
             meta["purpose"] = block.strip()
     return meta
 
@@ -173,7 +191,7 @@ def resolve_command_token(s: str) -> Tuple[str, List[str]]:
         raise ValueError("Empty command")
     parts = s.split()
     token = parts[0]
-    if not token.startswith('/'):
+    if not token.startswith("/"):
         raise ValueError("Command must start with '/' (e.g., /dagrunner)")
     return token, parts[1:]
 
@@ -185,9 +203,9 @@ def cmd_run(args: argparse.Namespace) -> None:
     rec = index.get(token)
     if not rec:
         # Try fallback: same token without dashes/underscores
-        norm = token.replace('-', '').replace('_', '')
+        norm = token.replace("-", "").replace("_", "")
         for k in index.keys():
-            knorm = k.replace('-', '').replace('_', '')
+            knorm = k.replace("-", "").replace("_", "")
             if knorm == norm:
                 rec = index[k]
                 break
@@ -218,19 +236,26 @@ def cmd_run(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Local runner for .claude/commands")
+    parser = argparse.ArgumentParser(
+        description="Local runner for .claude/commands"
+    )
     sub = parser.add_subparsers(dest="sub")
 
     p_list = sub.add_parser("list", help="List available commands")
     p_list.set_defaults(func=cmd_list)
 
-    p_run = sub.add_parser("run", help="Run a command by string, e.g., '/dagrunner foo'")
-    p_run.add_argument("command", help="Slash command with optional args, quoted if needed")
+    p_run = sub.add_parser(
+        "run", help="Run a command by string, e.g., '/dagrunner foo'"
+    )
+    p_run.add_argument(
+        "command", help="Slash command with optional args, quoted if needed"
+    )
     p_run.set_defaults(func=cmd_run)
 
     # Convenience: if first argument looks like a slash command, treat as run
     import sys
-    if len(sys.argv) >= 2 and sys.argv[1].startswith('/'):
+
+    if len(sys.argv) >= 2 and sys.argv[1].startswith("/"):
         ns = argparse.Namespace(sub="run", command=" ".join(sys.argv[1:]))
         return cmd_run(ns)
 
@@ -243,4 +268,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

@@ -42,5 +42,3 @@ def test_llm_stream_direct_sampling():
 def test_stop_chat():
     s = stop_chat()
     assert len(s) == 3
-
-

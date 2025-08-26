@@ -45,5 +45,3 @@ def test_crud_and_list_recent():
         # Delete
         assert repo.delete(t.id) is True
         assert repo.get(t.id) is None
-
-

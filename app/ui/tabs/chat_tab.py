@@ -54,6 +54,7 @@ def setup_chat_tab(
         tid = (tid or "").strip()
         from app.db.session import db_session
         from app.repositories.thread_repo import ThreadRepository
+
         if tid:
             with db_session() as s:
                 repo = ThreadRepository(s)
@@ -140,13 +141,18 @@ def setup_chat_tab(
         html = build_threads_html(items, "")
         return gr.update(value=html), items, "", []
 
-    evt_new = new_btn.click(_on_new, None, [threads_html, threads_state, current_thread_id, chat])
-    evt_new.then(lambda: None, None, None, js="()=>{ try { if (window.clearSelection) window.clearSelection(); } catch(_){} }")
+    evt_new = new_btn.click(
+        _on_new, None, [threads_html, threads_state, current_thread_id, chat]
+    )
+    evt_new.then(
+        lambda: None,
+        None,
+        None,
+        js="()=>{ try { if (window.clearSelection) window.clearSelection(); } catch(_){} }",
+    )
 
     return {
         "refresh_threads": _refresh_threads,
         "on_new": _on_new,
         "evt_new": evt_new,
     }
-
-

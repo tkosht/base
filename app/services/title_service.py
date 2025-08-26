@@ -23,5 +23,3 @@ class TitleService:
         if len(text) > self.max_length:
             return text[: self.max_length] + "…"
         return text
-
-

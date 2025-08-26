@@ -29,8 +29,20 @@ def test_threads_crud_and_messages(client: TestClient):
     assert r.status_code == 200 and any(t["id"] == tid for t in r.json())
 
     # Add messages
-    assert client.post(f"/api/threads/{tid}/messages", json={"role": "user", "content": "hi"}).status_code == 201
-    assert client.post(f"/api/threads/{tid}/messages", json={"role": "assistant", "content": "ok"}).status_code == 201
+    assert (
+        client.post(
+            f"/api/threads/{tid}/messages",
+            json={"role": "user", "content": "hi"},
+        ).status_code
+        == 201
+    )
+    assert (
+        client.post(
+            f"/api/threads/{tid}/messages",
+            json={"role": "assistant", "content": "ok"},
+        ).status_code
+        == 201
+    )
 
     # List messages
     r = client.get(f"/api/threads/{tid}/messages")
@@ -39,8 +51,14 @@ def test_threads_crud_and_messages(client: TestClient):
     assert roles == ["user", "assistant"]
 
     # Update thread
-    r = client.patch(f"/api/threads/{tid}", json={"title": "T1-new", "archived": True})
-    assert r.status_code == 200 and r.json()["title"] == "T1-new" and r.json()["archived"] is True
+    r = client.patch(
+        f"/api/threads/{tid}", json={"title": "T1-new", "archived": True}
+    )
+    assert (
+        r.status_code == 200
+        and r.json()["title"] == "T1-new"
+        and r.json()["archived"] is True
+    )
 
     # Delete
     assert client.delete(f"/api/threads/{tid}").status_code == 204
@@ -53,6 +71,3 @@ def test_settings_get_update(client: TestClient):
 
     r = client.patch("/api/settings/app", json={"show_thread_sidebar": False})
     assert r.status_code == 200 and r.json()["show_thread_sidebar"] is False
-
-
-

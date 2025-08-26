@@ -60,5 +60,3 @@ def test_message_relationships_loaded():
         # Relationship should load at least one message
         assert len(t.messages) >= 1
         assert t.messages[0].role in {"assistant", "user", "system"}
-
-

@@ -59,5 +59,3 @@ def test_toggle_sidebar_persists():
     # toggle back
     s3 = toggle_sidebar_visibility()
     assert s3["show_thread_sidebar"] == s1["show_thread_sidebar"]
-
-

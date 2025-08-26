@@ -24,6 +24,3 @@ def test_db_session_rollback_on_exception():
     # Thread should not exist after rollback
     with db_session() as s:
         assert s.get(Thread, "rollback-thread-000000000000") is None
-
-
-

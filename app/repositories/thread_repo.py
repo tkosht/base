@@ -65,7 +65,9 @@ class ThreadRepository:
         return True
 
     # Messages
-    def add_message(self, msg_id: str, thread_id: str, role: str, content: str) -> Message:
+    def add_message(
+        self, msg_id: str, thread_id: str, role: str, content: str
+    ) -> Message:
         m = Message(id=msg_id, thread_id=thread_id, role=role, content=content)
         self.session.add(m)
         # 更新指標
@@ -77,8 +79,13 @@ class ThreadRepository:
         self.session.flush()
         return m
 
-    def list_messages(self, thread_id: str, limit: int = 1000) -> list[Message]:
-        stmt = select(Message).where(Message.thread_id == thread_id).order_by(Message.created_at.asc()).limit(limit)
+    def list_messages(
+        self, thread_id: str, limit: int = 1000
+    ) -> list[Message]:
+        stmt = (
+            select(Message)
+            .where(Message.thread_id == thread_id)
+            .order_by(Message.created_at.asc())
+            .limit(limit)
+        )
         return list(self.session.scalars(stmt).all())
-
-

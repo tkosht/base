@@ -24,7 +24,11 @@ def get_app_settings() -> dict:
     }
 
 
-def update_app_settings(*, show_thread_sidebar: bool | None = None, show_threads_tab: bool | None = None) -> dict:
+def update_app_settings(
+    *,
+    show_thread_sidebar: bool | None = None,
+    show_threads_tab: bool | None = None,
+) -> dict:
     s = SettingsService().update(
         show_thread_sidebar=show_thread_sidebar,
         show_threads_tab=show_threads_tab,
@@ -39,6 +43,7 @@ def list_threads() -> list[dict]:
     with db_session() as s:
         repo = ThreadRepository(s)
         items = repo.list_recent(limit=100)
+
         def build_summary_and_flag(thread_id: str) -> tuple[str, bool]:
             # 最新メッセージの先頭部分を概要として返し、空スレッドかのフラグも返す
             msgs = repo.list_messages(thread_id, limit=3)
@@ -115,7 +120,9 @@ def toggle_sidebar_visibility() -> dict:
     - UI側は戻り値をもとに表示状態を反映する。
     """
     s = SettingsService().get()
-    updated = SettingsService().update(show_thread_sidebar=not s.show_thread_sidebar)
+    updated = SettingsService().update(
+        show_thread_sidebar=not s.show_thread_sidebar
+    )
     return {
         "show_thread_sidebar": updated.show_thread_sidebar,
         "show_threads_tab": updated.show_threads_tab,
@@ -135,9 +142,5 @@ def dummy_delete(thread_id: str) -> dict:
     return {"ok": True, "action": "delete", "thread_id": thread_id}
 
 
-
 def dummy_change_owner(thread_id: str) -> dict:
     return {"ok": True, "action": "change_owner", "thread_id": thread_id}
-
-
-

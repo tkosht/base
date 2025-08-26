@@ -39,7 +39,9 @@ class CreateThreadResult:
 
 
 class ThreadService:
-    def create_thread(self, title_hint: Optional[str] = None, fixed_id: Optional[str] = None) -> CreateThreadResult:
+    def create_thread(
+        self, title_hint: Optional[str] = None, fixed_id: Optional[str] = None
+    ) -> CreateThreadResult:
         with db_session() as s:
             repo = ThreadRepository(s)
             thread_id = fixed_id or _generate_new_id()
@@ -52,18 +54,32 @@ class ThreadService:
             repo.create(thread_id=thread_id, title=title)
             return CreateThreadResult(thread_id=thread_id)
 
-    def add_user_message(self, thread_id: str, content: str, fixed_id: Optional[str] = None) -> str:
+    def add_user_message(
+        self, thread_id: str, content: str, fixed_id: Optional[str] = None
+    ) -> str:
         with db_session() as s:
             repo = ThreadRepository(s)
             msg_id = fixed_id or _simple_ulid(content[:26])
-            repo.add_message(msg_id=msg_id, thread_id=thread_id, role="user", content=content)
+            repo.add_message(
+                msg_id=msg_id,
+                thread_id=thread_id,
+                role="user",
+                content=content,
+            )
             return msg_id
 
-    def add_assistant_message(self, thread_id: str, content: str, fixed_id: Optional[str] = None) -> str:
+    def add_assistant_message(
+        self, thread_id: str, content: str, fixed_id: Optional[str] = None
+    ) -> str:
         with db_session() as s:
             repo = ThreadRepository(s)
             msg_id = fixed_id or _simple_ulid(content[:26])
-            repo.add_message(msg_id=msg_id, thread_id=thread_id, role="assistant", content=content)
+            repo.add_message(
+                msg_id=msg_id,
+                thread_id=thread_id,
+                role="assistant",
+                content=content,
+            )
             return msg_id
 
     def get_history(self, thread_id: str) -> list[dict]:
@@ -71,5 +87,3 @@ class ThreadService:
             repo = ThreadRepository(s)
             msgs = repo.list_messages(thread_id)
             return [{"role": m.role, "content": m.content} for m in msgs]
-
-

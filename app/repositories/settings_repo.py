@@ -21,7 +21,9 @@ class SettingsRepository:
     def get_or_create(self) -> AppSettings:
         obj = self.session.get(AppSettings, 1)
         if obj is None:
-            obj = AppSettings(id=1, show_thread_sidebar=True, show_threads_tab=True)
+            obj = AppSettings(
+                id=1, show_thread_sidebar=True, show_threads_tab=True
+            )
             self.session.add(obj)
             self.session.flush()
         return obj
@@ -39,6 +41,3 @@ class SettingsRepository:
             obj.show_threads_tab = show_threads_tab
         self.session.flush()
         return obj
-
-
-
