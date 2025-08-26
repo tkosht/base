@@ -409,6 +409,35 @@
       };
       tryOnce(attempts);
     };
+    // チャット表示に遷移した際、スレッドサイドバーを必ず開いた状態にする
+    // - サイドバーが既に開いている場合は何もしない
+    // - 非表示（edge_col が表示）なら、edge 側のトグルボタンをクリックして開く
+    const ensureSidebarOpen = (attempts = 6) => {
+      const isVisible = (el) => {
+        if (!el) return false;
+        try {
+          const cs = (el.ownerDocument?.defaultView || window).getComputedStyle(el);
+          return cs && cs.display !== 'none' && cs.visibility !== 'hidden';
+        } catch (e) {
+          try { return !!(el.offsetParent !== null); } catch (_) { return false; }
+        }
+      };
+      const tryOnce = (n) => {
+        if (n <= 0) return;
+        const side = gi('sidebar_col');
+        const edge = gi('edge_col');
+        if (isVisible(side)) return; // 既に開いている
+        // 閉じている場合は edge 側のトグルを押下して開く
+        if (edge) {
+          const btn = qsWithin(edge, 'button, [role="button"], .gr-button');
+          if (btn) {
+            try { btn.click(); } catch (e) {}
+          }
+        }
+        setTimeout(() => tryOnce(n - 1), 120);
+      };
+      tryOnce(attempts);
+    };
     // スレッド項目クリック: open をディスパッチ。2回目以降でも change を確実に発火させるため、
     // いったん kind を空にしてから id→kind の順で設定する。
     document.addEventListener('click', (e) => {
@@ -486,6 +515,8 @@
       const isInThreadsTab = (path || []).some((n) => n && n.id === 'threads_list_tab');
       if (isInThreadsTab) {
         ensureChatTab(8);
+        // タブ遷移後、サイドバーを必ず開いた状態に揃える
+        setTimeout(() => ensureSidebarOpen(6), 100);
         // タブ遷移完了後にも念のため再マーキング（描画の前後差吸収）
         setTimeout(() => markSelectedLists(id), 120);
         setTimeout(() => markSelectedLists(id), 220);
@@ -625,5 +656,4 @@
     // - Python側 _dispatch_action_common に "send" 分岐を追加済み。
   };
 })();
-
 

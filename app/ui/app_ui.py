@@ -217,20 +217,7 @@ def create_blocks() -> gr.Blocks:
                     )
                     return new_cur, new_history, html, html
 
-                def _toggle_sidebar_left():
-                    s = toggle_sidebar_visibility()
-                    return gr.update(visible=s["show_thread_sidebar"]), gr.update(visible=not s["show_thread_sidebar"])  # type: ignore[index]
-
-                def _toggle_sidebar_edge():
-                    s = toggle_sidebar_visibility()
-                    return gr.update(visible=s["show_thread_sidebar"]), gr.update(visible=not s["show_thread_sidebar"])  # type: ignore[index]
-
-                toggle_btn_left.click(
-                    _toggle_sidebar_left, None, [sidebar_col, edge_col]
-                )
-                toggle_btn_edge.click(
-                    _toggle_sidebar_edge, None, [sidebar_col, edge_col]
-                )
+                # Sidebar toggle handlers are wired in chat_tab; avoid double-binding here (DRY)
 
                 demo.load(
                     _refresh_threads,
