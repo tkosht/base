@@ -4,7 +4,7 @@ import os
 
 from fastapi.testclient import TestClient
 from app.db.session import reconfigure_engine
-from app.app_factory import create_api_app
+from app.web.factory import create_api_app
 
 
 def test_create_app_and_endpoints(tmp_path, monkeypatch):

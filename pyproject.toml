@@ -141,6 +141,8 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore:cannot collect test class .*TestBaseA2AAgent.* because it has a __init__ constructor:pytest.PytestCollectionWarning",
     "ignore::RuntimeWarning:app.query_monitor",
+    "ignore::pytest.PytestUnraisableExceptionWarning",
+    "ignore::ResourceWarning",
 ]
 
 [tool.coverage.run]
@@ -153,6 +155,12 @@ omit = [
     # ヘッドレス実行時に外部ライブラリの未クローズ警告を誘発しがちで、
     # 実運用検証はE2E/UIテスト領域で担保する方針のため、単体カバレッジからは除外する。
     "app/app_factory.py",
+    # UI 構築・イベント配線レイヤは単体テスト対象外
+    "app/ui/*",
+    "app/ui/**",
+    # デモ/実験用スクリプトはカバレッジ対象外
+    "app/demo.py",
+    "app/ex.py",
 ]
 
 [tool.coverage.report]

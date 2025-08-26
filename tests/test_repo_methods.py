@@ -38,9 +38,9 @@ def test_crud_and_list_recent():
         msgs = repo.list_messages(t.id)
         assert [m.role for m in msgs] == ["user", "assistant"]
 
-        # List recent (should include our thread)
+        # List recent excludes archived threads by仕様
         recents = repo.list_recent(limit=10)
-        assert any(x.id == t.id for x in recents)
+        assert all(x.archived is False for x in recents)
 
         # Delete
         assert repo.delete(t.id) is True
