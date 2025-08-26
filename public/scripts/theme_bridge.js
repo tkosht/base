@@ -63,9 +63,9 @@
       var styleId = 'ui-theme-bridge';
       var node = sr.getElementById ? sr.getElementById(styleId) : sr.querySelector('#'+styleId);
       var css;
-      var common = "#sidebar-toggle-row button{min-width:36px;height:36px;}\n"
-                 + "#sidebar_toggle_btn button{width:36px;height:36px;}\n"
-                 + "#edge_col .gr-button, #edge_col .gr-button>button{width:36px;min-width:36px;height:36px;padding:0;}\n";
+      var common = ".icon36, .icon36 *{box-sizing:border-box;}\n"
+                 + ".icon36{width:36px;min-width:36px;}\n"
+                 + ".icon36>button{width:36px;min-width:36px;height:36px;padding:0;line-height:36px;display:inline-flex;align-items:center;justify-content:center;}\n";
       if(isLight){
         css = "#threads_list .thread-title, #threads_list_tab .thread-title{color:#111827 !important;}\n"
             + "label, [data-testid='block-label'], .label{color:#111827 !important;}\n"
@@ -106,4 +106,3 @@
   setTimeout(applyUiMode, 150);
   setTimeout(applyUiMode, 600);
 })();
-
