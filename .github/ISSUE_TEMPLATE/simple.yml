@@ -1,0 +1,36 @@
+name: "📝 Simple Issue (Form)"
+description: "最小限の入力で起票"
+labels: ["triage"]
+body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要（1–2行）
+      placeholder: 例：ユーザー一覧APIで500。検索にタグ条件を追加、など。
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: raise_check
+    attributes:
+      label: 起票チェック（起票の完了条件）
+      options:
+        - label: 期待する状態を1行で記述した
+        - label: 再現/確認手順をメモに書いた
+        - label: 関連リンク/PR/スクショを追記した（あれば）
+
+  - type: textarea
+    id: dod
+    attributes:
+      label: 解決DoD（クローズ条件｜最小1行）
+      description: “テスト可能な受け入れ条件”を短く。不要なら N/A とだけ記入。
+      placeholder: 例：/users?active=true で200を返し、一覧が表示される。
+    validations:
+      required: false
+
+  - type: textarea
+    id: notes
+    attributes:
+      label: メモ（任意：再現手順・補足・影響）
+      render: bash
+
