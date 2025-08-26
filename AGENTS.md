@@ -1,4 +1,4 @@
-# CLAUDE.md (and GEMINI.md, AGENT.md) - AI Agent Mandatory Protocol
+# CLAUDE.md (and GEMINI.md, AGENTS.md) - AI Agent Mandatory Protocol
 
 **🤖 IMPORTANT: This is an AI AGENT-ONLY knowledge base. Human operators should NOT attempt to read or reference these files due to volume and AI-optimized formatting.**
 
@@ -78,9 +78,9 @@ function display_mandatory_rules_checklist() {
     echo ""
     echo "📚 MANDATORY REFERENCES:"
     echo "   • memory-bank/00-core/*mandatory*.md"
+    echo "   • memory-bank/00-core/mandatory_rules_checklist.md (FULL CHECKLIST)"
     echo "   • memory-bank/11-checklist-driven/checklist_driven_execution_framework.md"
     echo "   • memory-bank/02-organization/tmux_organization_success_patterns.md (for tmux activities)"
-    echo "   • checklists/mandatory_rules_checklist.md (FULL CHECKLIST)"
     echo ""
     echo "⚠️ REMINDER: Commands (/command) ALSO require knowledge loading!"
     echo ""
@@ -319,14 +319,13 @@ FORBIDDEN=("probably" "maybe" "I think" "seems like")
 | **Memory Design** | Understand hierarchy | `mcp__serena__read_memory("memory_hierarchy_design_framework")` |
 | **Auto-Updates** | Event-driven framework | `mcp__serena__read_memory("ai_agent_event_driven_update_framework")` |
 | **Any Task** | Load knowledge first | `smart_knowledge_load "domain"` |
-| **Mandatory Rules** | Interactive checklist | `show_rules` or `checklists/mandatory_rules_checklist.md` |
+| **Mandatory Rules** | Interactive checklist | `show_rules` or `memory-bank/00-core/mandatory_rules_checklist.md` |
 | **Task Checklist** | Create from template | `new_task_checklist "task_name"` |
 | **Commands** | Essential reference | `memory-bank/09-meta/essential_commands_reference.md` |
 | **Cognee Ops** | Strategic hub | `memory-bank/01-cognee/cognee_strategic_operations_hub.md` |
 | **AI Coordination** | Complete guide | `memory-bank/02-organization/ai_coordination_comprehensive_guide.md` |
 | **tmux Organization** | SUCCESS PATTERNS | `memory-bank/02-organization/tmux_organization_success_patterns.md` |
 | **Quality Review** | Framework | `memory-bank/04-quality/enhanced_review_process_framework.md` |
-| **Detailed Impl** | Full guide | `CLAUDE_structured.md` |
 
 ## 🔄 MCP SELECTION PROTOCOL (MCP選択必須プロトコル)
 
