@@ -63,14 +63,19 @@
       var styleId = 'ui-theme-bridge';
       var node = sr.getElementById ? sr.getElementById(styleId) : sr.querySelector('#'+styleId);
       var css;
+      var common = "#sidebar-toggle-row button{min-width:36px;height:36px;}\n"
+                 + "#sidebar_toggle_btn button{width:36px;height:36px;}\n"
+                 + "#edge_col .gr-button, #edge_col .gr-button>button{width:36px;min-width:36px;height:36px;padding:0;}\n";
       if(isLight){
         css = "#threads_list .thread-title, #threads_list_tab .thread-title{color:#111827 !important;}\n"
             + "label, [data-testid='block-label'], .label{color:#111827 !important;}\n"
-            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#111827 !important;}\n";
+            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#111827 !important;}\n"
+            + common;
       } else {
         css = "#threads_list .thread-title, #threads_list_tab .thread-title{color:#e5e7eb !important;}\n"
             + "label, [data-testid='block-label'], .label{color:#e5e7eb !important;}\n"
-            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#e5e7eb !important;}\n";
+            + "[role='slider'] ~ *, input[type='range'] ~ *{color:#e5e7eb !important;}\n"
+            + common;
       }
       if(!node){
         node = document.createElement('style');
@@ -101,5 +106,4 @@
   setTimeout(applyUiMode, 150);
   setTimeout(applyUiMode, 600);
 })();
-
 
