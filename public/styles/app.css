@@ -18,12 +18,12 @@
 /* improve dots click affordance */
 #threads_list .ctx-dots, #threads_list_tab .ctx-dots{ cursor:pointer; }
 /* threads list (scoped by ids where applicable) */
-#sidebar-toggle-row button{ min-width: var(--ctrl-w); height: var(--ctrl-h); }
-#sidebar_toggle_btn{margin-left:auto;}
+#sidebar-toggle-row button{ min-width: var(--ctrl-w) !important; height: var(--ctrl-h) !important; }
+#sidebar_toggle_btn{ margin-left:auto; min-width: var(--ctrl-w) !important; }
 /* ensure the left toggle is square */
-#sidebar_toggle_btn button{ width: var(--ctrl-w); height: var(--ctrl-h); }
+#sidebar_toggle_btn button{ width: var(--ctrl-w) !important; height: var(--ctrl-h) !important; }
 /* unify new button height (text width remains flexible) */
-#new_btn_main button{ height: var(--ctrl-h); }
+#new_btn_main button{ height: var(--ctrl-h) !important; }
 .threads-list{display:block}
 #sidebar_col{overflow:hidden;}
 #threads_list{overflow-y:auto; max-height:calc(100vh - 220px);}
@@ -49,7 +49,8 @@
 #threads_list .thread-link,
 #threads_list_tab .thread-link{padding:8px 10px; cursor:pointer; border-radius:6px; position:relative;}
 /* edge column icon buttons (≡ / ＋) should be square */
-#edge_col .gr-button > button{ width: var(--ctrl-w); height: var(--ctrl-h); min-width: var(--ctrl-w); padding: 0; }
+#edge_col .gr-button{ width: var(--ctrl-w) !important; min-width: var(--ctrl-w) !important; }
+#edge_col .gr-button > button{ width: var(--ctrl-w) !important; height: var(--ctrl-h) !important; min-width: var(--ctrl-w) !important; padding: 0 !important; }
 /* =================== Tokens =================== */
 :root{
   --avatar-base: 32px;
