@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Threads / Settings UI controllers.
 
 設計意図:
@@ -7,13 +5,12 @@ from __future__ import annotations
 - 永続化は service 層に委譲し、ここでは入出力整形に専念する。
 """
 
-from dataclasses import dataclass
-from typing import List, Dict
+from __future__ import annotations
 
-from app.services.thread_service import ThreadService
-from app.services.settings_service import SettingsService, AppSettingsDTO
 from app.db.session import db_session
 from app.repositories.thread_repo import ThreadRepository
+from app.services.settings_service import SettingsService
+from app.services.thread_service import ThreadService
 
 
 def get_app_settings() -> dict:
@@ -24,7 +21,11 @@ def get_app_settings() -> dict:
     }
 
 
-def update_app_settings(*, show_thread_sidebar: bool | None = None, show_threads_tab: bool | None = None) -> dict:
+def update_app_settings(
+    *,
+    show_thread_sidebar: bool | None = None,
+    show_threads_tab: bool | None = None,
+) -> dict:
     s = SettingsService().update(
         show_thread_sidebar=show_thread_sidebar,
         show_threads_tab=show_threads_tab,
@@ -39,6 +40,7 @@ def list_threads() -> list[dict]:
     with db_session() as s:
         repo = ThreadRepository(s)
         items = repo.list_recent(limit=100)
+
         def build_summary_and_flag(thread_id: str) -> tuple[str, bool]:
             # 最新メッセージの先頭部分を概要として返し、空スレッドかのフラグも返す
             msgs = repo.list_messages(thread_id, limit=3)
@@ -115,7 +117,9 @@ def toggle_sidebar_visibility() -> dict:
     - UI側は戻り値をもとに表示状態を反映する。
     """
     s = SettingsService().get()
-    updated = SettingsService().update(show_thread_sidebar=not s.show_thread_sidebar)
+    updated = SettingsService().update(
+        show_thread_sidebar=not s.show_thread_sidebar
+    )
     return {
         "show_thread_sidebar": updated.show_thread_sidebar,
         "show_threads_tab": updated.show_threads_tab,
@@ -135,9 +139,5 @@ def dummy_delete(thread_id: str) -> dict:
     return {"ok": True, "action": "delete", "thread_id": thread_id}
 
 
-
 def dummy_change_owner(thread_id: str) -> dict:
     return {"ok": True, "action": "change_owner", "thread_id": thread_id}
-
-
-

@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Application settings service.
 
 設計意図:
 - 表示制御設定の取得/更新をユースケース単位のAPIで提供する。
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 
@@ -28,7 +28,12 @@ class SettingsService:
                 show_threads_tab=obj.show_threads_tab,
             )
 
-    def update(self, *, show_thread_sidebar: bool | None = None, show_threads_tab: bool | None = None) -> AppSettingsDTO:
+    def update(
+        self,
+        *,
+        show_thread_sidebar: bool | None = None,
+        show_threads_tab: bool | None = None,
+    ) -> AppSettingsDTO:
         with db_session() as s:
             repo = SettingsRepository(s)
             obj = repo.update(
@@ -39,6 +44,3 @@ class SettingsService:
                 show_thread_sidebar=obj.show_thread_sidebar,
                 show_threads_tab=obj.show_threads_tab,
             )
-
-
-

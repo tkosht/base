@@ -15,24 +15,23 @@ from __future__ import annotations
 import argparse
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMANDS_DIR = ROOT / ".claude" / "commands"
 
 
-def iter_command_files() -> List[Path]:
+def iter_command_files() -> list[Path]:
     exts = (".md",)
     if not COMMANDS_DIR.exists():
         return []
-    files: List[Path] = []
+    files: list[Path] = []
     for p in COMMANDS_DIR.rglob("*"):
         if p.is_file() and p.suffix in exts:
             files.append(p)
     return sorted(files)
 
 
-def extract_usage_block(text: str) -> Optional[str]:
+def extract_usage_block(text: str) -> str | None:
     # Capture a YAML-like key `usage_command:` with an indented block, or a section with a heading
     # Strategy: find line starting with `usage_command:`; capture following indented lines until blank
     m = re.search(r"^usage_command:\s*\|?\s*$", text, flags=re.MULTILINE)
@@ -58,14 +57,16 @@ def extract_usage_block(text: str) -> Optional[str]:
     while lines and not lines[-1].strip():
         lines.pop()
     # Determine minimal indent across non-empty lines
-    indents = [len(re.match(r"^[ \t]*", ln).group(0)) for ln in lines if ln.strip()]
+    indents = [
+        len(re.match(r"^[ \t]*", ln).group(0)) for ln in lines if ln.strip()
+    ]
     base = min(indents) if indents else 0
     block = "\n".join(ln[base:] if len(ln) >= base else ln for ln in lines)
     return block.strip() or None
 
 
-def extract_meta(text: str) -> Dict[str, str]:
-    meta: Dict[str, str] = {}
+def extract_meta(text: str) -> dict[str, str]:
+    meta: dict[str, str] = {}
     # Best-effort extraction of meta.name and meta.version and purpose block
     # 1) Try YAML front-matter style delimited by --- ... ---
     fm = None
@@ -75,23 +76,33 @@ def extract_meta(text: str) -> Dict[str, str]:
             fm = text[4:end]
     # Search in front matter or whole text
     scope = fm if fm else text
-    m_name = re.search(r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE)
+    m_name = re.search(
+        r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE
+    )
     if m_name:
         meta["name"] = m_name.group(1).strip()
     else:
         # Try meta: name inside nested YAML
-        m2 = re.search(r"^meta:\s*(?:\n|\r\n)([\s\S]*?)\n\S", text, flags=re.MULTILINE)
+        m2 = re.search(
+            r"^meta:\s*(?:\n|\r\n)([\s\S]*?)\n\S", text, flags=re.MULTILINE
+        )
         if m2:
             inner = m2.group(1)
-            m3 = re.search(r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", inner, flags=re.MULTILINE)
+            m3 = re.search(
+                r"^\s*name:\s*\"?([^\"\n]+)\"?\s*$", inner, flags=re.MULTILINE
+            )
             if m3:
                 meta["name"] = m3.group(1).strip()
-    m_ver = re.search(r"^\s*version:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE)
+    m_ver = re.search(
+        r"^\s*version:\s*\"?([^\"\n]+)\"?\s*$", scope, flags=re.MULTILINE
+    )
     if m_ver:
         meta["version"] = m_ver.group(1).strip()
 
     # purpose: may be a pipe-block
-    m_purpose = re.search(r"^\s*purpose:\s*(\|?>)?\s*$", scope, flags=re.MULTILINE)
+    m_purpose = re.search(
+        r"^\s*purpose:\s*(\|?>)?\s*$", scope, flags=re.MULTILINE
+    )
     if m_purpose:
         start = m_purpose.end()
         lines = []
@@ -106,15 +117,21 @@ def extract_meta(text: str) -> Dict[str, str]:
         while lines and not lines[-1].strip():
             lines.pop()
         if lines:
-            indents = [len(re.match(r"^[ \t]*", ln).group(0)) for ln in lines if ln.strip()]
+            indents = [
+                len(re.match(r"^[ \t]*", ln).group(0))
+                for ln in lines
+                if ln.strip()
+            ]
             base = min(indents) if indents else 0
-            block = "\n".join(ln[base:] if len(ln) >= base else ln for ln in lines)
+            block = "\n".join(
+                ln[base:] if len(ln) >= base else ln for ln in lines
+            )
             meta["purpose"] = block.strip()
     return meta
 
 
-def derive_command_names(path: Path, usage_block: Optional[str]) -> List[str]:
-    names: List[str] = []
+def derive_command_names(path: Path, usage_block: str | None) -> list[str]:
+    names: list[str] = []
     # From usage_block: lines like "/dag-debug-enhanced ..." — take token after '/'
     if usage_block:
         for line in usage_block.splitlines():
@@ -129,7 +146,7 @@ def derive_command_names(path: Path, usage_block: Optional[str]) -> List[str]:
     names.append(f"/{stem}")
     # Deduplicate preserving order
     seen = set()
-    out: List[str] = []
+    out: list[str] = []
     for n in names:
         if n not in seen:
             out.append(n)
@@ -137,8 +154,8 @@ def derive_command_names(path: Path, usage_block: Optional[str]) -> List[str]:
     return out
 
 
-def build_index() -> Dict[str, Dict[str, object]]:
-    index: Dict[str, Dict[str, object]] = {}
+def build_index() -> dict[str, dict[str, object]]:
+    index: dict[str, dict[str, object]] = {}
     for p in iter_command_files():
         text = p.read_text(encoding="utf-8", errors="ignore")
         usage = extract_usage_block(text)
@@ -156,7 +173,7 @@ def cmd_list(args: argparse.Namespace) -> None:
         print("No commands found under .claude/commands.")
         return
     # Group by unique path to avoid duplicates due to aliases
-    seen_paths: Dict[Path, List[str]] = {}
+    seen_paths: dict[Path, list[str]] = {}
     for key, rec in index.items():
         seen_paths.setdefault(rec["path"], []).append(key)
     for path, aliases in sorted(seen_paths.items(), key=lambda kv: str(kv[0])):
@@ -167,13 +184,13 @@ def cmd_list(args: argparse.Namespace) -> None:
             print(f"  name: {name}")
 
 
-def resolve_command_token(s: str) -> Tuple[str, List[str]]:
+def resolve_command_token(s: str) -> tuple[str, list[str]]:
     s = s.strip()
     if not s:
         raise ValueError("Empty command")
     parts = s.split()
     token = parts[0]
-    if not token.startswith('/'):
+    if not token.startswith("/"):
         raise ValueError("Command must start with '/' (e.g., /dagrunner)")
     return token, parts[1:]
 
@@ -185,9 +202,9 @@ def cmd_run(args: argparse.Namespace) -> None:
     rec = index.get(token)
     if not rec:
         # Try fallback: same token without dashes/underscores
-        norm = token.replace('-', '').replace('_', '')
+        norm = token.replace("-", "").replace("_", "")
         for k in index.keys():
-            knorm = k.replace('-', '').replace('_', '')
+            knorm = k.replace("-", "").replace("_", "")
             if knorm == norm:
                 rec = index[k]
                 break
@@ -196,8 +213,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         print("Tip: Use 'list' to see available commands.")
         return
     path: Path = rec["path"]  # type: ignore[assignment]
-    usage: Optional[str] = rec.get("usage")  # type: ignore[assignment]
-    meta: Dict[str, str] = rec.get("meta", {})  # type: ignore[assignment]
+    usage: str | None = rec.get("usage")  # type: ignore[assignment]
+    meta: dict[str, str] = rec.get("meta", {})  # type: ignore[assignment]
     print(f"Command: {token}")
     if rest:
         print(f"Args: {' '.join(rest)}")
@@ -218,19 +235,26 @@ def cmd_run(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Local runner for .claude/commands")
+    parser = argparse.ArgumentParser(
+        description="Local runner for .claude/commands"
+    )
     sub = parser.add_subparsers(dest="sub")
 
     p_list = sub.add_parser("list", help="List available commands")
     p_list.set_defaults(func=cmd_list)
 
-    p_run = sub.add_parser("run", help="Run a command by string, e.g., '/dagrunner foo'")
-    p_run.add_argument("command", help="Slash command with optional args, quoted if needed")
+    p_run = sub.add_parser(
+        "run", help="Run a command by string, e.g., '/dagrunner foo'"
+    )
+    p_run.add_argument(
+        "command", help="Slash command with optional args, quoted if needed"
+    )
     p_run.set_defaults(func=cmd_run)
 
     # Convenience: if first argument looks like a slash command, treat as run
     import sys
-    if len(sys.argv) >= 2 and sys.argv[1].startswith('/'):
+
+    if len(sys.argv) >= 2 and sys.argv[1].startswith("/"):
         ns = argparse.Namespace(sub="run", command=" ".join(sys.argv[1:]))
         return cmd_run(ns)
 
@@ -243,4 +267,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

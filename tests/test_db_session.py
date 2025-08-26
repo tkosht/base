@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from app.db.bootstrap import bootstrap_schema_and_seed
-from app.db.session import db_session
 from app.db.models import Thread
+from app.db.session import db_session
 
 
 @pytest.fixture(autouse=True)
@@ -24,6 +24,3 @@ def test_db_session_rollback_on_exception():
     # Thread should not exist after rollback
     with db_session() as s:
         assert s.get(Thread, "rollback-thread-000000000000") is None
-
-
-

@@ -65,6 +65,8 @@ exclude = '''
     \.git
   | \.mypy_cache
   | \.pytest_cache
+  | \.venv
+  | venv
   | htmlcov
   | output
   | backup
@@ -72,6 +74,7 @@ exclude = '''
   | memory-bank
   | templates
   | examples
+  | node_modules
 )/
 '''
 
@@ -108,6 +111,14 @@ ignore = []
 known-first-party = ["app"]
 combine-as-imports = true
 
+[tool.ruff.lint.per-file-ignores]
+"app/ui/**/*.py" = ["E501"]
+"app/ui/html/**/*.py" = ["E501"]
+"app/utils/svg.py" = ["E501"]
+"app/web/assets.py" = ["E501"]
+"tests/**/*.py" = ["E501"]
+"bin/claude_slash_runner.py" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
@@ -138,9 +149,19 @@ asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
     "error",
-    "ignore::DeprecationWarning",
-    "ignore:cannot collect test class .*TestBaseA2AAgent.* because it has a __init__ constructor:pytest.PytestCollectionWarning",
-    "ignore::RuntimeWarning:app.query_monitor",
+
+    # 自前コードは Deprecation を見逃さない
+    "error::DeprecationWarning:app\\..*",
+
+    # 外部ライブラリ由来の Deprecation は必要に応じて無視
+    "ignore::DeprecationWarning:gradio.*",
+    "ignore::DeprecationWarning:fastapi.*",
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore::DeprecationWarning:sqlalchemy.*",
+    "ignore::DeprecationWarning:gradio_client.*",
+    "ignore::DeprecationWarning:websockets.*",
+
+    # 実行環境のノイズ抑制
     "ignore::pytest.PytestUnraisableExceptionWarning",
     "ignore::ResourceWarning",
 ]

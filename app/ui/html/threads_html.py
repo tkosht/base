@@ -12,7 +12,9 @@ def build_threads_html(items: list[dict], selected_tid: str = "") -> str:
         tid = _esc(it.get("id") or "")
         has_msgs = bool(it.get("has_messages"))
         disabled = " data-empty='1'" if not has_msgs else ""
-        sel_cls = " selected" if selected_tid and (tid == _esc(selected_tid)) else ""
+        sel_cls = (
+            " selected" if selected_tid and (tid == _esc(selected_tid)) else ""
+        )
         rows.append(
             f"<div class='thread-link{sel_cls}' data-tid='{tid}'{disabled}><span class='thread-title'>{title}</span></div>"
         )
@@ -36,13 +38,25 @@ def build_threads_html_tab(items: list[dict], selected_tid: str = "") -> str:
             + (btn("owner", tid, "オーナー変更") if has_msgs else "")
             + btn("delete", tid, "削除")
         )
-        sel_cls = " selected" if selected_tid and (tid == _esc(selected_tid)) else ""
+        sel_cls = (
+            " selected" if selected_tid and (tid == _esc(selected_tid)) else ""
+        )
         row_html = (
-            "<div class='thread-link" + sel_cls + "' data-tid='" + tid + "'" + (" data-empty='1'" if not has_msgs else "") + ">"
+            "<div class='thread-link"
+            + sel_cls
+            + "' data-tid='"
+            + tid
+            + "'"
+            + (" data-empty='1'" if not has_msgs else "")
+            + ">"
             + "<div class='thread-row'>"
             + "<div class='thread-main'>"
             + f"<span class='thread-title'>{title}</span>"
-            + (f"<span class='thread-summary'>{summary}</span>" if summary else "")
+            + (
+                f"<span class='thread-summary'>{summary}</span>"
+                if summary
+                else ""
+            )
             + "</div>"
             + f"<div class='thread-actions'>{actions}</div>"
             + "</div>"
@@ -51,5 +65,3 @@ def build_threads_html_tab(items: list[dict], selected_tid: str = "") -> str:
         rows.append(row_html)
     sel_attr = f" data-selected='{_esc(selected_tid)}'" if selected_tid else ""
     return f"<div class='threads-list'{sel_attr}>{''.join(rows)}</div>"
-
-

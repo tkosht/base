@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, HTTPException
+
 from app.db.session import db_session
 from app.repositories.thread_repo import ThreadRepository
 from app.services.thread_service import ThreadService
-
 
 router = APIRouter()
 
@@ -78,5 +78,3 @@ def delete_thread(thread_id: str):
         if not ok:
             raise HTTPException(status_code=404, detail="thread not found")
         return None
-
-

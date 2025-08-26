@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session, sessionmaker
@@ -59,5 +59,3 @@ def db_session() -> Generator[Session, None, None]:
         raise
     finally:
         session.close()
-
-

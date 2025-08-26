@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import os
-
 from fastapi.testclient import TestClient
+
 from app.db.session import reconfigure_engine
 from app.web.factory import create_api_app
 
@@ -18,11 +17,11 @@ def test_create_app_and_endpoints(tmp_path, monkeypatch):
         r = client.get("/manifest.json")
         assert r.status_code == 200
 
-        assert r.headers["content-type"].startswith("application/manifest+json")
+        assert r.headers["content-type"].startswith(
+            "application/manifest+json"
+        )
 
         # Favicon provided
         r = client.get("/favicon.ico")
         assert r.status_code == 200
         assert r.headers["content-type"].startswith("image/")
-
-

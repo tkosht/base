@@ -2,9 +2,16 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from app.features.search import _search_users, chips_html, neutralize_email, suggest, on_change
-from app.utils.svg import build_favicon_svg, make_favicon_data_uri, write_emoji_svg
-import gradio as gr
+from app.features.search import (
+    _search_users,
+    on_change,
+    suggest,
+)
+from app.utils.svg import (
+    build_favicon_svg,
+    make_favicon_data_uri,
+    write_emoji_svg,
+)
 
 
 def test_search_and_suggest_and_on_change(tmp_path):
@@ -36,5 +43,3 @@ def test_svg_utils(tmp_path):
     dest = Path(tmp_path) / "x.svg"
     p = write_emoji_svg("🙂", str(dest))
     assert Path(p).exists()
-
-

@@ -5,15 +5,15 @@ import pytest
 from app.db.bootstrap import bootstrap_schema_and_seed
 from app.db.session import reconfigure_engine
 from app.ui.threads_ui import (
-    get_app_settings,
-    update_app_settings,
-    list_threads,
-    create_thread,
-    rename_thread,
     archive_thread,
+    create_thread,
     delete_thread,
+    get_app_settings,
     list_messages,
+    list_threads,
+    rename_thread,
     toggle_sidebar_visibility,
+    update_app_settings,
 )
 
 
@@ -59,5 +59,3 @@ def test_toggle_sidebar_persists():
     # toggle back
     s3 = toggle_sidebar_visibility()
     assert s3["show_thread_sidebar"] == s1["show_thread_sidebar"]
-
-

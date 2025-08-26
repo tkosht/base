@@ -14,5 +14,3 @@ def prepare_avatars() -> tuple[str, str]:
     )
     bot = write_emoji_svg("🦜", "/tmp/gradio_bot_avatar.svg", bg="#E5E7EB")
     return user, bot
-
-

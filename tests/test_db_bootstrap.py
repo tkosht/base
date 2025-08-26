@@ -1,8 +1,5 @@
 from __future__ import annotations
 
-import os
-from pathlib import Path
-
 import pytest
 
 from app.db import bootstrap
@@ -60,5 +57,3 @@ def test_message_relationships_loaded():
         # Relationship should load at least one message
         assert len(t.messages) >= 1
         assert t.messages[0].role in {"assistant", "user", "system"}
-
-

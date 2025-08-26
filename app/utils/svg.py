@@ -72,5 +72,3 @@ def build_favicon_svg(
         "style='font-family: Noto Color Emoji, Apple Color Emoji, Segoe UI Emoji, Segoe UI Symbol, Twemoji Mozilla, EmojiOne Color, Android Emoji, sans-serif'>"
         f"{emoji}</text></svg>"
     )
-
-

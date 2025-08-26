@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Application settings repository.
 
 設計意図:
@@ -7,7 +5,7 @@ from __future__ import annotations
 - シングルトン行（id=1）を前提とし、存在しない場合は作成する。
 """
 
-from typing import Optional
+from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
@@ -21,7 +19,9 @@ class SettingsRepository:
     def get_or_create(self) -> AppSettings:
         obj = self.session.get(AppSettings, 1)
         if obj is None:
-            obj = AppSettings(id=1, show_thread_sidebar=True, show_threads_tab=True)
+            obj = AppSettings(
+                id=1, show_thread_sidebar=True, show_threads_tab=True
+            )
             self.session.add(obj)
             self.session.flush()
         return obj
@@ -29,8 +29,8 @@ class SettingsRepository:
     def update(
         self,
         *,
-        show_thread_sidebar: Optional[bool] = None,
-        show_threads_tab: Optional[bool] = None,
+        show_thread_sidebar: bool | None = None,
+        show_threads_tab: bool | None = None,
     ) -> AppSettings:
         obj = self.get_or_create()
         if show_thread_sidebar is not None:
@@ -39,6 +39,3 @@ class SettingsRepository:
             obj.show_threads_tab = show_threads_tab
         self.session.flush()
         return obj
-
-
-
