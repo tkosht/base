@@ -1,8 +1,7 @@
 from __future__ import annotations
 
-import os
-
 from fastapi.testclient import TestClient
+
 from app.db.session import reconfigure_engine
 from app.web.factory import create_api_app
 

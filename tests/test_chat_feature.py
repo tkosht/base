@@ -2,9 +2,7 @@ from __future__ import annotations
 
 import itertools
 
-import gradio as gr
-
-from app.features.chat import guard_and_prep, stream_llm, stop_chat, llm_stream
+from app.features.chat import guard_and_prep, llm_stream, stop_chat, stream_llm
 
 
 def test_guard_and_prep_empty_and_nonempty():

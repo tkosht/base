@@ -1,13 +1,12 @@
-from __future__ import annotations
-
 """Title suggestion service (LLM stub).
 
 将来、LLM連携に差し替える前提のスタブ実装。
 初期実装ではユーザー入力の先頭 N 文字をタイトル案として返す。
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
 
+from dataclasses import dataclass
 
 DEFAULT_TITLE_MAX = 40
 

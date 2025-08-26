@@ -1,10 +1,10 @@
 import sys
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 
 
 def convert_timestamp_to_jst(ms_timestamp):
     seconds = ms_timestamp / 1000.0
-    utc_time = datetime.fromtimestamp(seconds, tz=timezone.utc)
+    utc_time = datetime.fromtimestamp(seconds, tz=UTC)
     jst = utc_time.astimezone(timezone(timedelta(hours=9)))
     return jst.strftime("%Y-%m-%d %H:%M:%S.%f")[:-3] + " JST"
 

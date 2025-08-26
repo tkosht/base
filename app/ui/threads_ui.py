@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Threads / Settings UI controllers.
 
 設計意図:
@@ -7,13 +5,12 @@ from __future__ import annotations
 - 永続化は service 層に委譲し、ここでは入出力整形に専念する。
 """
 
-from dataclasses import dataclass
-from typing import List, Dict
+from __future__ import annotations
 
-from app.services.thread_service import ThreadService
-from app.services.settings_service import SettingsService, AppSettingsDTO
 from app.db.session import db_session
 from app.repositories.thread_repo import ThreadRepository
+from app.services.settings_service import SettingsService
+from app.services.thread_service import ThreadService
 
 
 def get_app_settings() -> dict:

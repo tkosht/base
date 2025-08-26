@@ -1,10 +1,10 @@
-from __future__ import annotations
-
 """Application settings service.
 
 設計意図:
 - 表示制御設定の取得/更新をユースケース単位のAPIで提供する。
 """
+
+from __future__ import annotations
 
 from dataclasses import dataclass
 

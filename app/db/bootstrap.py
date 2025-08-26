@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-from typing import Iterable
-
 from .models import AppSettings, Base, Message, Thread
-from .session import get_engine, db_session
+from .session import db_session, get_engine
 
 
 def create_all() -> None:

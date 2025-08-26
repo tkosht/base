@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from typing import List, Optional
 from datetime import datetime
 
 from sqlalchemy import Boolean, DateTime, ForeignKey, String, Text, func
@@ -15,7 +14,7 @@ class Thread(Base):
     __tablename__ = "threads"
 
     id: Mapped[str] = mapped_column(String(26), primary_key=True)
-    title: Mapped[Optional[str]] = mapped_column(Text(), nullable=True)
+    title: Mapped[str | None] = mapped_column(Text(), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean(), default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
@@ -23,11 +22,11 @@ class Thread(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), onupdate=func.now()
     )
-    last_message_at: Mapped[Optional[datetime]] = mapped_column(
+    last_message_at: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True), nullable=True
     )
 
-    messages: Mapped[List["Message"]] = relationship(
+    messages: Mapped[list[Message]] = relationship(
         back_populates="thread", cascade="all, delete-orphan"
     )
 

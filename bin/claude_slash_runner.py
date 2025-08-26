@@ -15,24 +15,23 @@ from __future__ import annotations
 import argparse
 import re
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
 
 ROOT = Path(__file__).resolve().parents[1]
 COMMANDS_DIR = ROOT / ".claude" / "commands"
 
 
-def iter_command_files() -> List[Path]:
+def iter_command_files() -> list[Path]:
     exts = (".md",)
     if not COMMANDS_DIR.exists():
         return []
-    files: List[Path] = []
+    files: list[Path] = []
     for p in COMMANDS_DIR.rglob("*"):
         if p.is_file() and p.suffix in exts:
             files.append(p)
     return sorted(files)
 
 
-def extract_usage_block(text: str) -> Optional[str]:
+def extract_usage_block(text: str) -> str | None:
     # Capture a YAML-like key `usage_command:` with an indented block, or a section with a heading
     # Strategy: find line starting with `usage_command:`; capture following indented lines until blank
     m = re.search(r"^usage_command:\s*\|?\s*$", text, flags=re.MULTILINE)
@@ -66,8 +65,8 @@ def extract_usage_block(text: str) -> Optional[str]:
     return block.strip() or None
 
 
-def extract_meta(text: str) -> Dict[str, str]:
-    meta: Dict[str, str] = {}
+def extract_meta(text: str) -> dict[str, str]:
+    meta: dict[str, str] = {}
     # Best-effort extraction of meta.name and meta.version and purpose block
     # 1) Try YAML front-matter style delimited by --- ... ---
     fm = None
@@ -131,8 +130,8 @@ def extract_meta(text: str) -> Dict[str, str]:
     return meta
 
 
-def derive_command_names(path: Path, usage_block: Optional[str]) -> List[str]:
-    names: List[str] = []
+def derive_command_names(path: Path, usage_block: str | None) -> list[str]:
+    names: list[str] = []
     # From usage_block: lines like "/dag-debug-enhanced ..." — take token after '/'
     if usage_block:
         for line in usage_block.splitlines():
@@ -147,7 +146,7 @@ def derive_command_names(path: Path, usage_block: Optional[str]) -> List[str]:
     names.append(f"/{stem}")
     # Deduplicate preserving order
     seen = set()
-    out: List[str] = []
+    out: list[str] = []
     for n in names:
         if n not in seen:
             out.append(n)
@@ -155,8 +154,8 @@ def derive_command_names(path: Path, usage_block: Optional[str]) -> List[str]:
     return out
 
 
-def build_index() -> Dict[str, Dict[str, object]]:
-    index: Dict[str, Dict[str, object]] = {}
+def build_index() -> dict[str, dict[str, object]]:
+    index: dict[str, dict[str, object]] = {}
     for p in iter_command_files():
         text = p.read_text(encoding="utf-8", errors="ignore")
         usage = extract_usage_block(text)
@@ -174,7 +173,7 @@ def cmd_list(args: argparse.Namespace) -> None:
         print("No commands found under .claude/commands.")
         return
     # Group by unique path to avoid duplicates due to aliases
-    seen_paths: Dict[Path, List[str]] = {}
+    seen_paths: dict[Path, list[str]] = {}
     for key, rec in index.items():
         seen_paths.setdefault(rec["path"], []).append(key)
     for path, aliases in sorted(seen_paths.items(), key=lambda kv: str(kv[0])):
@@ -185,7 +184,7 @@ def cmd_list(args: argparse.Namespace) -> None:
             print(f"  name: {name}")
 
 
-def resolve_command_token(s: str) -> Tuple[str, List[str]]:
+def resolve_command_token(s: str) -> tuple[str, list[str]]:
     s = s.strip()
     if not s:
         raise ValueError("Empty command")
@@ -214,8 +213,8 @@ def cmd_run(args: argparse.Namespace) -> None:
         print("Tip: Use 'list' to see available commands.")
         return
     path: Path = rec["path"]  # type: ignore[assignment]
-    usage: Optional[str] = rec.get("usage")  # type: ignore[assignment]
-    meta: Dict[str, str] = rec.get("meta", {})  # type: ignore[assignment]
+    usage: str | None = rec.get("usage")  # type: ignore[assignment]
+    meta: dict[str, str] = rec.get("meta", {})  # type: ignore[assignment]
     print(f"Command: {token}")
     if rest:
         print(f"Args: {' '.join(rest)}")

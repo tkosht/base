@@ -4,17 +4,14 @@ from pathlib import Path
 
 from app.features.search import (
     _search_users,
-    chips_html,
-    neutralize_email,
-    suggest,
     on_change,
+    suggest,
 )
 from app.utils.svg import (
     build_favicon_svg,
     make_favicon_data_uri,
     write_emoji_svg,
 )
-import gradio as gr
 
 
 def test_search_and_suggest_and_on_change(tmp_path):

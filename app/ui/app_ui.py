@@ -2,28 +2,23 @@ from __future__ import annotations
 
 import gradio as gr
 
-from app.ui.head import build_head_html
-from app.ui.avatars import prepare_avatars
-from app.ui.html.threads_html import build_threads_html, build_threads_html_tab
-from app.ui.tabs.chat_tab import setup_chat_tab
-from app.ui.tabs.threads_tab import setup_threads_tab
 from app.features.search import (
-    suggest,
-    on_change,
     chips_html,
     neutralize_email,
-)
-from app.ui.threads_ui import (
-    list_threads as ui_list_threads,
-    create_thread as ui_create_thread,
-    rename_thread as ui_rename_thread,
-    archive_thread as ui_archive_thread,
-    delete_thread as ui_delete_thread,
-    toggle_sidebar_visibility,
-    list_messages as ui_list_messages,
+    on_change,
+    suggest,
 )
 from app.services.settings_service import SettingsService
-
+from app.ui.avatars import prepare_avatars
+from app.ui.head import build_head_html
+from app.ui.html.threads_html import build_threads_html
+from app.ui.tabs.threads_tab import setup_threads_tab
+from app.ui.threads_ui import (
+    create_thread as ui_create_thread,
+    list_messages as ui_list_messages,
+    list_threads as ui_list_threads,
+    toggle_sidebar_visibility,
+)
 
 DEFAULT_STATUS_TEXT = "準備OK! いつでもチャットを開始できます。"
 
@@ -162,10 +157,10 @@ def create_blocks() -> gr.Blocks:
                         return new_tid, history, gr.update()
 
                     if kind == "rename" and tid and arg:
+                        from app.db.session import db_session
                         from app.repositories.thread_repo import (
                             ThreadRepository,
                         )
-                        from app.db.session import db_session
 
                         with db_session() as s:
                             repo = ThreadRepository(s)
@@ -191,10 +186,10 @@ def create_blocks() -> gr.Blocks:
                         return no_changes()
 
                     if kind == "delete" and tid:
+                        from app.db.session import db_session
                         from app.repositories.thread_repo import (
                             ThreadRepository,
                         )
-                        from app.db.session import db_session
 
                         with db_session() as s:
                             repo = ThreadRepository(s)

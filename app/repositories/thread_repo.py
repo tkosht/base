@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Thread/Message persistence operations (repository layer).
 
 設計意図:
@@ -7,9 +5,9 @@ from __future__ import annotations
 - ここではビジネスルールは持たず、単純なCRUDとクエリに徹する。
 """
 
-from typing import Iterable, Optional
+from __future__ import annotations
 
-from sqlalchemy import select, delete
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db.models import Message, Thread
@@ -20,14 +18,14 @@ class ThreadRepository:
         self.session = session
 
     # Threads
-    def create(self, thread_id: str, title: Optional[str]) -> Thread:
+    def create(self, thread_id: str, title: str | None) -> Thread:
         t = Thread(id=thread_id, title=title)
         self.session.add(t)
         # セッション内で即時取得できるよう flush する
         self.session.flush()
         return t
 
-    def get(self, thread_id: str) -> Optional[Thread]:
+    def get(self, thread_id: str) -> Thread | None:
         return self.session.get(Thread, thread_id)
 
     def list_recent(self, limit: int = 50) -> list[Thread]:
@@ -42,7 +40,7 @@ class ThreadRepository:
         )
         return list(self.session.scalars(stmt).all())
 
-    def rename(self, thread_id: str, title: str) -> Optional[Thread]:
+    def rename(self, thread_id: str, title: str) -> Thread | None:
         t = self.get(thread_id)
         if not t:
             return None

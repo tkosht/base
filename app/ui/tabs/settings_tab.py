@@ -34,12 +34,12 @@ def setup_settings_tab(
         removed = [x for x in prev if x not in cur]
         added_cnt = len(added)
         removed_cnt = len(removed)
-        added_part = "｜追加 %d 件" % added_cnt + (
+        added_part = f"｜追加 {added_cnt} 件" + (
             ": " + ", ".join(neutralize_email(x) for x in added)
             if added_cnt
             else ""
         )
-        removed_part = "｜削除 %d 件" % removed_cnt + (
+        removed_part = f"｜削除 {removed_cnt} 件" + (
             ": " + ", ".join(neutralize_email(x) for x in removed)
             if removed_cnt
             else ""

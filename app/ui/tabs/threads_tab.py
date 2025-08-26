@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import gradio as gr
+
 from app.ui.html.threads_html import build_threads_html_tab
 
 

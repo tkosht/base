@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from pathlib import Path
-from fastapi import FastAPI
+
+from fastapi import APIRouter, FastAPI
 from fastapi.responses import RedirectResponse
-from fastapi import APIRouter
 
 from app.db.bootstrap import bootstrap_schema_and_seed
 from app.web.assets import ensure_public_assets, mount_public_and_routes
-from app.web.routers.threads import router as threads_router
 from app.web.routers.settings import router as settings_router
+from app.web.routers.threads import router as threads_router
 
 
 def create_api_app() -> FastAPI:

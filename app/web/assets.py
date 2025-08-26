@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+
 from fastapi import FastAPI
-from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.utils import svg as svg_utils
 

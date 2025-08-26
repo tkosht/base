@@ -6,9 +6,10 @@
 from __future__ import annotations
 
 import time
-import gradio as gr
-from app.services.thread_service import ThreadService
 
+import gradio as gr
+
+from app.services.thread_service import ThreadService
 
 STATUS_GENERATING = "⌛ 回答生成中..."
 

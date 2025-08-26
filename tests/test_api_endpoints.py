@@ -3,9 +3,9 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from app.web.factory import create_api_app
 from app.db.bootstrap import bootstrap_schema_and_seed
 from app.db.session import reconfigure_engine
+from app.web.factory import create_api_app
 
 
 @pytest.fixture()

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 import time
+
 import gradio as gr
 
-from app.features.chat import guard_and_prep, stream_llm, stop_chat
+from app.features.chat import guard_and_prep, stop_chat, stream_llm
 from app.services.title_service import TitleService
 
 

@@ -1,5 +1,3 @@
-from __future__ import annotations
-
 """Thread/Message service layer.
 
 設計意図:
@@ -7,9 +5,10 @@ from __future__ import annotations
 - ID生成や簡単なビジネスルール（初回タイトル推定など）をここで担う。
 """
 
-from dataclasses import dataclass
-from typing import Optional
+from __future__ import annotations
+
 import uuid
+from dataclasses import dataclass
 
 from app.db.session import db_session
 from app.repositories.thread_repo import ThreadRepository
@@ -40,7 +39,7 @@ class CreateThreadResult:
 
 class ThreadService:
     def create_thread(
-        self, title_hint: Optional[str] = None, fixed_id: Optional[str] = None
+        self, title_hint: str | None = None, fixed_id: str | None = None
     ) -> CreateThreadResult:
         with db_session() as s:
             repo = ThreadRepository(s)
@@ -55,7 +54,7 @@ class ThreadService:
             return CreateThreadResult(thread_id=thread_id)
 
     def add_user_message(
-        self, thread_id: str, content: str, fixed_id: Optional[str] = None
+        self, thread_id: str, content: str, fixed_id: str | None = None
     ) -> str:
         with db_session() as s:
             repo = ThreadRepository(s)
@@ -69,7 +68,7 @@ class ThreadService:
             return msg_id
 
     def add_assistant_message(
-        self, thread_id: str, content: str, fixed_id: Optional[str] = None
+        self, thread_id: str, content: str, fixed_id: str | None = None
     ) -> str:
         with db_session() as s:
             repo = ThreadRepository(s)

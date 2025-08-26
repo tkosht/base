@@ -1,12 +1,10 @@
 from __future__ import annotations
 
-import os
-
 import pytest
 
 from app.db.bootstrap import bootstrap_schema_and_seed
-from app.services.thread_service import ThreadService
 from app.db.session import reconfigure_engine
+from app.services.thread_service import ThreadService
 
 
 @pytest.fixture(autouse=True)

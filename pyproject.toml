@@ -111,6 +111,14 @@ ignore = []
 known-first-party = ["app"]
 combine-as-imports = true
 
+[tool.ruff.lint.per-file-ignores]
+"app/ui/**/*.py" = ["E501"]
+"app/ui/html/**/*.py" = ["E501"]
+"app/utils/svg.py" = ["E501"]
+"app/web/assets.py" = ["E501"]
+"tests/**/*.py" = ["E501"]
+"bin/claude_slash_runner.py" = ["E501"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]

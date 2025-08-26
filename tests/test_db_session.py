@@ -3,8 +3,8 @@ from __future__ import annotations
 import pytest
 
 from app.db.bootstrap import bootstrap_schema_and_seed
-from app.db.session import db_session
 from app.db.models import Thread
+from app.db.session import db_session
 
 
 @pytest.fixture(autouse=True)
