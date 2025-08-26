@@ -69,9 +69,8 @@ def create_blocks() -> gr.Blocks:
                             elem_id="new_btn_edge",
                             elem_classes=["icon36"],
                         )
-                        )
-
-                    gr.HTML("<div class='v-sep'></div>", elem_id="vsep")
+                        gr.HTML("<div class='v-sep'></div>", elem_id="vsep")
+                        gr.HTML("<div class='v-sep'></div>", elem_id="vsep")
 
                     with gr.Column(scale=4):
                         chat = gr.Chatbot(
