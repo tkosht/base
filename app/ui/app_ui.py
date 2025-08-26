@@ -56,11 +56,11 @@ def create_blocks() -> gr.Blocks:
                         threads_state = gr.State([])
                         threads_html = gr.HTML("", elem_id="threads_list")
 
-                    edge_col = gr.Column(scale=0, min_width=24, visible=not settings.show_thread_sidebar, elem_id="edge_col")  # type: ignore[index]
+                    edge_col = gr.Column(scale=0, min_width=36, visible=not settings.show_thread_sidebar, elem_id="edge_col")  # type: ignore[index]
                     with edge_col:
-                        toggle_btn_edge = gr.Button("≡", scale=0, min_width=24)
+                        toggle_btn_edge = gr.Button("≡", scale=0, min_width=36)
                         new_btn_edge = gr.Button(
-                            "＋", scale=0, min_width=24, elem_id="new_btn_edge"
+                            "＋", scale=0, min_width=36, elem_id="new_btn_edge"
                         )
 
                     gr.HTML("<div class='v-sep'></div>", elem_id="vsep")

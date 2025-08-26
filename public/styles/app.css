@@ -18,12 +18,8 @@
 /* improve dots click affordance */
 #threads_list .ctx-dots, #threads_list_tab .ctx-dots{ cursor:pointer; }
 /* threads list (scoped by ids where applicable) */
-#sidebar-toggle-row button{ min-width: var(--ctrl-w) !important; height: var(--ctrl-h) !important; }
-#sidebar_toggle_btn{ margin-left:auto; min-width: var(--ctrl-w) !important; }
-/* ensure the left toggle is square */
-#sidebar_toggle_btn button{ width: var(--ctrl-w) !important; height: var(--ctrl-h) !important; }
-/* unify new button height (text width remains flexible) */
-#new_btn_main button{ height: var(--ctrl-h) !important; }
+#sidebar-toggle-row button{min-width:36px;}
+#sidebar_toggle_btn{margin-left:auto;}
 .threads-list{display:block}
 #sidebar_col{overflow:hidden;}
 #threads_list{overflow-y:auto; max-height:calc(100vh - 220px);}
@@ -48,9 +44,7 @@
 /* thread-link base (migrated from inline in app_factory.py) */
 #threads_list .thread-link,
 #threads_list_tab .thread-link{padding:8px 10px; cursor:pointer; border-radius:6px; position:relative;}
-/* edge column icon buttons (≡ / ＋) should be square */
-#edge_col .gr-button{ width: var(--ctrl-w) !important; min-width: var(--ctrl-w) !important; }
-#edge_col .gr-button > button{ width: var(--ctrl-w) !important; height: var(--ctrl-h) !important; min-width: var(--ctrl-w) !important; padding: 0 !important; }
+/* edge column icon buttons: sizes handled via Gradio min_width */
 /* =================== Tokens =================== */
 :root{
   --avatar-base: 32px;
@@ -65,9 +59,6 @@
   --chip-bg:#e5e7eb; --search-band-bg:#F1F5F9; --search-band-radius:10px; --search-band-pad:12px;
   --search-bg:#EEF2FF; --search-text:#111827; --search-border:#BFDBFE; --search-ph:#6B7280;
   --search-bg-focus:#fff; --search-outline:rgba(37,99,235,.25);
-  /* unified control size for icon buttons */
-  --ctrl-h: 36px;
-  --ctrl-w: 36px;
 }
 /* ===== Theme bridge enforced styles (ui-light/ui-dark set by theme_bridge.js) ===== */
 html.ui-light #threads_list, html.ui-light #threads_list_tab{ color:#111827 !important; }
