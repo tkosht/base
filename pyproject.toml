@@ -149,9 +149,19 @@ asyncio_mode = "strict"
 asyncio_default_fixture_loop_scope = "function"
 filterwarnings = [
     "error",
-    "ignore::DeprecationWarning",
-    "ignore:cannot collect test class .*TestBaseA2AAgent.* because it has a __init__ constructor:pytest.PytestCollectionWarning",
-    "ignore::RuntimeWarning:app.query_monitor",
+
+    # 自前コードは Deprecation を見逃さない
+    "error::DeprecationWarning:app\\..*",
+
+    # 外部ライブラリ由来の Deprecation は必要に応じて無視
+    "ignore::DeprecationWarning:gradio.*",
+    "ignore::DeprecationWarning:fastapi.*",
+    "ignore::DeprecationWarning:starlette.*",
+    "ignore::DeprecationWarning:sqlalchemy.*",
+    "ignore::DeprecationWarning:gradio_client.*",
+    "ignore::DeprecationWarning:websockets.*",
+
+    # 実行環境のノイズ抑制
     "ignore::pytest.PytestUnraisableExceptionWarning",
     "ignore::ResourceWarning",
 ]
