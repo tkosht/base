@@ -32,6 +32,10 @@ poetry:
 python: up
 	docker compose exec app python
 
+external-network:
+	docker network create base_net
+
+
 # switch mode
 cpu gpu:
 	@rm -f compose.yml
@@ -78,6 +82,34 @@ clean-container:
 	docker compose down --rmi all
 	rm -rf app/__pycache__
 
+clean-external-network:
+	docker network rm base_net
+
 clean-repository: clean-poetry clean-logs
 	rm -rf app/* tests/* data/*
+
+# ==========
+# Serena MCP controls
+.PHONY: serena-up serena-down serena-restart serena-logs serena-init serena-status
+
+serena-up:
+	@mkdir -p .serena_home/logs .serena_home/prompt_templates projects
+	@echo "Starting Serena MCP server (SSE :9121)..."
+	docker compose up -d serena
+	@echo "Hint: use 'make serena-logs' to tail logs"
+
+serena-down:
+	@echo "Stopping Serena MCP server..."
+	docker compose stop serena || true
+
+serena-restart:
+	@echo "Restarting Serena MCP server..."
+	docker compose restart serena
+
+serena-logs:
+	@echo "Tailing Serena MCP logs (Ctrl-C to stop)"
+	docker compose logs -f serena
+
+serena-status:
+	@docker compose ps serena
 

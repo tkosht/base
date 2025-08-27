@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:24.04
 
 LABEL maintainer="tkosht <takehito.oshita.business@gmail.com>"
 
@@ -11,18 +11,8 @@ RUN apt-get update -y && apt-get upgrade -y \
         jq sqlite3 curl nodejs npm default-jre chromium-browser libpq-dev \
         libgeos-dev libsnappy-dev fontconfig fonts-ipaexfont fonts-ipafont \
         libmecab-dev mecab mecab-ipadic-utf8 mecab-utils file \
+        ripgrep fd-find eza \
     && localedef -f UTF-8 -i ja_JP ja_JP.UTF-8
-
-RUN apt-get install -y --fix-missing --no-install-recommends \
-        python3.10 \
-        python3.10-dev \
-        python3-pip \
-        python3-setuptools \
-        python3-wheel
-
-RUN ln -s /usr/bin/python3.10 /usr/bin/python \
-    && ln -s /usr/bin/pdb3 /usr/bin/pdb
-
 
 COPY bin/install_gh.sh /tmp/install_gh.sh
 RUN sh /tmp/install_gh.sh
@@ -48,13 +38,6 @@ ENV LANG="ja_JP.UTF-8" \
 # # Install for Tokenizers
 WORKDIR /tmp
 
-# # MeCab
-# RUN git config --global http.postBuffer 1048576000 \
-#     && git clone https://github.com/neologd/mecab-ipadic-neologd.git \
-#     && cd mecab-ipadic-neologd && bin/install-mecab-ipadic-neologd -n -a -y
-
-RUN python -m pip install --upgrade pip
-
 # upgrade system
 RUN apt-get upgrade -y \
     && apt-get autoremove -y \
@@ -66,12 +49,11 @@ ARG user_id=1000
 ARG group_id=1000
 ARG user_name
 ARG group_name
-
-RUN groupadd --gid $group_id $group_name
-RUN useradd -s /bin/bash --uid $user_id \
-    --gid $group_id -m $user_name
-RUN usermod $user_name -G docker,sudo,$group_name
 ARG home_dir=/home/$user_name
+
+RUN usermod -l $user_name ubuntu
+RUN groupmod -n $group_name ubuntu
+RUN usermod -d $home_dir -m $user_name
 COPY docker/rc $home_dir
 
 RUN echo $user_name:$user_name | chpasswd
