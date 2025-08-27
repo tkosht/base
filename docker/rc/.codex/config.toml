@@ -22,7 +22,7 @@ args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
 command = "npx"
 args = ["-y", "mcp-remote@latest", "http://serena:9121/sse", "--allow-http", "--transport", "sse-only", "--context", "codex"]
 
-[mcp_servers.codex]
+[mcp_servers.codex_mcp]
 command = "codex"
 args = ["mcp"]
 
