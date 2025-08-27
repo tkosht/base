@@ -1,8 +1,10 @@
-# CLAUDE.md (and GEMINI.md, AGENTS.md) - AI Agent Mandatory Protocol
+# AGENTS.md (and GEMINI.md, CLAUDE.md) - AI Agent Mandatory Protocol
 
 **🤖 IMPORTANT: This is an AI AGENT-ONLY knowledge base. Human operators should NOT attempt to read or reference these files due to volume and AI-optimized formatting.**
 
 This file contains MANDATORY protocols for Claude/Gemini Code or Claude/Gemini Agent. ALL rules must be followed without exception.
+
+Communication with users is in Japanese.
 
 ## 🚨 ABSOLUTE MANDATORY RULES (絶対遵守 - NO EXCEPTIONS)
 
