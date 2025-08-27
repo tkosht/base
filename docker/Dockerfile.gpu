@@ -60,9 +60,9 @@ ARG group_name
 RUN groupadd --gid $group_id $group_name
 RUN useradd -s /bin/bash --uid $user_id \
     --gid $group_id -m $user_name
-RUN usermod $user_name -G docker,sudo,$group_name
 # RUN sudo usermod -l $user_name ubuntu
 # RUN sudo groupmod -n $group_name ubuntu
+RUN usermod $user_name -G docker,sudo,$group_name
 ARG home_dir=/home/$user_name
 COPY docker/rc $home_dir
 
