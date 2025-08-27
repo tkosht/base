@@ -5,11 +5,18 @@ model_reasoning_effort = "high"
 approval_policy = "never"           # 完全自動
 sandbox_mode    = "workspace-write" # 読み書き可（ワークスペース内）
 
+
 [sandbox_workspace_write]
 network_access = true               # ★ネット許可
 
+[profiles.very-fast]
+model_reasoning_effort = "minimal"
+
 [profiles.fast]
 model_reasoning_effort = "low"
+
+[profiles.base]
+model_reasoning_effort = "medium"
 
 [profiles.deep]
 model_reasoning_effort = "high"
