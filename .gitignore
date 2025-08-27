@@ -15,6 +15,11 @@ bk/
 bkup/
 .ssh/
 .chroma/
+.codex-last-pr-url.txt
+.npm-cache/
+.serena/
+.serena_home/
+.projects/
 .*.swp
 ?.sh
 .env*

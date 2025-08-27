@@ -1,0 +1,23 @@
+services:
+  serena:
+    image: ghcr.io/oraios/serena:latest
+    container_name: serena-mcp-server
+    volumes:
+      - ./.serena_home:/root/.serena
+      - ./.projects:/workspaces/serena/.serena
+    command: >
+      uv run serena start-mcp-server --transport sse --port 9121
+    tty: false
+    restart: unless-stopped
+    ports:
+      - "9121:9121"
+#     networks:
+#       base_net:
+#         aliases: [ "serena" ]
+# 
+# 
+# networks:
+#   base_net:
+#     external: true
+#     name: base_net
+
