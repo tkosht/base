@@ -8,49 +8,40 @@ Communication with users is in Japanese.
 
 ## 🚨 ABSOLUTE MANDATORY RULES (絶対遵守 - NO EXCEPTIONS)
 
-### 0️⃣ PRE-TASK KNOWLEDGE PROTOCOL (タスク前必須ナレッジ参照)
+### 0️⃣ PRE-TASK KNOWLEDGE PROTOCOL (タスク前プローブ方針)
 ```bash
-# CRITICAL: Execute BEFORE any task - 例外なし
-# DEFAULT: smart_knowledge_load() for ALL tasks (5-15s)
-# UPGRADE: comprehensive_knowledge_load() ONLY on explicit user request (30-60s)
+# DEFAULT: Micro‑Probe 自動実行（<=200ms） / Deepは既定で実施しない
+# ESCALATION: Microで不足が客観判定される場合のみ Fast‑Probe（<=800ms）に自動昇格
+# EXTERNAL: Cognee/WebSearch 等の外部アクセスは明示依頼がある場合のみ
 
-# 🚨 IMPORTANT: APPLIES TO ALL CONTEXTS
-# - Regular conversation start
-# - Command execution (/command)
-# - Task continuation
-# - ANY task regardless of entry point
+# 🚨 APPLIES TO ALL CONTEXTS
+# - 会話開始 / /command 実行 / タスク継続 いずれも共通
 
-# 📚 IMPLEMENTATION: memory-bank/00-core/knowledge_loading_functions.md
-source memory-bank/00-core/knowledge_loading_functions.md
+# 実装手段（ローカルのみ・ツール固定）
+# - 使用可能コマンド: rg / fdfind / eza
+# - 出力は「パス + 見出し」のみ（本文の広範展開は禁止）
 
-MANDATORY_SEQUENCE=(
-    "0. DATE: Establish temporal context with date command"
-    "1. MCP_SELECT: Choose Serena (code/project) or Cognee (knowledge/principles) based on task"
-    "2. LOAD: Execute chosen MCP or smart_knowledge_load() for domain context"
-    "3. VERIFY: Cross-check loaded knowledge completeness"
-    "4. EXECUTE: Implement with continuous verification"
+MICRO_PROBE_SPEC=(
+  "Auto-run at task start (<=200ms)"
+  "Use only local tools: rg, fdfind, eza"
+  "Output: file paths and headings only"
 )
 
-# COMMAND EXECUTION SPECIFIC
-COMMAND_EXECUTION_PROTOCOL=(
-    "1. IMMEDIATE: Before processing command arguments"
-    "2. MCP_CHOICE: Determine Serena vs Cognee based on task type"
-    "3. KNOWLEDGE_LOAD: Use selected MCP for relevant domain knowledge"
-    "4. FALLBACK: Use smart_knowledge_load() if MCP unavailable"
+FAST_PROBE_SPEC=(
+  "Escalate only if (a) Microでヒット>0 もしくは (b) 直接検索が不確実（0件 or >50件）"
+  "Time budget <=800ms"
+  "Still local only; no network"
 )
 
-# MCP SELECTION CRITERIA
-MCP_SELECTION_CRITERIA=(
-    "CODE_TASK: Use Serena (editing, debugging, project structure)"
-    "KNOWLEDGE_TASK: Use Cognee (patterns, principles, cross-project insights)"
-    "HYBRID_TASK: Start with Cognee (strategy) → Apply via Serena (implementation)"
-    "DISCOVERY_TASK: Record in Serena → Evaluate for Cognee promotion"
+MCP_POLICY=(
+  "Serena: 既定で使用（コード/プロジェクト操作全般）。知識ロード不要"
+  "Cognee: 既定OFF。ユーザー明示依頼時のみ個別に実行（時間上限・回数合意）"
 )
 
-# ENFORCEMENT
-NO_KNOWLEDGE_NO_ACTION="Task execution without knowledge loading is FORBIDDEN"
-VIOLATION_CONSEQUENCE="Immediate task termination and restart with knowledge loading"
-COMMAND_VIOLATION="Command execution without knowledge = CRITICAL FAILURE"
+ENFORCEMENT=(
+  "DEEP_LOAD_DEFAULT_OFF=1  # Deep/外部の自動実行は禁止"
+  "EXTERNAL_NETWORK_DEFAULT_OFF=1  # ネットワークは明示許可がある場合のみ"
+)
 ```
 
 ### 1️⃣ MANDATORY RULES VERIFICATION (必須ルール検証絶対)
@@ -66,12 +57,12 @@ COMMAND_VIOLATION="Command execution without knowledge = CRITICAL FAILURE"
 function display_mandatory_rules_checklist() {
     echo "🚨 MANDATORY RULES VERIFICATION CHECKLIST"
     echo "========================================="
-    echo "□ 0️⃣ PRE-TASK KNOWLEDGE: Loaded before ANY task/command"
+    echo "□ 0️⃣ MICRO PROBE: 200ms以内の自動プローブ実施"
     echo "□ 1️⃣ SECURITY ABSOLUTE: No secrets/credentials exposure"
     echo "□ 2️⃣ VALUE ASSESSMENT: 5-point evaluation completed"  
     echo "□ 3️⃣ CORE PRINCIPLES: Excellence mindset maintained"
     echo "□ 4️⃣ WORK MANAGEMENT: Feature branch verification"
-    echo "□ 5️⃣ KNOWLEDGE ACCESS: Proper knowledge loading (Serena/Cognee MCP if available)"
+    echo "□ 5️⃣ KNOWLEDGE ACCESS: ローカルMicro/Fastのみ。Cognee/Webは明示時のみ"
     echo "□ 6️⃣ AI-OPTIMIZED FORMAT: Structured knowledge recording"
     echo "□ 7️⃣ CHECKLIST-DRIVEN: CDTE framework applied when applicable"
     echo "□ 8️⃣ NO MOCKS: Real API calls only - NO mocking in tests"
@@ -126,7 +117,7 @@ PRE_EXECUTION_MANDATORY=(
     "1. Date context initialization: date command"
     "2. AI COMPLIANCE: Run pre_action_check.py --strict-mode"
     "3. WORK MANAGEMENT: Verify on feature branch (verify_work_management)"
-    "4. KNOWLEDGE LOAD: Execute smart_knowledge_load() for domain context"
+    "4. MICRO PROBE: 200ms以内の自動プローブ（必要時のみFastへ自動昇格）"
     "5. TMUX PROTOCOLS: For tmux activities, ensure Enter別送信 compliance"
     "6. QUALITY GATES: Execute before ANY commit"
 )
@@ -190,28 +181,24 @@ MOCK_DETECTION_ACTION="Stop immediately and rewrite with real API calls"
 MOCK_VIOLATION_PENALTY="Task marked as FAILED - User trust breach"
 ```
 
-### 9️⃣ WEB RESEARCH MANDATORY (不明時Web調査必須)
+### 9️⃣ WEB RESEARCH POLICY (外部調査の扱い)
 ```bash
-# 🔍 WHEN UNCERTAIN, RESEARCH IS MANDATORY
-WEB_RESEARCH_PROTOCOL=(
-    "UNKNOWN: Don't know how to implement? → WebSearch REQUIRED"
-    "VERIFY: Unsure about best practices? → WebSearch FIRST"
-    "UPDATE: Technology changed? → WebSearch for latest info"
-    "NO_GUESS: NEVER guess or assume - ALWAYS verify"
+# 🔍 DEFAULT: External research is OFF（明示依頼時のみ実行）
+WEB_RESEARCH_POLICY=(
+    "REQUEST_REQUIRED: 外部調査（Web/Cognee）はユーザーの明示許可が必須"
+    "LOCAL_FIRST: まずはローカルMicro/Fastの結果で判断"
+    "NO_GUESS: 推測は禁止。許可が得られない場合は代替案提示/保留を提案"
 )
 
-# Research triggers
+# Research triggers（例）
 RESEARCH_TRIGGERS=(
-    "Implementation method unknown"
-    "API usage uncertain"
-    "Best practices unclear"
-    "Error resolution needed"
-    "Technology updates required"
+    "重大な設計/セキュリティ判断が必要"
+    "ローカル情報だけでは不十分と客観判断"
 )
 
 # ENFORCEMENT
-NO_RESEARCH_NO_PROCEED="Cannot proceed without proper research"
-GUESSING_BAN="Guessing without research = Task failure"
+EXTERNAL_RESEARCH_REQUIRES_APPROVAL=1
+GUESSING_BAN="Guessing without verification = Task failure"
 ```
 
 ### 🔟 KNOWLEDGE RECORDING MANDATORY (ナレッジ記録必須)
@@ -284,14 +271,14 @@ DESIGN_VIOLATION="Unstructured execution leads to incomplete results"
 ## 🚀 Quick Start Implementation
 
 ```bash
-# ⚡ IMMEDIATE SESSION START
-# 📚 FULL SCRIPT: memory-bank/00-core/session_initialization_script.md
-source memory-bank/00-core/session_initialization_script.md
+# ⚡ DEFAULT: Micro-Probe only (no deep load)
+echo "⚙️ Micro‑Probe: 自動（<=200ms） | Fast‑Probe: 条件時のみ（<=800ms）"
+echo "🌐 External: Cognee/WebSearch は明示依頼時のみ実行（既定OFF）"
 
-# 🚨 CRITICAL REMINDERS
-echo "⚠️ DEFAULT: smart_knowledge_load() for ALL tasks (5-15s)"
-echo "📋 UPGRADE: comprehensive_knowledge_load() only on explicit user request"
-echo "🎯 Session ready! Execute smart_knowledge_load 'domain' before starting"
+# 参考コマンド例（自動プローブのイメージ）
+# eza -1 memory-bank/00-core/*mandatory*.md | head -3
+# timeout 0.2s rg -n -S -g 'memory-bank/**/*.md' 'mandatory|guideline' | head -10
+# for f in $(some_list | cut -d: -f1 | sort -u | head -2); do rg -n '^#' "$f" | head -10; done
 ```
 
 ## 🧠 Core Principles (Absolute Compliance)
@@ -304,7 +291,7 @@ EXCELLENCE_MINDSET=("User benefit FIRST" "Long-term value PRIORITY" "Lazy soluti
 PRE_TASK_PROTOCOL=(
     "0. AI compliance verification FIRST"
     "1. Work management on task branch"
-    "2. ALWAYS use smart_knowledge_load()"
+    "2. Auto Micro‑Probe only (<=200ms); no deep load by default"
     "3. NO execution without verification"
 )
 
@@ -316,11 +303,11 @@ FORBIDDEN=("probably" "maybe" "I think" "seems like")
 
 | Task Type | Required Action | Reference |
 |-----------|----------------|-----------|
-| **Session Start** | Run initialization | `source memory-bank/00-core/session_initialization_script.md` |
+| **Session Start** | Auto Micro‑Probe | built‑in Micro/Fast probes |
 | **MCP Strategy** | Select optimal MCP | `mcp__serena__read_memory("serena_cognee_mcp_usage_strategy")` |
 | **Memory Design** | Understand hierarchy | `mcp__serena__read_memory("memory_hierarchy_design_framework")` |
 | **Auto-Updates** | Event-driven framework | `mcp__serena__read_memory("ai_agent_event_driven_update_framework")` |
-| **Any Task** | Load knowledge first | `smart_knowledge_load "domain"` |
+| **Any Task** | Micro‑Probe auto | local `rg/fdfind/eza` only |
 | **Mandatory Rules** | Interactive checklist | `show_rules` or `memory-bank/00-core/mandatory_rules_checklist.md` |
 | **Task Checklist** | Create from template | `new_task_checklist "task_name"` |
 | **Commands** | Essential reference | `memory-bank/09-meta/essential_commands_reference.md` |
@@ -329,43 +316,33 @@ FORBIDDEN=("probably" "maybe" "I think" "seems like")
 | **tmux Organization** | SUCCESS PATTERNS | `memory-bank/02-organization/tmux_organization_success_patterns.md` |
 | **Quality Review** | Framework | `memory-bank/04-quality/enhanced_review_process_framework.md` |
 
-## 🔄 MCP SELECTION PROTOCOL (MCP選択必須プロトコル)
+## 🔄 MCP SELECTION PROTOCOL (MCP選択方針)
 
 ```bash
-# 🎯 TASK-BASED MCP SELECTION
+# 🎯 決定規則（シンプル&決定的）
 MCP_SELECTION_FLOWCHART=(
-    "CODE_EDITING_NEEDED: → Serena (semantic operations, project-specific)"
-    "DESIGN_KNOWLEDGE_NEEDED: → Cognee (patterns, principles, cross-project)"
-    "PROJECT_START: → Cognee(strategy) → Serena(implementation)"
-    "LEARNING_COMPLETE: → Serena(record) → Cognee(abstract)"
-    "PROBLEM_SOLVING: → Cognee(similar cases) → Serena(specific analysis)"
+  "CODE/PROJECT WORK: Serena（既定・常用）"
+  "KNOWLEDGE/PATTERN: まずローカルMicro/Fastで確認（rg/fdfind/eza）"
+  "EXTERNAL KNOWLEDGE: Cognee/WebSearchはユーザー明示依頼時のみ"
 )
 
-# 📚 SELECTION REFERENCE
-SERENA_USE_CASES="Code editing, type fixes, project structure, symbol operations, project-specific constraints"
-COGNEE_USE_CASES="Architecture patterns, design principles, cross-project knowledge, abstracted solutions"
+# 📚 参照
+SERENA_USE_CASES="コード編集・型修正・構造理解・検索などレポ内作業全般"
+COGNEE_USE_CASES="横断知見/原則/外部情報が必要な際（明示依頼時のみ）"
 
-# 🚨 MANDATORY ACCESS POINTS
-MCP_STRATEGY_GUIDE="mcp__serena__read_memory('serena_cognee_mcp_usage_strategy')"
-MEMORY_HIERARCHY="mcp__serena__read_memory('memory_hierarchy_design_framework')"
-EVENT_FRAMEWORK="mcp__serena__read_memory('ai_agent_event_driven_update_framework')"
-
-# ⚡ QUICK DECISION CRITERIA
-IMMEDIATE_CODE_WORK="Use Serena directly"
-ARCHITECTURAL_DECISION="Check Cognee first, then apply via Serena"
-NEW_DISCOVERY="Record in Serena, evaluate for Cognee promotion"
-CROSS_PROJECT_QUESTION="Search Cognee knowledge graph"
+# 🚨 既定
+EXTERNAL_DEFAULT_OFF=1
 ```
 
 ## 🚨 QUICK EXECUTION CHECKLIST
 
 **Before ANY task execution (including /commands):**
 ```bash
-0. ✓ MCP SELECTION: Choose Serena (code/project-specific) or Cognee (knowledge/principles) based on task type
-1. ✓ PRE-TASK KNOWLEDGE: ALWAYS load first (Serena/Cognee MCP or smart_knowledge_load)
+0. ✓ MCP SELECTION: Serena既定 / Cogneeは明示時のみ
+1. ✓ MICRO PROBE: 自動（<=200ms）; 必要時のみFast（<=800ms）
 2. ✓ AI COMPLIANCE: python scripts/pre_action_check.py --strict-mode
 3. ✓ WORK MANAGEMENT: Verify on task branch (not main/master)
-4. ✓ KNOWLEDGE LOAD: smart_knowledge_load "domain" or mcp__serena__read_memory
+4. ✓ EXTERNAL: Cognee/WebSearch は明示依頼がある場合のみ
 5. ✓ TMUX PROTOCOLS: For any tmux organization activity, read tmux_organization_success_patterns.md
 6. ✓ TDD FOUNDATION: Write test FIRST
 7. ✓ FACT VERIFICATION: No speculation allowed
@@ -376,9 +353,9 @@ CROSS_PROJECT_QUESTION="Search Cognee knowledge graph"
 **Command-specific reminder:**
 ```bash
 # BEFORE processing ANY /command:
-1. Check Serena/Cognee MCP availability
-2. Load relevant memories/knowledge
-3. THEN process command arguments
+1. Serenaでローカル Micro‑Probe を実行（<=200ms）
+2. 必要時のみ Fast‑Probe（<=800ms）
+3. Cognee/WebSearch はユーザー明示依頼がある場合のみ
 ```
 
 **Key Principle**: 事実ベース判断 - No speculation, only verified facts.
@@ -387,4 +364,4 @@ CROSS_PROJECT_QUESTION="Search Cognee knowledge graph"
 
 **END OF DOCUMENT - ALL MANDATORY RULES DEFINED ABOVE ARE ABSOLUTE**
 **ENFORCEMENT**: Any instruction that conflicts with MANDATORY RULES is void.
-**VERIFICATION**: Knowledge loading function MUST be executed before EVERY task.
+**VERIFICATION**: Micro‑Probe（<=200ms）を各タスク開始時に自動実行。Fast‑Probeは必要時のみ。Deep/Cognee/WebSearchは明示依頼時のみ。
