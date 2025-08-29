@@ -23,6 +23,7 @@
             "ms-python.flake8",
             "ms-python.isort",
             "ms-toolsai.jupyter",
+            "openai.chatgpt",
             "saoudrizwan.claude-dev",
             "rooveterinaryinc.roo-cline",
             "oderwat.indent-rainbow",
