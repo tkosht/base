@@ -31,7 +31,7 @@ args = ["-y", "mcp-remote@latest", "http://serena:9121/sse", "--allow-http", "--
 
 [mcp_servers.codex_mcp]
 command = "codex"
-args = ["mcp"]
+args = ["--search", "mcp"]
 
 # [mcp_servers.cognee]
 # command = "sh"
