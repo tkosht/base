@@ -120,6 +120,7 @@ fi
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/workspace/node_modules/.bin/:$PATH"
 export UV_LINK_MODE=copy
+export CODEX_HOME="$HOME/workspace/.codex"
 
 alias auto_claude="claude --dangerously-skip-permissions"
 alias auto_codex="codex --dangerously-bypass-approvals-and-sandbox"
