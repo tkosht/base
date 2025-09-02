@@ -299,6 +299,24 @@ PRE_TASK_PROTOCOL=(
 FORBIDDEN=("probably" "maybe" "I think" "seems like")
 ```
 
+### Script/Automation Minimalism (スクリプト最小化方針)
+
+```bash
+# 目的: リポジトリの複雑性を抑制し、安易な自動化追加を防ぐ
+SCRIPT_AUTOMATION_MINIMALISM=(
+  "DEFAULT_OFF: 新規スクリプト/自動化は最後の手段（まずは手順簡素化/既存ターゲット活用）"
+  "PREFER_EXISTING: 既存の Makefile/スクリプトの拡張を優先（重複/乱立を禁止）"
+  "SIZE_LIMIT: 単機能・短命。~100行以内・外部依存追加禁止・副作用最小"
+  "PLACEMENT: 追加時は既存構造に従う（Makefile優先／scripts/ は最小限）"
+  "DOC_REQUIRED: 目的・利用手順・撤去基準を README か AGENTS.md に記載"
+  "DELETE_PLAN: 不使用の自動化は定期的に整理・削除（No repository bloat）"
+  "GATES: 追加前に Value Assessment(5-point) と Work Management を満たすこと"
+)
+
+# ENFORCEMENT（ゲート）
+SCRIPT_CHANGE_GATE="価値/保守/安全の実証なしに新規スクリプト追加を禁止（Makefile優先）"
+```
+
 ## 📖 Navigation Guide
 
 | Task Type | Required Action | Reference |
@@ -315,6 +333,8 @@ FORBIDDEN=("probably" "maybe" "I think" "seems like")
 | **AI Coordination** | Complete guide | `memory-bank/02-organization/ai_coordination_comprehensive_guide.md` |
 | **tmux Organization** | SUCCESS PATTERNS | `memory-bank/02-organization/tmux_organization_success_patterns.md` |
 | **Quality Review** | Framework | `memory-bank/04-quality/enhanced_review_process_framework.md` |
+| **Agent Collaboration** | codex_mcp checklist | `memory-bank/11-checklist-driven/templates/codex_mcp_collaboration_checklist_template.md` |
+| **Dir Conventions** | Meaning & placement rules | `memory-bank/00-core/repository_directory_conventions.md` |
 
 ## 🔄 MCP SELECTION PROTOCOL (MCP選択方針)
 
@@ -323,16 +343,106 @@ FORBIDDEN=("probably" "maybe" "I think" "seems like")
 MCP_SELECTION_FLOWCHART=(
   "CODE/PROJECT WORK: Serena（既定・常用）"
   "KNOWLEDGE/PATTERN: まずローカルMicro/Fastで確認（rg/fdfind/eza）"
+  "HARD TASKS (長引く/難易度高): codex_mcpで協働相談を開始"
   "EXTERNAL KNOWLEDGE: Cognee/WebSearchはユーザー明示依頼時のみ"
 )
 
 # 📚 参照
 SERENA_USE_CASES="コード編集・型修正・構造理解・検索などレポ内作業全般"
 COGNEE_USE_CASES="横断知見/原則/外部情報が必要な際（明示依頼時のみ）"
+CODEX_MCP_USE_CASES="難易度が高い問題の共同解析・設計検討・詰まり解消（ローカル情報で議論可能な範囲）"
 
 # 🚨 既定
 EXTERNAL_DEFAULT_OFF=1
 ```
+
+## ⓭ AGENT COLLABORATION POLICY (codex_mcp 相談方針)
+
+```bash
+# PURPOSE: 困難タスク時に codex_mcp を用いて別AIと協働し、事実ベースで打開する
+
+CODEX_MCP_COLLAB_POLICY=(
+  "TRIGGERED_BY: 長引くエラー解析/根本原因不明/設計ジレンマ/探索の行き詰まり"
+  "CONTEXT-FIRST: 問題の現象・環境・再現手順・試行と結果・仮説・制約・具体的なASKを簡潔に同梱"
+  "SESSION-CONTINUITY: 同一テーマの継続相談は必ず同一Session IDで継続"
+  "SESSION-SWITCH: 全く別テーマは新規セッションに切替（混線防止）"
+  "LOCAL-FIRST: 外部調査は引き続き既定OFF（許可時のみ）"
+)
+
+# ESCALATION TRIGGERS（少なくとも1つ満たす際に実施を検討）
+CODEX_MCP_ESCALATION_TRIGGERS=(
+  "30分以上の停滞 or 3回以上の有効試行不成立"
+  "クリティカル障害で優先度が高いのに原因が不明"
+  "設計オプションのトレードオフが拮抗し決め手不足"
+  "レビュー/テストで再現するがローカルで切り分け困難"
+)
+
+# PROMPT STRUCTURE（テンプレ）
+read -r -d '' CODEX_MCP_PROMPT_TEMPLATE << 'TEMPLATE'
+[Problem]
+- 現象/エラー内容: （1-3文で要約）
+- 期待動作: 
+
+[Environment]
+- リポ/サービス:（名前/パス）
+- バージョン/依存:（該当部分のみ）
+
+[Reproduction]
+- 再現手順:（最短フロー/コマンド）
+- ログ/出力:（要点のみ、抜粋）
+
+[Attempts]
+- 試したことと結果（n件、箇条書き・因果で明確に）
+
+[Hypotheses]
+- 現在の仮説（根拠付き）
+
+[Constraints]
+- セキュリティ/時間/互換性などの制約
+
+[Ask]
+- 今回の相談ゴール（1つ）
+- 補助的サブ質問（必要なら）
+
+[Artifacts]
+- 参照すべきファイル/行/PR/テストのパス
+TEMPLATE
+
+# SESSION RULES（継続時は必須）
+CODEX_MCP_SESSION_RULES=(
+  "FIRST_CALL: codex_mcp で新規セッションを開始し prompt にテンプレを適用"
+  "CAPTURE: 返却された Session ID を記録（memory-bank/06-project/context など）"
+  "FOLLOW_UP: 同一トピックでは codex_mcp-reply + Session ID を使用"
+  "SWITCH: 別トピックでは新規セッションを作成し、以降は新IDで継続"
+)
+
+# OPERATIONAL GUARDRAILS
+CODEX_MCP_GUARDRAILS=(
+  "SECURITY: 秘密情報は伏せる（トークン/鍵/個人情報は絶対不可）"
+  "DATA_MIN: 必要最小限のログ抜粋のみ（大量貼付禁止、要点化）"
+  "FACT-BASED: 推測禁止。再現/観測/差分/ログに基づく記述のみ"
+  "TIMEBOX: 1セッションは15-25分の検討→収穫なければ視点/仮説を更新して再度"
+)
+
+# RECORDING（相談の知見を再利用可能に）
+CODEX_MCP_RECORDING=(
+  "LOG: 要点を memory-bank/03-patterns/ or 06-project/ に簡潔記録"
+  "TEMPLATE: Problem→Approach→Outcome→Next を固定フォーマットで残す"
+  "LINKS: 関連PR/テスト/ファイルパスを明記し将来参照可能に"
+)
+
+# ENFORCEMENT
+CODEX_MCP_ENFORCEMENT=(
+  "NO_SESSION_DRIFT: 同一テーマでSession ID未使用→手戻り。必ず継続利用"
+  "NO_CONTEXT_BLOAT: 無関係ログ大量貼付の禁止。要点に絞る"
+  "NO_SPECULATION: 禁止ワード/推測表現の利用は是正"
+)
+
+# Minimal invocation examples（参考：ローカルMCPツール利用例のイメージ）
+echo "First consult → codex_mcp(prompt=CODEX_MCP_PROMPT_TEMPLATE)"
+echo "Follow-up    → codex_mcp-reply(sessionId=<ID>, prompt='追加の観測/差分/ASK')"
+```
+
 
 ## 🚨 QUICK EXECUTION CHECKLIST
 
@@ -343,11 +453,13 @@ EXTERNAL_DEFAULT_OFF=1
 2. ✓ AI COMPLIANCE: python scripts/pre_action_check.py --strict-mode
 3. ✓ WORK MANAGEMENT: Verify on task branch (not main/master)
 4. ✓ EXTERNAL: Cognee/WebSearch は明示依頼がある場合のみ
+5. ✓ CODEX_MCP: 難易度が高い/停滞時は協働相談を発火（セッション継続を厳守）
 5. ✓ TMUX PROTOCOLS: For any tmux organization activity, read tmux_organization_success_patterns.md
 6. ✓ TDD FOUNDATION: Write test FIRST
 7. ✓ FACT VERIFICATION: No speculation allowed
 8. ✓ QUALITY GATES: Before commit
 9. ✓ COMPLETION: Create Pull Request when done
+10. ✓ COMPLEXITY: 新規スクリプトは最後の手段（Makefile拡張を優先）
 ```
 
 **Command-specific reminder:**
