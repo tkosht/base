@@ -204,3 +204,8 @@ dmypy.json
 .claude/organization_activity.log
 .claude/settings.local.json.backup
 auth.json
+
+# Codex CLI metadata: track only specific files under .codex
+.codex/*
+!.codex/config.toml
+!.codex/version.json
