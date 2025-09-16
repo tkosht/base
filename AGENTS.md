@@ -454,12 +454,12 @@ echo "Follow-up    → codex_mcp-reply(sessionId=<ID>, prompt='追加の観測/�
 3. ✓ WORK MANAGEMENT: Verify on task branch (not main/master)
 4. ✓ EXTERNAL: Cognee/WebSearch は明示依頼がある場合のみ
 5. ✓ CODEX_MCP: 難易度が高い/停滞時は協働相談を発火（セッション継続を厳守）
-5. ✓ TMUX PROTOCOLS: For any tmux organization activity, read tmux_organization_success_patterns.md
-6. ✓ TDD FOUNDATION: Write test FIRST
-7. ✓ FACT VERIFICATION: No speculation allowed
-8. ✓ QUALITY GATES: Before commit
-9. ✓ COMPLETION: Create Pull Request when done
-10. ✓ COMPLEXITY: 新規スクリプトは最後の手段（Makefile拡張を優先）
+6. ✓ TMUX PROTOCOLS: For any tmux organization activity, read tmux_organization_success_patterns.md
+7. ✓ TDD FOUNDATION: Write test FIRST
+8. ✓ FACT VERIFICATION: No speculation allowed
+9. ✓ QUALITY GATES: Before commit
+10. ✓ COMPLETION: Create Pull Request when done
+11. ✓ COMPLEXITY: 新規スクリプトは最後の手段（Makefile拡張を優先）
 ```
 
 **Command-specific reminder:**
