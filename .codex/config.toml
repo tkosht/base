@@ -4,6 +4,7 @@ model = "gpt-5-codex"
 model_provider = "openai"
 approval_policy = "never"           # 完全自動
 sandbox_mode    = "workspace-write" # 読み書き可（ワークスペース内）
+model_reasoning_effort = "high"
 
 
 [sandbox_workspace_write]
