@@ -1,7 +1,7 @@
 projects = { "/home/devuser/workspace" = { trust_level = "trusted" } }
-model = "gpt-5"
+# model = "gpt-5"
+model = "gpt-5-codex"
 model_provider = "openai"
-model_reasoning_effort = "high"
 approval_policy = "never"           # 完全自動
 sandbox_mode    = "workspace-write" # 読み書き可（ワークスペース内）
 
