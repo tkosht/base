@@ -7,7 +7,7 @@ on:
       - 'app/**'
       - 'tests/**'
       - 'pyproject.toml'
-      - 'poetry.lock'
+      - 'uv.lock'
       - '.github/workflows/ci.yml'
   pull_request:
     branches: [ main ]
@@ -15,7 +15,7 @@ on:
       - 'app/**'
       - 'tests/**'
       - 'pyproject.toml'
-      - 'poetry.lock'
+      - 'uv.lock'
       - '.github/workflows/ci.yml'
     paths-ignore:
       - '**/*.md'
@@ -39,47 +39,32 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v3
         with:
           python-version: ${{ matrix.python-version }}
-      
-      - name: Cache Poetry dependencies
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cache/pypoetry
-            ~/.cache/pip
-          key: ${{ runner.os }}-poetry-${{ hashFiles('poetry.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-poetry-
-      
-      - name: Install Poetry
-        run: |
-          curl -sSL https://install.python-poetry.org | python3 -
-          echo "$HOME/.local/bin" >> $GITHUB_PATH
-      
+
       - name: Install dependencies
         run: |
-          poetry install --no-interaction --no-ansi --with dev
-      
+          uv sync --all-groups --all-extras
+
       - name: Run linters
         run: |
-          poetry run ruff check .
-          poetry run black --check .
-      
+          uv run ruff check .
+          uv run black --check .
+
       - name: Type checking
         run: |
           # Make mypy non-blocking in this CI job to avoid false negatives from
           # third-party union types. We keep type checks informative and fix
           # incrementally while preventing CI flakes.
-          poetry run mypy app/ --ignore-missing-imports --explicit-package-bases || true
-      
+          uv run mypy app/ --ignore-missing-imports --explicit-package-bases || true
+
       - name: Run tests with coverage
         run: |
           # Run only unit tests in CI to avoid timeout issues
           # Integration tests are run separately with proper API key setup
-          poetry run pytest -q
+          uv run pytest -q
       
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
