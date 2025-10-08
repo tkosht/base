@@ -1,61 +1,65 @@
-[tool.poetry]
+[project]
 name = "cursor_dev"
 version = "0.1.0"
 description = "Cursor 開発環境"
-authors = ["AI Developer <dev@example.com>"]
-package-mode = false
+authors = [{ name = "AI Developer", email = "dev@example.com" }]
+requires-python = ">=3.10,<=3.13"
+dependencies = [
+    "aiohttp>=3.9.1,<4",
+    "beautifulsoup4",
+    "numpy",
+    "matplotlib",
+    "python-dotenv",
+    "requests",
+    "ipykernel",
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pydantic",
+    "python-multipart",
+    "starlette",
+    "a2a-sdk",
+    "claude-code-sdk>=0.0.14,<0.0.15",
+    "langgraph>=0.5.3,<0.6",
+    "langchain-openai>=0.3.28,<0.4",
+    "langchain-google-genai>=2.1.8,<3",
+    "langchain-tavily>=0.2.10,<0.3",
+    "langchain-experimental>=0.3.4,<0.4",
+    "mcp>=1.12.4,<2",
+    "fastmcp>=2.11.2,<3",
+    "chainlit>=2.6.9,<3",
+    "passlib[bcrypt]>=1.7.4,<2",
+    "aiosqlite>=0.21.0,<0.22",
+    "asyncpg>=0.30.0,<0.31",
+    "psycopg2>=2.9.10,<3",
+    "gradio>=5.42.0,<6",
+    "markdown-it-py>=4.0.0,<5",
+    "gunicorn[uvicorn]>=23.0.0,<24",
+    "sqlalchemy~=2.0",
+]
 
-[tool.poetry.dependencies]
-python = ">=3.10,<=3.13"
-aiohttp = "^3.9.1"
-beautifulsoup4 = "*"
-numpy = "*"
-matplotlib = "*"
-python-dotenv = "*"
-requests = "*"
-ipykernel = "*"
-fastapi = "*"
-uvicorn = "*"
-httpx = "*"
-pydantic = "*"
-python-multipart = "*"
-starlette = "*"
-a2a-sdk = "*"
-claude-code-sdk = "^0.0.14"
-langgraph = "^0.5.3"
-langchain-openai = "^0.3.28"
-langchain-google-genai = "^2.1.8"
-langchain-tavily = "^0.2.10"
-langchain-experimental = "^0.3.4"
-mcp = "^1.12.4"
-fastmcp = "^2.11.2"
-chainlit = "^2.6.9"
-passlib = {extras = ["bcrypt"], version = "^1.7.4"}
-aiosqlite = "^0.21.0"
-asyncpg = "^0.30.0"
-psycopg2 = "^2.9.10"
-gradio = "^5.42.0"
-markdown-it-py = "^4.0.0"
-gunicorn = {extras = ["uvicorn"], version = "^23.0.0"}
-sqlalchemy = "^2.0"
+[dependency-groups]
+dev = [
+    "pytest",
+    "pytest-cov",
+    "pytest-mock",
+    "black",
+    "flake8",
+    "isort",
+    "pytest-asyncio",
+    "mypy",
+    "pytest-benchmark",
+    "memory-profiler",
+    "psutil",
+    "ruff",
+]
 
-[tool.poetry.group.dev.dependencies]
-pytest = "*"
-pytest-cov = "*"
-pytest-mock = "*"
-black = "*"
-flake8 = "*"
-isort = "*"
-pytest-asyncio = "*"
-mypy = "*"
-pytest-benchmark = "*"
-memory-profiler = "*"
-psutil = "*"
-ruff = "*"
+[tool.uv]
+package = false
 
 [build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 79

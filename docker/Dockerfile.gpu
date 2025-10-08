@@ -74,9 +74,6 @@ RUN echo $user_name ALL=\(root\) NOPASSWD:ALL \
 RUN chown -R $user_name:$group_name $home_dir 
 USER $user_name
 
-# Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 -
-
 # uv
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 

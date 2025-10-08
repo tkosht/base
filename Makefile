@@ -2,10 +2,10 @@ default: all
 
 all: up install
 
-install: install-poetry install-agent-cli
+install: install-venv install-agent-cli
 
-install-poetry:
-	docker compose exec app bash bin/install_poetry.sh
+install-venv:
+	docker compose exec app bash bin/make_venv.sh
 
 install-agent-cli:
 	docker compose exec app bash bin/install_agentcli.sh
@@ -26,11 +26,8 @@ container-webapp:
 bash:
 	docker compose exec app bash
 
-poetry:
-	docker compose exec app bash -i -c 'SHELL=/usr/bin/bash poetry shell'
-
-python: up
-	docker compose exec app python
+python:
+	docker compose exec app bash -i -c 'uv run python'
 
 external-network:
 	docker network create base_net
@@ -67,10 +64,10 @@ build-no-cache:
 
 reup: down up
 
-clean: clean-logs clean-poetry clean-npm clean-container
+clean: clean-logs clean-venv clean-npm clean-container
 
-clean-poetry:
-	rm -rf .venv poetry.lock
+clean-venv:
+	rm -rf .venv uv.lock
 
 clean-npm:
 	rm -rf .npm-global
@@ -85,7 +82,7 @@ clean-container:
 clean-external-network:
 	docker network rm base_net
 
-clean-repository: clean-poetry clean-logs
+clean-repository: clean-venv clean-logs
 	rm -rf app/* tests/* data/*
 
 # ==========
