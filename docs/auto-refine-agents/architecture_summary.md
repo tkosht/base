@@ -49,6 +49,7 @@
 ### 実務上の要点（強化）
 - 評価健全性: Rubric/Spec 準拠 + 摂動ロバスト性 + 監査ログ + HITL 昇格
 - 並列運用: 各エージェントは Git worktree を分離し、`.agent/`（含 FTS DB）は共有しない
+- 共有正典: `agent/registry/` に prompts/playbooks/rubrics/config( *.defaults.yaml ) を管理（Git）。RAGの対象外。pull=`agent/registry→.agent` / push=`.agent→PR→agent/registry`
 - 参照: `evaluation-governance.md`, `worktree-guide.md`
 
 ### 関連ドキュメント

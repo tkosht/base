@@ -99,6 +99,16 @@ metadata:
 - ダッシュボード/リプレイの最小要件: スコア遷移、失敗チェック分布、コスト時系列、CheatingRisk 指標。
 - ログ保存期間はプロジェクト標準に従う（例: 90日）。
 
+## 8. 昇格PR提出物（必須）
+- 対象ファイル（正典）: `agent/registry/` 配下の差分（prompts/playbooks/rubrics/config/*.defaults.yaml）
+- 監査エビデンス（添付/リンク）:
+  - scores（total/内訳）, logs 抜粋, input-hash, rubric_id, template_id
+  - artifacts ハッシュ（入力/成果物）, metrics（cost, latency_ms）
+  - 判定根拠抜粋, 実行環境（モデル/バージョン）
+- スナップショット（任意）: `.agent/{config,prompts}` の現用セットを `agent/snapshots/YYYYMMDD-HHMM/` として同梱可
+- 満たすべき基準: 本書「Gate MUST」全項目への適合宣言 + HITL 承認者/理由/チケットID
+- 手順参照: `.cursor/commands/tasks/agent_templates_push_pr.md`
+
 ---
 参照:
 - `cli-implementation-design.md` 4.3.4/4.3.5/8.3

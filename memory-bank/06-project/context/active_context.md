@@ -30,3 +30,16 @@
 - 参照: `docs/auto-refine-agents/mvp-scope.md`
 
 
+## 決定事項（auto-refine-agents）
+- 三層分離の正式採用:
+  - ランタイム（非Git）: `.agent/`（worktree専用、RAG DB含む）
+  - 共有正典（Git）: `agent/registry/`（prompts/playbooks/rubrics/config/*.defaults.yaml）
+  - 意思決定（Git）: `memory-bank/`（目的/判断/進捗の記録）
+- 同期モデル: pull=`agent/registry → .agent` / push=`.agent → PR → agent/registry`（昇格はガバナンス MUST 準拠）
+- 設定優先順位: `.agent/config/*` > `agent/registry/config/*.defaults.yaml` > built-in
+- 運用手順: Makefile 依存を廃し、`.cursor/commands/tasks/*.md` にプロンプトタスクを整備
+- RAG 対象: `docs/**.md`, `memory-bank/**.md`（`agent/registry/**` は対象外）
+- `.gitignore`: ルートに `.agent/` を明記
+- ドキュメント更新: `cli-implementation-design.md`, `worktree-guide.md`, `evaluation-governance.md`, `architecture*.md`
+- 新規: `registry-guidelines.md`, `mvp-tracker.md`
+

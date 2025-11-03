@@ -294,3 +294,8 @@ flowchart TB
 
 参考: `docs/auto-refine-agents/evaluation-governance.md`
 
+### 補足（正典 / ランタイム / RAG 対象）
+- 共有正典（Git）: `agent/registry/`（prompts/playbooks/rubrics/config/*.defaults.yaml）。再利用資産はここで管理し、PR昇格で更新。
+- ランタイム（非Git）: `.agent/`（worktree専用の実行状態、RAG DB含む）。
+- RAG対象: `docs/**.md`, `memory-bank/**.md`。`agent/registry/**` は RAG の対象外。
+

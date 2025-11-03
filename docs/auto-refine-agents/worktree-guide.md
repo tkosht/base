@@ -57,6 +57,24 @@ git branch -D feature/agent-a
 - 各エージェントの成果は PR ベースで `develop` へ統合
 - 昇格（テンプレ更新）は `evaluation-governance.md` のゲートを通過させ、人間承認を伴う
 
+## 8. 同期（正典とランタイム）
+- 正典（Git管理）: `agent/registry/`（prompts/playbooks/rubrics/config/*.defaults.yaml）
+- ランタイム（非Git）: `.agent/`（各 worktree 専用の実行状態）
+
+手順（tasksベース）
+1) pull（共有→ローカル）
+   - 目的: 正典を `.agent/` に同期
+   - 参照タスク: `.cursor/commands/tasks/agent_templates_pull.md`
+2) push / 昇格（ローカル→共有）
+   - 目的: `.agent/` の有用変更を正典へ提案（PR）
+   - 要件: `evaluation-governance.md` の MUST（スコア/ログ/入力ハッシュ/テンプレID/コスト/レイテンシ/根拠）
+   - 参照タスク: `.cursor/commands/tasks/agent_templates_push_pr.md`
+
+リカバリ（競合・破損時の例）
+- ローカル変更の退避: `.agent/{config,prompts}` を `agent/snapshots/YYYYMMDD-HHMM/` へコピー
+- 再同期: `agent_templates_pull.md` を再実行
+- 最終手段: `.agent/` を削除して `agent_init.md` で再初期化後、必要に応じてスナップショットから復元
+
 ---
 参照:
 - `cli-implementation-design.md` 4.2/4.3.2（ACE/構造）

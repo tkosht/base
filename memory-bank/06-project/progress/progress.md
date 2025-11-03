@@ -67,3 +67,18 @@
 - [ ] SCOPE-MVP-002: 遅延初期化が自動生成される
 - [ ] SCOPE-MVP-003: 最小評価で ok:true/false を判定できる
 - [ ] SCOPE-MVP-004: デフォルト設定のみで最短ループが回る
+
+---
+
+## 2025-11-03 auto-refine-agents: 文書反映と正典レジストリ整備
+
+- 完了:
+  - `cli-implementation-design.md`: 三層分離/同期モデル/設定優先/registry非RAG/ rubrics配置 追記
+  - `worktree-guide.md`: pull/push とリカバリ手順 追記
+  - `evaluation-governance.md`: 昇格PR提出物（必須） 追記
+  - `architecture*.md`: registry ノードと凡例 追記
+  - 新規: `registry-guidelines.md`, `mvp-tracker.md`
+  - `.gitignore`: `.agent/` を明記
+- 次アクション:
+  - tasks（`.cursor/commands/tasks/*.md`）の整備（Phase1〜4）
+  - Memory Bank 残タスク: `tech_context.md`, `system_patterns.md` 更新
