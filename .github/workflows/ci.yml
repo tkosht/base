@@ -17,10 +17,6 @@ on:
       - 'pyproject.toml'
       - 'uv.lock'
       - '.github/workflows/ci.yml'
-    paths-ignore:
-      - '**/*.md'
-      - 'docs/**'
-      - 'memory-bank/**'
 
 jobs:
   test:
