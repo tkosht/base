@@ -4,7 +4,7 @@
 
 ## 実行
 ```bash
-bash ./.cursor/commands/agent/agent_goal_run.md
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_goal_run.md | bash
 ```
 
 ## 成果物

@@ -34,3 +34,20 @@
 詳細は `docs/auto-refine-agents/*.md` を参照してください。
 
 
+## 実行ガイダンス（.md は直接 bash 不可）
+- `.md` を `bash file.md` で直接実行しないでください（Markdownはbashで解釈できません）。
+- 各タスクは `.md` 内の最初の ```bash コードブロックを抽出して実行してください。
+
+```bash
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_goal_run.md | bash
+```
+
+- 簡便のためのエイリアス例（任意）:
+```bash
+alias mdrun='f(){ awk '\''/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag'\'' "$1" | bash; }; f'
+# 使い方: mdrun ./.cursor/commands/agent/agent_goal_run.md
+```
+
+備考:
+- 本ガイダンスは `docs/auto-refine-agents/cli-implementation-design.md` の「ゼロスクリプト（ワンライナー運用）」方針に準拠しています。
+

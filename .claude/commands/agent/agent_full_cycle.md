@@ -4,12 +4,12 @@
 
 ## 実行
 ```bash
-bash ./.cursor/commands/agent/agent_goal_run.md
-bash ./.cursor/commands/agent/eval_perturb_suite.md
-bash ./.cursor/commands/agent/outerloop_abtest.md
-bash ./.cursor/commands/agent/outerloop_promote.md
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_goal_run.md | bash
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/eval_perturb_suite.md | bash
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_abtest.md | bash
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_promote.md | bash
 # 合格時のみ
-bash ./.cursor/commands/agent/agent_templates_push_pr.md
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_templates_push_pr.md | bash
 ```
 
 ## 成果物
