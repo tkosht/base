@@ -23,6 +23,9 @@ bkup/
 .*.swp
 ?.sh
 .env*
+ex*.ipynb
+
+NotebookLM
 
 # IDE specific files
 .idea/
