@@ -24,3 +24,9 @@
 - 右クリック/インラインリネーム: 選択維持のままタイトル更新反映。
 
 
+## Scope/Phase（auto-refine-agents）
+- 現在フェーズ: MVP
+- 達成ゲート: SCOPE-MVP-001〜004 の受け入れ基準
+- 参照: `docs/auto-refine-agents/mvp-scope.md`
+
+

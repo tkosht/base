@@ -60,3 +60,10 @@
   - Step 0: 完了（ベースライン検証、/gradio 307許容に更新）
   - Step 1: 実装中（assets抽出、`app/web/assets.py` 追加し `create_api_app()` から委譲）
   - 次ステップ: Step 1 のPR作成・マージ後に Step 2（APIルーター分離）
+
+
+## MVP Scope Progress（auto-refine-agents）
+- [ ] SCOPE-MVP-001: Inner-Loop最短経路が1回転する
+- [ ] SCOPE-MVP-002: 遅延初期化が自動生成される
+- [ ] SCOPE-MVP-003: 最小評価で ok:true/false を判定できる
+- [ ] SCOPE-MVP-004: デフォルト設定のみで最短ループが回る
