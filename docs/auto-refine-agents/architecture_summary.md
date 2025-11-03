@@ -45,3 +45,11 @@
 3. **多層的学習**: タスク実行（Inner）→ 経験学習（Middle）→ モデル改善（Outer）の3段階で能力向上
 
 このアーキテクチャは、論文で言及されている**ICL、コンテキストエンジニアリング、RL系手法**を統合した自己改善型エージェントの実装案です。
+
+### 実務上の要点（強化）
+- 評価健全性: Rubric/Spec 準拠 + 摂動ロバスト性 + 監査ログ + HITL 昇格
+- 並列運用: 各エージェントは Git worktree を分離し、`.agent/`（含 FTS DB）は共有しない
+- 参照: `evaluation-governance.md`, `worktree-guide.md`
+
+### 関連ドキュメント
+- [MVP/ポストMVPのスコープ定義](./mvp-scope.md)

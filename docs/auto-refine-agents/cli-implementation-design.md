@@ -1,5 +1,7 @@
 # CLI Agent実装設計書：自己改善型AIエージェントアーキテクチャ（CLIコア・Python非依存版）
 
+[MVP/ポストMVPのスコープ定義](./mvp-scope.md) を参照してください。
+
 ## 1. エグゼクティブサマリー
 
 本ドキュメントは、`architecture.md` の**3層ループ構造の自己改善型AIエージェント**を、**CLI Agent環境（Cursor CLI、Claude Code、Gemini CLI等）**で実現するための設計です。現時点の絶対方針として、コアは Python に依存しません（POSIXシェル + jq/yq/rg/awk/sed/sqlite3 FTS 等）。
@@ -14,6 +16,12 @@
 
 - コアは「プロンプト・コンテキスト最適化」と「CLIパイプライン」を中心に設計
 - 高度機能（Chroma/FAISS/RL系等）は「将来プラグイン」として仕様のみ定義し、実装は本体から分離
+
+### 1.3 自動初期化の方針
+
+- 遅延初期化（Lazy Initialization）: 初回タスク実行時に自動で初期化を実行
+- ユーザー作業ゼロ: 手動の初期設定は不要（ゼロセットアップ）
+- 自動検出: 文脈管理子（ACE）が `.agent/` 構造の存在を検知し、必要に応じ自動生成
 
 ---
 
@@ -190,6 +198,7 @@ flowchart TB
 ```
 
 注: `bin/` は現行コアには含めません（完全ゼロスクリプト運用）。将来オプションとして導入可能ですが、本設計ではワンライナー手順のみを採用します。
+注2: `.agent/` は各 Git worktree 専用とし、他ツリーと共有しない（`memory/semantic/fts.db` も共有禁止）。詳細は `worktree-guide.md` を参照。
 
 ### 4.3 Inner-Loop実装詳細（CLIパイプライン）
 
@@ -226,6 +235,24 @@ planner_template:
 - プログレッシブ・ルールローディング
 - RAG（SQLite FTS）連携による文脈拡張
 
+**自動初期化チェック:**
+
+ACEは状態ファイルへの初回アクセス時に以下を自動実行する（冪等・軽量）:
+
+1. `.agent/` ディレクトリ構造の存在確認
+2. 必要ディレクトリの自動生成
+3. SQLite FTS データベースの初期化（未作成時のみ）
+4. デフォルト設定ファイルの生成（未作成時のみ）
+5. デフォルトプロンプトテンプレートの配置（未作成時のみ）
+
+```bash
+# ACE初期化チェック（遅延初期化）
+[ -d .agent ] || mkdir -p .agent/{state/session_history,memory/{episodic,semantic/documents,playbooks},prompts/{planner,executor,evaluator,analyzer},config,logs} && \
+[ -f .agent/memory/semantic/fts.db ] || sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);" && \
+[ -f .agent/config/agent_config.yaml ] || printf "default_config: {}\n" > .agent/config/agent_config.yaml && \
+[ -f .agent/config/loop_config.yaml ] || printf "default_loop_config: {}\n" > .agent/config/loop_config.yaml
+```
+
 **状態管理スキーマ:**
 ```json
 {
@@ -249,6 +276,12 @@ planner_template:
   }
 }
 ```
+
+**並列運用指針（worktree）:**
+- `.agent/` は worktree ごとに独立作成・使用（他ツリーと共有しない）
+- 同一ツリーで複数タスクを併走する場合は、`task_id` ごとに WM/ログ/成果物のパスを完全分離
+- RAG や Playbook の共有は「ファイルコピー」で行い、DB ファイルの共有は避ける
+- 参考: `worktree-guide.md`
 
 #### 4.3.3 実行者
 
@@ -276,12 +309,88 @@ jq -r '.' \
 | jq -R -s '{ok:true, scores:{basic:1.0}, notes:["cli-eval"]}'
 ```
 
+**標準 Rubric YAML スキーマ（最小）:**
+```yaml
+id: code_quality_v1
+version: 1
+objectives:
+  - name: spec_compliance
+    weight: 0.4
+  - name: robustness
+    weight: 0.3
+  - name: cost_efficiency
+    weight: 0.2
+  - name: runtime_reliability
+    weight: 0.1
+checks:
+  - name: no_errors_in_logs
+    detector: "rg -n '(ERROR|FAIL|Timeout)' logs/ | wc -l"
+    expect: "== 0"
+    weight: 0.4
+  - name: spec_tests_pass
+    detector: "bash tests/spec_run.sh"
+    expect: "exit_code == 0"
+    weight: 0.3
+  - name: perturbation_robust
+    detector: "bash tests/perturbation_suite.sh"
+    expect: "exit_code == 0"
+    weight: 0.2
+  - name: budget_within_limit
+    detector: "jq '.total_cost' artifacts/metrics.json"
+    expect: "<= budget.max_cost"
+    weight: 0.1
+thresholds:
+  pass_score: 0.9
+  hard_fail_checks: ["no_errors_in_logs", "spec_tests_pass"]
+```
+
+**Evaluator JSON I/O 標準:**
+```json
+{
+  "task_id": "uuid",
+  "rubric": {"id":"code_quality_v1","version":1},
+  "artifacts": ["logs/app.log","artifacts/metrics.json"],
+  "budget": {"max_cost": 1.50}
+}
+```
+→ 出力例:
+```json
+{
+  "ok": true,
+  "scores": {"total": 0.93, "spec_compliance": 1.0, "robustness": 0.9},
+  "notes": ["no error found", "perturbation passed"],
+  "evidence": {"failed_checks": [], "raw": {"no_errors_in_logs":0}},
+  "metrics": {"cost": 1.12, "latency_ms": 8200},
+  "rubric_id": "code_quality_v1@1"
+}
+```
+
+**ロバスト性・反チート（最小導入）:**
+- 摂動テスト（順序入替/シャッフル/軽微ノイズ/境界ケース）を標準スイート化
+- ImpossibleBench 類似の「抜け道」検知を最小導入
+- 監査ログに入力ハッシュ・rubric_id・template_id・スコア・コスト・根拠抜粋を必須保存
+
+参照: `evaluation-governance.md`
+
 #### 4.3.5 リファイナ
 
 **実装アプローチ:**
 - 評価結果に基づく再試行（テンプレ選択/パラメタ切替）
 - 差分管理はファイルベースで記録（execution_history）
 - 最大試行回数の制限
+
+**プロモーション・ゲート（テンプレ昇格条件）:**
+- MUST（全て）
+  1) 回帰スイート合格（spec 準拠）
+  2) 摂動ロバスト性合格（順序/ノイズ/境界ケース）
+  3) コスト・SLO 内（予算/レイテンシ）
+  4) ホールドアウト合格（リーク無し）
+  5) 監査ログ完備（再現可能）
+  6) HITL 承認（責任者サイン）
+- SHOULD（望ましい）: A/B 反復 n≥5、有意優越（簡易基準で可）
+- 不合格/劣化時は直前安定版へロールバック（自動降格）
+
+参照: `evaluation-governance.md`
 
 ### 4.4 Middle-Loop実装詳細（CLI）
 
@@ -341,13 +450,9 @@ prompt_templates:
 
 **既定:** SQLite FTS（FTS5）を使用。高度RAG（Chroma/FAISS等）は将来プラグイン。
 
-**初期化例:**
-```bash
-# FTSテーブル作成
-sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);"
-# ドキュメント投入例
-sqlite3 .agent/memory/semantic/fts.db "INSERT INTO docs(path, content) VALUES('docs/example.md', readfile('docs/example.md'));"
-```
+**自動初期化:**
+
+FTSデータベースはACEの自動初期化時に作成される。手動での初期化や投入は不要（必要に応じて実装側で自動投入を行う）。
 
 **検索例:**
 ```bash
@@ -391,6 +496,12 @@ sqlite3 .agent/memory/semantic/fts.db "SELECT path, snippet(docs, 1, '[', ']', '
 - [ ] プロンプトテンプレート骨子
 - [ ] SQLite FTS 初期化ワンライナー整備
 
+- [ ] 自動初期化システムの実装（ACE初回アクセス時）
+  - [ ] ディレクトリ構造の自動生成
+  - [ ] SQLite FTS の自動初期化
+  - [ ] デフォルト設定ファイルの自動生成
+  - [ ] 初期化エラーハンドリング
+
 **成果物:**
 - CLI骨格（状態/評価/解析/RAGの最小実装）
 
@@ -398,6 +509,7 @@ sqlite3 .agent/memory/semantic/fts.db "SELECT path, snippet(docs, 1, '[', ']', '
 
 - [ ] プランナー/実行者テンプレ強化
 - [ ] 文脈管理子（ACE）実装
+- [ ] ACEの自動初期化チェック組み込み
 - [ ] 評価ワンライナー整備
 - [ ] 失敗解析ワンライナー整備
 - [ ] ループ制御ロジック
@@ -491,6 +603,11 @@ schemas:
 - CLIパイプラインの基準化
 - 結果のJSON化と再現性確保
 
+**監査・承認フロー（運用）:**
+- 監査ログに以下を必須記録: `task_id`, 入力ハッシュ, `rubric_id`, `template_id`, `scores`, 失敗チェック一覧, 成果物ハッシュ, コスト/レイテンシ, 判定根拠抜粋, モデル/バージョン
+- テンプレ昇格時は HITL（人間承認）を必須とし、承認者/理由/チケットIDを記録
+- 詳細: `evaluation-governance.md`
+
 ### 8.4 プロンプト最適化
 
 **課題**: 学習系が使えない
@@ -499,6 +616,16 @@ schemas:
 - A/Bテスト的最適化
 - 成功例の蓄積/選抜
 - テンプレのバージョン管理
+
+### 8.5 自動初期化の信頼性
+
+**課題**: 初期化失敗時の挙動とエラーハンドリング
+
+**対策:**
+- 冪等性の保証（既存構造があればスキップ）
+- 失敗時の明確なエラー通知
+- 部分初期化でも安全に動作可能な設計
+- 権限/環境エラーの検出とガイダンス
 
 ---
 
@@ -509,6 +636,7 @@ schemas:
 1. **タスク成功率の向上**: Inner-Loopの計画・実行・評価・改善サイクル
 2. **知識の蓄積**: Middle-Loopによる経験の学習と再利用
 3. **効率化**: CLIパイプラインによる自動化
+4. **ゼロセットアップ**: 初期設定不要で即時に利用開始可能
 
 ### 9.2 制限事項
 
