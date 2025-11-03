@@ -286,3 +286,11 @@ flowchart TB
 ```
 
 
+## 評価健全性ガイドライン（抜粋）
+- 評価者（V）は Rubric/Spec 準拠、摂動ロバスト性、ImpossibleBench 類似の抜け道検知を備える
+- 昇格（テンプレ更新）はプロモーション・ゲートを通過（回帰/ロバスト/コスト/ホールドアウト/監査/HITL）
+- 監査ログ必須: 入力ハッシュ・rubric_id・template_id・スコア・根拠・コスト/レイテンシ・モデル情報
+- 可視化: スコア推移・失敗分布・コスト時系列・CheatingRisk をダッシュボードで監視
+
+参考: `docs/auto-refine-agents/evaluation-governance.md`
+
