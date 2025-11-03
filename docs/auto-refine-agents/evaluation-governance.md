@@ -135,3 +135,5 @@ metadata:
 - `cli-implementation-design.md` 4.3.4/4.3.5/8.3
 - `architecture.md` 通信/標準/安全, 評価者ノード
 
+注記（Symlink）: `.cursor/` は `.claude/` へのシンボリックリンクです。表記は `.cursor/commands/agent/*.md` に統一しています。
+

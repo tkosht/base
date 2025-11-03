@@ -71,6 +71,8 @@ git branch -D feature/agent-a
    - 要件: `evaluation-governance.md` の MUST（スコア/ログ/入力ハッシュ/テンプレID/コスト/レイテンシ/根拠）
    - 参照タスク: `.cursor/commands/agent/agent_templates_push_pr.md`
 
+注記（Symlink）: `.cursor/` は `.claude/` へのシンボリックリンクです。表記は `.cursor/commands/agent/*.md` に統一しています。
+
 リカバリ（競合・破損時の例）
 - ローカル変更の退避: `.agent/{config,prompts}` を `agent/snapshots/YYYYMMDD-HHMM/` へコピー
 - 再同期: `agent_templates_pull.md` を再実行

@@ -3,11 +3,16 @@
 目的: ユーザ入力を Goal のみに限定し、RAS/AO 自動補完の最小経路で `ok:true|false` を判定します。
 
 ## 前提
-- `.agent/` 初期化済（未実施なら `agent_init.md` を先に実行）
 - CLI: `jq`, `rg`, `sqlite3`（FTSは任意）
 
 ## 手順
 ```bash
+# ACE自動初期化（遅延・冪等）
+[ -d .agent ] || mkdir -p .agent/{state/session_history,generated/{rubrics,artifacts},memory/{episodic,semantic/documents,playbooks},prompts/{planner,executor,evaluator,analyzer},config,logs}
+[ -f .agent/memory/semantic/fts.db ] || sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);"
+[ -f .agent/config/agent_config.yaml ] || printf "default_config: {}\n" > .agent/config/agent_config.yaml
+[ -f .agent/config/loop_config.yaml ]  || printf "default_loop_config: {}\n" > .agent/config/loop_config.yaml
+
 GOAL="あなたのGoal"
 
 # 入力（v2: rubric/artifacts を自動補完）

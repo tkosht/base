@@ -1,6 +1,6 @@
-# agent_init — `.agent/` 遅延初期化（ACE）
+# agent_recovery_init — `.agent/` 手動初期化（復旧専用）
 
-目的: worktree 毎に独立した `.agent/` 構造を冪等に生成し、SQLite FTS5 を初期化します。
+目的: 例外的な復旧時に `.agent/` 構造を冪等に生成し、SQLite FTS5 を初期化します（通常運用はACE自動初期化）。
 
 ## 前提
 - CLI: `jq`, `yq`, `sqlite3`, `rg`, `awk`, `sed`
@@ -30,13 +30,9 @@
 ls -1 .agent | sed 's/^/created: /'
 ```
 
-## 出力
-- `.agent/**` 一式
-- `.agent/memory/semantic/fts.db`
-
 ## 注意
-- `.agent/` は Git 管理外（`.gitignore` 必須）
-- RAG DB の共有は禁止（worktree 毎に独立）
+- 通常は各タスク先頭のACEで自動初期化されるため、本コマンドは不要です。
+- worktree間で `.agent/memory/semantic/fts.db` を共有しないでください。
 
 参照: `docs/auto-refine-agents/cli-implementation-design.md`, `quickstart_goal_only.md`, `worktree-guide.md`
 

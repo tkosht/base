@@ -2,12 +2,14 @@
 
 本ガイドは、ユーザ入力を「Goal」1点に限定し、Rubric/Artifacts を自動生成（RAS/AO）して自己改善ループを実行する最短手順を示します。
 
+注: 各タスクは先頭にACE（自動初期化）を内蔵しているため、手動の初期化は不要です。以下の「初期化」ブロックは参考・復旧用です。
+
 ## 事前要件
 - CLIツール: `jq`, `yq`, `ripgrep(rg)`, `awk`, `sed`, `sqlite3`
 - リポジトリ配置: 本ドキュメントと同一リポジトリ直下
 - 推奨: Git worktree を用い、各 worktree 毎に `.agent/` を分離（RAG DB 共有禁止）
 
-## 初期化（冪等）
+## 初期化（冪等・任意）
 ```bash
 [ -d .agent ] || mkdir -p .agent/{state/session_history,generated/{rubrics,artifacts},memory/{episodic,semantic/documents,playbooks},prompts/{planner,executor,evaluator,analyzer},config,logs}
 [ -f .agent/memory/semantic/fts.db ] || sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);"

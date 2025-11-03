@@ -9,6 +9,12 @@
 
 ## 判定（擬似ロジック例）
 ```bash
+# ACE自動初期化（遅延・冪等）
+[ -d .agent ] || mkdir -p .agent/{state/session_history,generated/{rubrics,artifacts},memory/{episodic,semantic/documents,playbooks},prompts/{planner,executor,evaluator,analyzer},config,logs}
+[ -f .agent/memory/semantic/fts.db ] || sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);"
+[ -f .agent/config/agent_config.yaml ] || printf "default_config: {}\n" > .agent/config/agent_config.yaml
+[ -f .agent/config/loop_config.yaml ]  || printf "default_loop_config: {}\n" > .agent/config/loop_config.yaml
+
 AB=.agent/logs/eval/ab/summary.json
 jq 'sort_by(.s) | reverse | .[0]' "$AB" > .agent/logs/eval/ab/best.json
 cat .agent/logs/eval/ab/best.json

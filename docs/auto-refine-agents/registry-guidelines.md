@@ -68,6 +68,8 @@ agent/
 - Q: registry を RAG に入れない理由は？
   - A: テンプレやルーブリックは設計資産であり、検索は `docs/`/`memory-bank/` を経由するため。
 
+注記（Symlink）: `.cursor/` は `.claude/` へのシンボリックリンクです。表記は `.cursor/commands/agent/*.md` に統一しています。
+
 ---
 参照: `cli-implementation-design.md`, `worktree-guide.md`, `evaluation-governance.md`
 

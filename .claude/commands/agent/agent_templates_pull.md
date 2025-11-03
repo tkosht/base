@@ -4,10 +4,15 @@
 
 ## 前提
 - `agent/registry/**` に雛形が存在
-- `.agent/` 初期化済み（未実施なら `agent_init.md`）
 
 ## 手順
 ```bash
+# ACE自動初期化（遅延・冪等）
+[ -d .agent ] || mkdir -p .agent/{state/session_history,generated/{rubrics,artifacts},memory/{episodic,semantic/documents,playbooks},prompts/{planner,executor,evaluator,analyzer},config,logs}
+[ -f .agent/memory/semantic/fts.db ] || sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);"
+[ -f .agent/config/agent_config.yaml ] || printf "default_config: {}\n" > .agent/config/agent_config.yaml
+[ -f .agent/config/loop_config.yaml ]  || printf "default_loop_config: {}\n" > .agent/config/loop_config.yaml
+
 # prompts
 rsync -av --delete agent/registry/prompts/ .agent/prompts/
 
