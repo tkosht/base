@@ -109,6 +109,27 @@ metadata:
 - 満たすべき基準: 本書「Gate MUST」全項目への適合宣言 + HITL 承認者/理由/チケットID
 - 手順参照: `.cursor/commands/tasks/agent_templates_push_pr.md`
 
+## 9. AutoRubric（RAS）運用指針（追加）
+- 乾式検証（detector dry-run）を必須とし、不成立チェックは自動で除外/無効化する。
+- 重み最適化: 直近の実行履歴（スコア/失敗分布）を用い `objectives.weight` を漸進調整（均等→学習済み）。
+- しきい値調整: Gate 境界に張り付く場合は `thresholds.pass_score` を微調整。
+- 監査: 生成元シグナル、rubricハッシュ、学習履歴（世代ID）を保存（再現可能性）。
+- 保存場所（ランタイム）: `.agent/generated/rubrics/*.yaml`, `.agent/state/rubric_history.json`
+
+## 10. Artifacts Orchestrator（AO）運用指針（追加）
+- 既定の評価対象を標準化: `logs/app.log`, `artifacts/metrics.json`。無い場合は作成。
+- 収集/生成: エラーログの集約、メトリクスの最小JSON生成（取得不能時）。
+- 整合: RAS が参照する `checks` と `artifacts` の一致を強制（不整合の自動修正）。
+- 監査: 収集/生成の根拠、入力ハッシュ、空生成の有無を保存。
+- 保存場所（ランタイム）: `.agent/state/artifacts_map.json`, `.agent/logs/eval/*.json`
+
+## 11. 自動生成 Rubric の昇格PR要件（追加）
+- 差分: `agent/registry/rubrics/` への PR（対象Rubricの追加/更新）。
+- 監査エビデンス（追加要件）:
+  - RAS 生成元シグナルの要約、rubricハッシュ、世代ID、比較対象（Before/After）の失敗分布と改善差分
+  - AO 生成/整形の根拠（入力ファイル一覧、空生成の扱い）
+- 前提: Gate MUST 満たすこと + HITL 承認
+
 ---
 参照:
 - `cli-implementation-design.md` 4.3.4/4.3.5/8.3

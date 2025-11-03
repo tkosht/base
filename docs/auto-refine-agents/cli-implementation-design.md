@@ -175,6 +175,10 @@ flowchart TB
 │   └── session_history/      # セッション履歴
 │       └── YYYY-MM-DD-HHMMSS.json
 │
+├── generated/                # 自動生成物（ランタイム・非Git）
+│   ├── rubrics/              # AutoRubric（RAS）の出力
+│   └── artifacts/            # Artifacts Orchestrator の整形物
+│
 ├── memory/                   # メモリ/知識ストア
 │   ├── episodic/             # エピソード記憶（.md）
 │   │   └── YYYY-MM-DD-*.md
@@ -204,6 +208,7 @@ flowchart TB
 
 - ランタイム（非Git・作業系）: `.agent/`
   - worktree ごとに独立。`state/`・`logs/`・`memory/semantic/fts.db`（RAG DB）等の実行時資産を保持
+  - `generated/{rubrics,artifacts}` は RAS/AO の自動生成置き場（Git管理外・PR昇格対象候補）
   - Git にはコミットしない（`.gitignore` 対象）
 - 共有正典（Git・再利用資産）: `agent/registry/`（単数形の `agent` を採用）
   - 構造（例）:
@@ -307,6 +312,23 @@ ACEは状態ファイルへの初回アクセス時に以下を自動実行す�
   }
 }
 ```
+
+**Evaluator JSON I/O v2（省略可・後方互換）:**
+rubric / artifacts を省略した場合、RAS/AO が自動生成・整合し評価を実行する。
+```json
+{
+  "task_id": "uuid|省略可",
+  "goal": "string",
+  "auto": { "rubric": true, "artifacts": true, "weights": "learned|uniform" },
+  "rubric": null,
+  "artifacts": null,
+  "budget": null
+}
+```
+備考:
+- v1はそのまま有効。rubric/artifacts を与えた場合は従来動作。
+- 省略時のみ v2 の自動化（RAS/AO）が発動。
+
 
 **並列運用指針（worktree）:**
 - `.agent/` は worktree ごとに独立作成・使用（他ツリーと共有しない）
@@ -428,6 +450,27 @@ thresholds:
 
 参照: `evaluation-governance.md`
 
+#### 4.3.6 自動生成コンポーネント（RAS / AO）
+
+**目的:** ユーザ入力を Goal のみに限定し、rubric / artifacts を自動生成・自動整合・自動ブラッシュアップする。
+
+- RAS（Rubric Auto Synthesis）
+  - 入力: `goal`、ワークスペース信号（tests/logs/metrics など）、履歴
+  - 出力: rubric YAML（`id/version/objectives/checks/thresholds`）
+  - 乾式検証（detector dry-run）で不成立チェックを自動除外/無効化
+  - 重み/閾値を実行履歴から漸進調整（均等→学習済み）
+  - 保存: `.agent/generated/rubrics/<task_id>.yaml`、履歴: `.agent/state/rubric_history.json`
+
+- AO（Artifacts Orchestrator）
+  - 既定の出力先を提供: `logs/app.log`, `artifacts/metrics.json`
+  - 収集・生成: エラーログ集約/最小メトリクス自動生成（取得不能時）
+  - 整合: RAS が参照する `checks` と `artifacts` の一貫性を自動調整
+  - 保存: `.agent/state/artifacts_map.json`, `.agent/logs/eval/*.json`
+
+備考:
+- v1 I/O 指定時はその値を尊重し、RAS/AO は無効。
+- v2 で rubric/artifacts が省略された場合のみ RAS/AO が発動。
+
 ### 4.4 Middle-Loop実装詳細（CLI）
 
 #### 4.4.1 失敗解析
@@ -494,6 +537,34 @@ FTSデータベースはACEの自動初期化時に作成される。手動で�
 ```bash
 sqlite3 .agent/memory/semantic/fts.db "SELECT path, snippet(docs, 1, '[', ']', '…', 10) FROM docs WHERE docs MATCH \"$*\" LIMIT 5;"
 ```
+
+---
+
+## 4.6 Quickstart（Goalのみで実行）
+
+前提: `jq` / `yq` / `rg` / `awk` / `sed` / `sqlite3` が利用可能。
+
+```bash
+# 初期化（冪等）
+[ -d .agent ] || mkdir -p .agent/{state/session_history,generated/{rubrics,artifacts},memory/{episodic,semantic/documents,playbooks},prompts/{planner,executor,evaluator,analyzer},config,logs}
+[ -f .agent/memory/semantic/fts.db ] || sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);"
+
+# Goalのみで実行（rubric/artifacts は自動: RAS/AO）
+GOAL="あなたのGoal"
+printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
+| tee .agent/logs/eval/input.json \
+| jq -r '.' \
+| rg -n "(ERROR|FAIL|Timeout)" - || true \
+| jq -R -s '{ok:true, scores:{basic:1.0}, notes:["cli-eval (skeleton)"]}' \
+| tee .agent/logs/eval/result.json
+```
+
+結果:
+- 実行ログ: `.agent/logs/`
+- 評価入出力スナップショット: `.agent/logs/eval/*.json`
+- 生成Rubric: `.agent/generated/rubrics/*.yaml`
+
+関連: `quickstart_goal_only.md`, `evaluation-governance.md`
 
 ---
 

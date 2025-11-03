@@ -39,18 +39,19 @@ git branch -D feature/agent-a
 ```
 
 ## 4. 安全基準
-- `.agent/` と配下（`state/`, `memory/semantic/fts.db`, `logs/` 等）は worktree 専用
+- `.agent/` と配下（`state/`, `generated/{rubrics,artifacts}`, `memory/semantic/fts.db`, `logs/` 等）は worktree 専用
 - 同一 worktree 内での複数エージェント併走は非推奨
   - やむを得ず同居する場合: `task_id` 毎に WM/ログ/成果物のパスを完全分離する
 - RAG投入や Playbook 共有は「ファイルコピー」で行い、DBファイル自体の共有を避ける
 
 ## 5. 初期化
 - 各 worktree で初回アクセス時、ACE が `.agent/` を自動生成（冪等）
-- 生成物: `state/`, `memory/episodic`, `memory/semantic/fts.db`, `prompts/`, `config/`, `logs/`
+- 生成物: `state/`, `generated/{rubrics,artifacts}`, `memory/episodic`, `memory/semantic/fts.db`, `prompts/`, `config/`, `logs/`
 
 ## 6. トラブルシュート
 - 衝突/ロック: `fts.db` を共有していないか確認。共有している場合は各 worktree の DB を再初期化
 - 残骸 cleanup: `git worktree list` で不整合を確認し、`git worktree remove` を実行
+- 生成物 cleanup: `.agent/generated/{rubrics,artifacts}` の古い世代を定期削除（昇格済みは正典へ移管）
 - 参照ずれ: ブランチを worktree に対応させる（ブランチ切替は各 worktree 内で実施）
 
 ## 7. ベストプラクティス

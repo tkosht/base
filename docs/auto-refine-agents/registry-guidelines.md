@@ -53,6 +53,15 @@ agent/
 - RAG 対象の変更有無と影響の確認（対象は `docs/**`, `memory-bank/**`）
 - 命名・配置の一貫性（`agent/registry` / `.agent` / `memory-bank`）
 
+## 7.5 自動生成物（ランタイム）と昇格
+- ランタイムの自動生成物は `.agent/generated/{rubrics,artifacts}` に保存（Git管理外）。
+- 昇格対象は主に Rubric（`rubrics/*.yaml`）。安定化後に `agent/registry/rubrics/` へ PR として提案する。
+- 付帯エビデンス: scores/logs 抜粋、input-hash、rubric_id、template_id、artifacts ハッシュ、metrics、根拠、環境（モデル/バージョン）。
+- 既定値の上書きレイヤは以下の順で適用される（再掲）:
+  1) `.agent/config/*`（ローカル上書き）
+  2) `agent/registry/config/*.defaults.yaml`（共有既定）
+  3) 内蔵デフォルト（設計書の記載）
+
 ## 7. 運用Q&A
 - Q: `.agent/` 内の変更は直接コミットできる？
   - A: できない。PR昇格で `agent/registry/` の正典に反映する。

@@ -1,0 +1,22 @@
+enable: true
+objectives_default:
+  spec_compliance: 0.4
+  robustness: 0.3
+  cost_efficiency: 0.2
+  runtime_reliability: 0.1
+checks_catalog:
+  no_errors_in_logs:
+    detector: "rg -n '(ERROR|FAIL|Timeout)' logs/ | wc -l"
+    expect: "== 0"
+  spec_tests_pass:
+    detector: "bash tests/spec_run.sh"
+    expect: "exit_code == 0"
+  budget_within_limit:
+    detector: "jq '.cost' artifacts/metrics.json"
+    expect: "<= budget.max_cost"
+thresholds:
+  pass_score: 0.9
+refine:
+  weights: learned   # learned|uniform
+  dry_run_prune: true
+
