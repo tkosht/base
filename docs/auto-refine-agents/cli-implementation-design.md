@@ -200,6 +200,37 @@ flowchart TB
 注: `bin/` は現行コアには含めません（完全ゼロスクリプト運用）。将来オプションとして導入可能ですが、本設計ではワンライナー手順のみを採用します。
 注2: `.agent/` は各 Git worktree 専用とし、他ツリーと共有しない（`memory/semantic/fts.db` も共有禁止）。詳細は `worktree-guide.md` を参照。
 
+#### 4.2.1 運用レイヤの棲み分け（公式）
+
+- ランタイム（非Git・作業系）: `.agent/`
+  - worktree ごとに独立。`state/`・`logs/`・`memory/semantic/fts.db`（RAG DB）等の実行時資産を保持
+  - Git にはコミットしない（`.gitignore` 対象）
+- 共有正典（Git・再利用資産）: `agent/registry/`（単数形の `agent` を採用）
+  - 構造（例）:
+    - `agent/registry/prompts/`（`templates.yaml` 等）
+    - `agent/registry/playbooks/`（*.yaml）
+    - `agent/registry/rubrics/`（評価ルーブリック *.yaml）
+    - `agent/registry/config/`（`*.defaults.yaml` の既定設定）
+    - 任意: `agent/snapshots/YYYYMMDD-HHMM/`（`.agent/{config,prompts}` のエクスポート）
+  - RAG のインデクシング対象外（設計資産の正典であり、検索は `docs/`/`memory-bank/` 側を用いる）
+- 意思決定・進捗の記録（Git・人間向け）: `memory-bank/`
+  - 目的/判断/進捗/既知課題などを時系列で管理
+
+設定優先順位（レイヤリング）:
+
+1) `.agent/config/*`（ローカル上書き）
+2) `agent/registry/config/*.defaults.yaml`（共有既定）
+3) 内蔵デフォルト（本書の記述）
+
+同期モデル（正典とランタイム）:
+
+- pull（共有→ローカル）: `agent/registry/** → .agent/**`
+- push（ローカル→共有・昇格）: `.agent/** → PR → agent/registry/**`（昇格は評価ガバナンスの MUST を満たすこと）
+
+備考:
+
+- 運用タスクは Makefile ではなく、`.cursor/commands/tasks/*.md` に手順（コマンド・前提・入出力・注意）として提供する。
+
 ### 4.3 Inner-Loop実装詳細（CLIパイプライン）
 
 #### 4.3.1 プランナー
@@ -299,6 +330,11 @@ ACEは状態ファイルへの初回アクセス時に以下を自動実行す�
 **実装アプローチ:**
 - rg/awk によるアーティファクト検査 + jq でのJSONスコア出力
 - ルーブリックは YAML で宣言し、判定条件をCLIで実装
+
+備考（正典配置と運用）:
+- ルーブリックの正典は `agent/registry/rubrics/` に配置する（Git 管理）
+- 実行時は必要に応じて `.agent/` にコピーして使用（tasks参照）
+- 正典への反映は PR による昇格（評価ガバナンスの MUST 条件を満たすこと）
 
 **評価ワンライナー例（入出力プロトコル）:**
 ```bash

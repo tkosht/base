@@ -212,3 +212,6 @@ auth.json
 .codex/*
 !.codex/config.toml
 !.codex/version.json
+
+# Agent runtime state (per worktree)
+.agent/
