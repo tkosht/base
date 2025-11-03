@@ -234,7 +234,7 @@ flowchart TB
 
 備考:
 
-- 運用タスクは Makefile ではなく、`.cursor/commands/tasks/*.md` に手順（コマンド・前提・入出力・注意）として提供する。
+- 運用タスクは Makefile ではなく、`.cursor/commands/agent/*.md` に手順（コマンド・前提・入出力・注意）として提供する。
 
 ### 4.3 Inner-Loop実装詳細（CLIパイプライン）
 

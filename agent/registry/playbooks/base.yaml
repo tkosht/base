@@ -1,0 +1,16 @@
+# base.yaml (registry playbook)
+
+id: playbook.base.v1
+description: Minimal playbook for Inner-Loop execution in CLI-only environments.
+steps:
+  - id: plan
+    uses: planner.default.v1
+  - id: execute
+    uses: executor.default.v1
+  - id: evaluate
+    uses: evaluator.default.v1
+  - id: refine
+    uses: analyzer.default.v1
+metadata:
+  updated: 2025-11-03
+

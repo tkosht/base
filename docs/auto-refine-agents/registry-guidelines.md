@@ -37,7 +37,7 @@ agent/
 ## 4. 同期モデル
 - pull（共有→ローカル）: `agent/registry/** → .agent/**`
 - push / 昇格（ローカル→共有）: `.agent/** → PR → agent/registry/**`
-  - 参照タスク: `.cursor/commands/tasks/agent_templates_pull.md`, `agent_templates_push_pr.md`
+  - 参照タスク: `.cursor/commands/agent/agent_templates_pull.md`, `.cursor/commands/agent/agent_templates_push_pr.md`
 
 ## 5. 昇格（PR）提出物（必須）
 - 差分: `agent/registry/` 配下の更新ファイル

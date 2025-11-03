@@ -7,7 +7,7 @@
 - eza / fdfind（任意）
 
 ## 原則
-- Makefileへの依存は避け、`.cursor/commands/tasks/*.md` に運用手順を記載
+- Makefileへの依存は避け、`.cursor/commands/agent/*.md` に運用手順を記載
 - `.agent/` は worktree 専用のランタイム（非Git）
 - `agent/registry/` は共有正典（Git）。RAG対象外
 - RAG対象は `docs/**.md` と `memory-bank/**.md`

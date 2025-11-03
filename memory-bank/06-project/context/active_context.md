@@ -37,7 +37,7 @@
   - 意思決定（Git）: `memory-bank/`（目的/判断/進捗の記録）
 - 同期モデル: pull=`agent/registry → .agent` / push=`.agent → PR → agent/registry`（昇格はガバナンス MUST 準拠）
 - 設定優先順位: `.agent/config/*` > `agent/registry/config/*.defaults.yaml` > built-in
-- 運用手順: Makefile 依存を廃し、`.cursor/commands/tasks/*.md` にプロンプトタスクを整備
+- 運用手順: Makefile 依存を廃し、`.cursor/commands/agent/*.md` にプロンプトタスクを整備
 - RAG 対象: `docs/**.md`, `memory-bank/**.md`（`agent/registry/**` は対象外）
 - `.gitignore`: ルートに `.agent/` を明記
 - ドキュメント更新: `cli-implementation-design.md`, `worktree-guide.md`, `evaluation-governance.md`, `architecture*.md`
