@@ -202,8 +202,12 @@ flowchart TB
     E["実行者\nTool / Code / API\n長文脈圧縮(DeepSeek-OCR 等)"]
     V["評価者\nRubric / Spec vs Test / ImpossibleBench / 摂動ロバスト性"]
     R["リファイナ\n差分パッチ / 次試行A/B"]
+    AO["Artifacts Orchestrator (AO)\n出力標準化/整合"]
+    RAS["Rubric Auto Synthesis (RAS)\n自動生成/ブラッシュアップ"]
 
     N0 --> P --> C --> E --> V --> R --> C
+    E --> AO --> V
+    R --> RAS
   end
 
   %% ===== メモリ / 知識ストア =====
@@ -288,6 +292,7 @@ flowchart TB
 
 ## 評価健全性ガイドライン（抜粋）
 - 評価者（V）は Rubric/Spec 準拠、摂動ロバスト性、ImpossibleBench 類似の抜け道検知を備える
+- 既定では RAS による AutoRubric を入力とし、明示の Rubric 指定があればそれを優先
 - 昇格（テンプレ更新）はプロモーション・ゲートを通過（回帰/ロバスト/コスト/ホールドアウト/監査/HITL）
 - 監査ログ必須: 入力ハッシュ・rubric_id・template_id・スコア・根拠・コスト/レイテンシ・モデル情報
 - 可視化: スコア推移・失敗分布・コスト時系列・CheatingRisk をダッシュボードで監視

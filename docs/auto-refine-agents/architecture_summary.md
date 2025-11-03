@@ -13,13 +13,13 @@
 
 #### 1. **Inner-Loop（計画ループ）** - タスク実行の核
 ```
-目標正規化 → プランナー → 文脈管理子(ACE) → 実行者 → 評価者 → リファイナ → (文脈管理子へフィードバック)
+目標正規化 → プランナー → 文脈管理子(ACE) → 実行者 → （AO） → 評価者 → リファイナ → （RAS） → (文脈管理子へフィードバック)
 ```
 - **プランナー**: Many-Shot ICLで計画生成
 - **文脈管理子(ACE)**: ワーキングメモリ/エピソード記憶/RAG/Playbookを管理
 - **実行者**: ツール/コード/API実行、長文脈圧縮
-- **評価者**: ルーブリック/テスト/摂動ロバスト性で評価
-- **リファイナ**: 差分パッチ/次試行のA/B設計
+- **評価者**: ルーブリック/テスト/摂動ロバスト性で評価（既定は AutoRubric）
+- **リファイナ**: 差分パッチ/次試行のA/B設計（RASでRubricを自動ブラッシュアップ）
 
 #### 2. **Middle-Loop（自己改良ループ）** - 経験から学習
 - **失敗解析**: Inner-Loopの失敗を分析
@@ -46,7 +46,7 @@
 
 このアーキテクチャは、論文で言及されている**ICL、コンテキストエンジニアリング、RL系手法**を統合した自己改善型エージェントの実装案です。
 
-### 実務上の要点（強化）
+- 目標入力: ユーザ入力は原則「Goal」のみ。rubric/artifacts は RAS/AO が自動生成・整合
 - 評価健全性: Rubric/Spec 準拠 + 摂動ロバスト性 + 監査ログ + HITL 昇格
 - 並列運用: 各エージェントは Git worktree を分離し、`.agent/`（含 FTS DB）は共有しない
 - 共有正典: `agent/registry/` に prompts/playbooks/rubrics/config( *.defaults.yaml ) を管理（Git）。RAGの対象外。pull=`agent/registry→.agent` / push=`.agent→PR→agent/registry`
@@ -54,3 +54,4 @@
 
 ### 関連ドキュメント
 - [MVP/ポストMVPのスコープ定義](./mvp-scope.md)
+- [Quickstart（Goalのみで起動）](./quickstart_goal_only.md)
