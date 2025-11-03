@@ -15,6 +15,9 @@
 
 GOAL="あなたのGoal"
 
+# eval ログディレクトリを確実に作成
+mkdir -p .agent/logs/eval
+
 # 入力（v2: rubric/artifacts を自動補完）
 printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
 | tee .agent/logs/eval/input.json \
