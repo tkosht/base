@@ -4,12 +4,32 @@
 
 ## 実行
 ```bash
+set -euo pipefail
+
+# 1) Goal-only 実行（Evaluator I/O v2 / RAS/AO 自動）
 awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_goal_run.md | bash
+
+# 2) 摂動ロバスト性スイート
 awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/eval_perturb_suite.md | bash
-awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_abtest.md | bash
-awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_promote.md | bash
-# 合格時のみ
-awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_templates_push_pr.md | bash
+
+# 3) ABテスト → 昇格判定 → （合格時）PRエビデンス収集
+#    反復上限: MAX_ITERS（優先順位: 環境変数 > loop_config.yaml > 既定1）
+MAX_ITERS="${MAX_ITERS:-}"
+if [ -z "${MAX_ITERS:-}" ] && command -v yq >/dev/null 2>&1; then
+  MAX_ITERS=$(yq -e '.loop.max_iters' .agent/config/loop_config.yaml 2>/dev/null || true)
+fi
+MAX_ITERS="${MAX_ITERS:-1}"
+
+i=1
+while [ "$i" -le "$MAX_ITERS" ]; do
+  awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_abtest.md | bash
+  if awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_promote.md | bash; then
+    # 合格時のみ
+    awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_templates_push_pr.md | bash
+    break
+  fi
+  i=$((i+1))
+done
 ```
 
 ## 成果物

@@ -76,7 +76,7 @@ git branch -D feature/agent-a
 リカバリ（競合・破損時の例）
 - ローカル変更の退避: `.agent/{config,prompts}` を `agent/snapshots/YYYYMMDD-HHMM/` へコピー
 - 再同期: `agent_templates_pull.md` を再実行
-- 最終手段: `.agent/` を削除して `agent_init.md` で再初期化後、必要に応じてスナップショットから復元
+- 最終手段: `.agent/` を削除して `agent_recovery_init.md` で再初期化後、必要に応じてスナップショットから復元
 
 ---
 参照:

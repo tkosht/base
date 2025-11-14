@@ -8,6 +8,7 @@
 
 ## 手順（冪等）
 ```bash
+set -euo pipefail
 # 1) ディレクトリ生成（存在時はスキップ）
 [ -d .agent ] || mkdir -p \
   .agent/state/session_history \

@@ -3,7 +3,7 @@
 ステータス凡例: BL=Backlog / IP=In Progress / RV=Review / DN=Done
 
 ## Backlog
-- [ ] （例）tasks: Phase1/2/3/4 の雛形作成（`.cursor/commands/tasks/*.md`）
+- [ ] （例）tasks: Phase1/2/3/4 の雛形作成（`.cursor/commands/agent/*.md`）
 - [ ] （例）RAG投入の運用強化（バッチ/堅牢化）
 
 ## In Progress

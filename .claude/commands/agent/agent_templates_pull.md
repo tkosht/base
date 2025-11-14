@@ -7,6 +7,8 @@
 
 ## 手順
 ```bash
+# 安全実行
+set -euo pipefail
 # ACE自動初期化（遅延・冪等）
 [ -d .agent ] || mkdir -p .agent/{state/session_history,generated/{rubrics,artifacts},memory/{episodic,semantic/documents,playbooks},prompts/{planner,executor,evaluator,analyzer},config,logs}
 [ -f .agent/memory/semantic/fts.db ] || sqlite3 .agent/memory/semantic/fts.db "CREATE VIRTUAL TABLE IF NOT EXISTS docs USING fts5(path, content);"
@@ -20,7 +22,7 @@ rsync -av --delete agent/registry/prompts/ .agent/prompts/
 rsync -av --delete agent/registry/playbooks/ .agent/memory/playbooks/
 
 # config 既定
-rsync -av --delete agent/registry/config/ .agent/config/
+rsync -av --ignore-existing agent/registry/config/ .agent/config/
 
 # 監査
 find .agent -maxdepth 2 -type d -print | sed 's/^/synced: /'

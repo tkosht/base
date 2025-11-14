@@ -6,22 +6,15 @@
 - Gate MUST を満たす監査エビデンスが揃っている（`evaluation-governance.md` 参照）
 - ブランチ: `feature/* | task/*` 等
 
-## 収集（必須エビデンス例）
-```bash
-mkdir -p pr_evidence
-cp -v .agent/logs/eval/result.json pr_evidence/
-# 例: 入力ハッシュ/テンプレID/コスト/レイテンシ抜粋
-jq '{input_hash, rubric_id, template_id, scores, metrics}' .agent/logs/eval/result.json > pr_evidence/summary.json
-```
-
 ## 昇格（例）
 ```bash
+set -euo pipefail
 # rubrics を昇格（必要に応じ該当ファイル）
 mkdir -p agent/registry/rubrics
 cp -v .agent/generated/rubrics/*.yaml agent/registry/rubrics/
 
-git add agent/registry/rubrics pr_evidence
-git commit -m "chore(registry): promote rubric from runtime with evidence"
+git add agent/registry/rubrics
+git commit -m "chore(registry): promote rubric from runtime"
 # upstream へ PR（ホストに応じて実施）
 ```
 

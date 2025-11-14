@@ -15,20 +15,43 @@
 [ -f .agent/config/loop_config.yaml ]  || printf "default_loop_config: {}\n" > .agent/config/loop_config.yaml
 
 set -euo pipefail
-TEMPLATES=(planner.default.v1 planner.candidate.v2)
-GOAL="あなたのGoal"
+TEMPLATES=(${TEMPLATES:-planner.default.v1 planner.candidate.v2})
+GOAL="${GOAL:-あなたのGoal}"
+
+# 反復回数（優先順位: 環境変数 > loop_config.yaml > 既定）
+AB_N="${AB_N:-}"
+if [ -z "${AB_N:-}" ] && command -v yq >/dev/null 2>&1; then
+  AB_N=$(yq -e '.ab.iterations' .agent/config/loop_config.yaml 2>/dev/null || true)
+fi
+AB_N="${AB_N:-5}"
+
 mkdir -p .agent/logs/eval/ab
 
-for TID in "${TEMPLATES[@]}"; do
-  printf '{"goal":"%s","template_id":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" "$TID" \
-  | jq -r '.' \
-  | rg -n "(ERROR|FAIL|Timeout)" - || true \
-  | jq -R -s '{ok:true, scores:{basic:1.0}, notes:["cli-eval (abtest)"]}' \
-  | tee ".agent/logs/eval/ab/${TID}.json"
+# 生データ蓄積（jsonl）
+: > .agent/logs/eval/ab/summary_raw.jsonl
 
+for TID in "${TEMPLATES[@]}"; do
+  : > ".agent/logs/eval/ab/${TID}.jsonl"
+  for i in $(seq 1 "$AB_N"); do
+    printf '{"goal":"%s","template_id":"%s","auto":{"rubric":true,"artifacts":true},"iteration":%d}\n' "$GOAL" "$TID" "$i" \
+    | jq -r '.' \
+    | rg -n "(ERROR|FAIL|Timeout)" - || true \
+    | jq -R -s --arg tid "$TID" --argjson i "$i" '{"template_id":$tid,"iteration":$i,"ok":true,"scores":{"total":1.0},"metrics":{"cost":0},"notes":["cli-eval (abtest)"]}' \
+    | tee -a ".agent/logs/eval/ab/${TID}.jsonl" >> .agent/logs/eval/ab/summary_raw.jsonl
+  done
 done
 
-jq -s 'map({id:.template_id,s: .scores.total//0, c: .metrics.cost//0})' .agent/logs/eval/ab/*.json > .agent/logs/eval/ab/summary.json
+# 平均集計
+jq -s '
+  group_by(.template_id) |
+  map({
+    id: .[0].template_id,
+    n: length,
+    s_avg: (map(.scores.total)|add/length),
+    c_avg: (map(.metrics.cost // 0)|add/length)
+  })
+' .agent/logs/eval/ab/summary_raw.jsonl > .agent/logs/eval/ab/summary.json
+
 cat .agent/logs/eval/ab/summary.json
 ```
 

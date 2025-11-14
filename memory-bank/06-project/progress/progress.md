@@ -80,5 +80,5 @@
   - 新規: `registry-guidelines.md`, `mvp-tracker.md`
   - `.gitignore`: `.agent/` を明記
 - 次アクション:
-  - tasks（`.cursor/commands/tasks/*.md`）の整備（Phase1〜4）
+  - tasks（`.cursor/commands/agent/*.md`）の整備（Phase1〜4）
   - Memory Bank 残タスク: `tech_context.md`, `system_patterns.md` 更新

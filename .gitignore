@@ -215,3 +215,6 @@ auth.json
 
 # Agent runtime state (per worktree)
 .agent/
+
+# PR evidence (unused)
+pr_evidence/
