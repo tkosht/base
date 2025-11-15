@@ -1,13 +1,13 @@
 projects = { "/home/devuser/workspace" = { trust_level = "trusted" } }
-model = "gpt-5"
+model = "gpt-5.1"
 # model = "gpt-5-codex"
 model_provider = "openai"
 approval_policy = "never"           # 完全自動
+sandbox_mode    = "danger-full-access"
 # sandbox_mode    = "workspace-write" # 読み書き可（ワークスペース内）
-# sandbox_mode    = "danger-full-access"
-sandbox_mode    = "read-only"
-# model_reasoning_effort = "high"
-model_reasoning_effort = "medium"
+# sandbox_mode    = "read-only"
+model_reasoning_effort = "high"
+# model_reasoning_effort = "medium"
 
 # experimental_use_rmcp_client = true     # for codex cli mcp
 
@@ -15,6 +15,8 @@ model_reasoning_effort = "medium"
 [sandbox_workspace_write]
 network_access = true               # ★ネット許可
 
+[sandbox_danger_full_access]
+network_access = true               # ★ネット許可
 
 [profiles.very-fast]
 model_reasoning_effort = "minimal"
@@ -27,10 +29,7 @@ model_reasoning_effort = "medium"
 
 [profiles.deep]
 model_reasoning_effort = "high"
-
-
-[tools]
-web_search = true       # ツール利用時のweb search 設定
+web_search_request = true       # ツール利用時のweb search 設定
 
 [mcp_servers.codex_mcp]
 command = "codex"
@@ -71,6 +70,9 @@ args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
 [mcp_servers.serena]
 command = "npx"
 args = ["-y", "mcp-remote@latest", "http://serena:9121/sse", "--allow-http", "--transport", "sse-only", "--context", "codex"]
+
+[notice]
+hide_gpt5_1_migration_prompt = true
 
 # [mcp_servers.cognee]
 # command = "sh"
