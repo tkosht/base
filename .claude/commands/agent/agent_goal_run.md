@@ -15,7 +15,7 @@ set -euo pipefail
 [ -f .agent/config/agent_config.yaml ] || printf "default_config: {}\n" > .agent/config/agent_config.yaml
 [ -f .agent/config/loop_config.yaml ]  || printf "default_loop_config: {}\n" > .agent/config/loop_config.yaml
 
-GOAL="あなたのGoal"
+GOAL="${GOAL:-あなたのGoal}"
 
 # eval ログディレクトリを確実に作成
 mkdir -p .agent/logs/eval
@@ -38,4 +38,3 @@ printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
 - RAS/AO の完全版は将来拡張。省略時は最小生成で継続する設計。
 
 参照: `docs/auto-refine-agents/quickstart_goal_only.md`, `evaluation-governance.md`
-

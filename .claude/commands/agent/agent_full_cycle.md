@@ -21,15 +21,23 @@ fi
 MAX_ITERS="${MAX_ITERS:-1}"
 
 i=1
+PROMOTE_OK=0
 while [ "$i" -le "$MAX_ITERS" ]; do
   awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_abtest.md | bash
   if awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/outerloop_promote.md | bash; then
     # 合格時のみ
     awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_templates_push_pr.md | bash
+    PROMOTE_OK=1
     break
   fi
   i=$((i+1))
 done
+
+# outerloop が有効（MAX_ITERS>0）の場合は、昇格Gate未達をエラーとして伝播
+if [ "$MAX_ITERS" -gt 0 ] && [ "$PROMOTE_OK" -ne 1 ]; then
+  echo "NG: promotion gate not satisfied within MAX_ITERS=$MAX_ITERS" >&2
+  exit 1
+fi
 ```
 
 ## 成果物
@@ -37,4 +45,3 @@ done
 - `pr_evidence/**`（昇格PR添付）
 
 参照: `docs/auto-refine-agents/evaluation-governance.md`
-
