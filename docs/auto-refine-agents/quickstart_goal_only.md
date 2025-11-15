@@ -25,7 +25,7 @@ printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
 | tee .agent/logs/eval/input.json \
 | jq -r '.' \
 | rg -n "(ERROR|FAIL|Timeout)" - || true \
-| jq -R -s '{ok:true, scores:{basic:1.0}, notes:["cli-eval (skeleton)"]}' \
+| jq -R -s '{ok:true, scores:{total:1.0}, notes:["cli-eval (skeleton)"]}' \
 | tee .agent/logs/eval/result.json
 ```
 
@@ -49,4 +49,3 @@ printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
 - `docs/auto-refine-agents/cli-implementation-design.md`（Evaluator I/O v2 / RAS / AO）
 - `docs/auto-refine-agents/evaluation-governance.md`（ガバナンス/昇格）
 - `docs/auto-refine-agents/worktree-guide.md`（並列運用/分離）
-

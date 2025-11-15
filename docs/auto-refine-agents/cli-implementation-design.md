@@ -557,7 +557,7 @@ printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
 | tee .agent/logs/eval/input.json \
 | jq -r '.' \
 | rg -n "(ERROR|FAIL|Timeout)" - || true \
-| jq -R -s '{ok:true, scores:{basic:1.0}, notes:["cli-eval (skeleton)"]}' \
+| jq -R -s '{ok:true, scores:{total:1.0}, notes:["cli-eval (skeleton)"]}' \
 | tee .agent/logs/eval/result.json
 ```
 
