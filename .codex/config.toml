@@ -1,5 +1,5 @@
 projects = { "/home/devuser/workspace" = { trust_level = "trusted" } }
-model = "gpt-5.1"
+model = "gpt-5.1-codex-max"
 # model = "gpt-5-codex"
 model_provider = "openai"
 approval_policy = "never"           # 完全自動
@@ -33,7 +33,7 @@ web_search_request = true       # ツール利用時のweb search 設定
 
 [mcp_servers.codex_mcp]
 command = "codex"
-args = ["mcp-server"]                 # ← ここがポイント。mcp ではなく mcp-server
+args = ["mcp-server"]
 enabled_tools = ["codex", "codex-reply"]
 # tool_timeout_sec = 600000          # 高推論でも落ちにくく
 tool_timeout_sec = 10000
@@ -73,6 +73,7 @@ args = ["-y", "mcp-remote@latest", "http://serena:9121/sse", "--allow-http", "--
 
 [notice]
 hide_gpt5_1_migration_prompt = true
+"hide_gpt-5.1-codex-max_migration_prompt" = true
 
 # [mcp_servers.cognee]
 # command = "sh"
