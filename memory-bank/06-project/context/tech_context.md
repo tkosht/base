@@ -7,10 +7,14 @@
 - eza / fdfind（任意）
 
 ## 原則
-- Makefileへの依存は避け、`.cursor/commands/tasks/*.md` に運用手順を記載
+- Makefileへの依存は避け、`.cursor/commands/agent/*.md` に運用手順を記載
 - `.agent/` は worktree 専用のランタイム（非Git）
 - `agent/registry/` は共有正典（Git）。RAG対象外
 - RAG対象は `docs/**.md` と `memory-bank/**.md`
+
+## Symlink 備考（失念防止）
+- `.cursor/` は `.claude/` へのシンボリックリンク（実体は `.claude/`）。
+- 表記は `.cursor/commands/agent/*.md` に統一するが、実体操作は `.claude/` と同一。
 
 ## 補足
 - 設定優先: `.agent/config/*` > `agent/registry/config/*.defaults.yaml` > built-in

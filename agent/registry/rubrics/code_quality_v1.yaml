@@ -1,0 +1,37 @@
+# code_quality_v1.yaml — Minimal rubric (Spec/Robustness/Cost/Reliability)
+
+id: code_quality_v1
+version: 1
+objectives:
+  - name: spec_compliance
+    weight: 0.4
+  - name: robustness
+    weight: 0.3
+  - name: cost_efficiency
+    weight: 0.2
+  - name: runtime_reliability
+    weight: 0.1
+checks:
+  - name: no_errors_in_logs
+    detector: "rg -n '(ERROR|FAIL|Timeout)' .agent/logs/ | wc -l"
+    expect: "== 0"
+    weight: 0.4
+  - name: spec_tests_pass
+    detector: "bash tests/spec_run.sh"
+    expect: "exit_code == 0"
+    weight: 0.3
+  - name: perturbation_robust
+    detector: "bash tests/perturbation_suite.sh"
+    expect: "exit_code == 0"
+    weight: 0.2
+  - name: budget_within_limit
+    detector: "jq '.total_cost' .agent/generated/artifacts/metrics.json"
+    expect: "<= budget.max_cost"
+    weight: 0.1
+thresholds:
+  pass_score: 0.9
+  hard_fail_checks: ["no_errors_in_logs", "spec_tests_pass"]
+metadata:
+  owner: platform
+  description: Spec準拠 + ロバスト性 + コスト上限を評価
+

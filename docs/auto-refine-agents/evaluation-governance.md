@@ -107,7 +107,7 @@ metadata:
   - 判定根拠抜粋, 実行環境（モデル/バージョン）
 - スナップショット（任意）: `.agent/{config,prompts}` の現用セットを `agent/snapshots/YYYYMMDD-HHMM/` として同梱可
 - 満たすべき基準: 本書「Gate MUST」全項目への適合宣言 + HITL 承認者/理由/チケットID
-- 手順参照: `.cursor/commands/tasks/agent_templates_push_pr.md`
+- 手順参照: `.cursor/commands/agent/agent_templates_push_pr.md`
 
 ## 9. AutoRubric（RAS）運用指針（追加）
 - 乾式検証（detector dry-run）を必須とし、不成立チェックは自動で除外/無効化する。
@@ -134,4 +134,6 @@ metadata:
 参照:
 - `cli-implementation-design.md` 4.3.4/4.3.5/8.3
 - `architecture.md` 通信/標準/安全, 評価者ノード
+
+注記（Symlink）: `.cursor/` は `.claude/` へのシンボリックリンクです。表記は `.cursor/commands/agent/*.md` に統一しています。
 

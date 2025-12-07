@@ -37,7 +37,7 @@ agent/
 ## 4. 同期モデル
 - pull（共有→ローカル）: `agent/registry/** → .agent/**`
 - push / 昇格（ローカル→共有）: `.agent/** → PR → agent/registry/**`
-  - 参照タスク: `.cursor/commands/tasks/agent_templates_pull.md`, `agent_templates_push_pr.md`
+  - 参照タスク: `.cursor/commands/agent/agent_templates_pull.md`, `.cursor/commands/agent/agent_templates_push_pr.md`
 
 ## 5. 昇格（PR）提出物（必須）
 - 差分: `agent/registry/` 配下の更新ファイル
@@ -67,6 +67,8 @@ agent/
   - A: できない。PR昇格で `agent/registry/` の正典に反映する。
 - Q: registry を RAG に入れない理由は？
   - A: テンプレやルーブリックは設計資産であり、検索は `docs/`/`memory-bank/` を経由するため。
+
+注記（Symlink）: `.cursor/` は `.claude/` へのシンボリックリンクです。表記は `.cursor/commands/agent/*.md` に統一しています。
 
 ---
 参照: `cli-implementation-design.md`, `worktree-guide.md`, `evaluation-governance.md`

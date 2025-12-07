@@ -23,6 +23,8 @@
 - ユーザー作業ゼロ: 手動の初期設定は不要（ゼロセットアップ）
 - 自動検出: 文脈管理子（ACE）が `.agent/` 構造の存在を検知し、必要に応じ自動生成
 
+注: 実運用の各タスク（`.cursor/commands/agent/*.md`）は先頭にACEの自動初期化スニペットを常設し、手動初期化は不要です。
+
 ---
 
 ## 2. 現状分析：CLI Agentの制約と可能性（CLIコア方針）
@@ -234,7 +236,7 @@ flowchart TB
 
 備考:
 
-- 運用タスクは Makefile ではなく、`.cursor/commands/tasks/*.md` に手順（コマンド・前提・入出力・注意）として提供する。
+- 運用タスクは Makefile ではなく、`.cursor/commands/agent/*.md` に手順（コマンド・前提・入出力・注意）として提供する。
 
 ### 4.3 Inner-Loop実装詳細（CLIパイプライン）
 
@@ -551,12 +553,47 @@ sqlite3 .agent/memory/semantic/fts.db "SELECT path, snippet(docs, 1, '[', ']', '
 
 # Goalのみで実行（rubric/artifacts は自動: RAS/AO）
 GOAL="あなたのGoal"
-printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
+TASK_ID="$(date +%s)-$RANDOM"
+
+mkdir -p .agent/logs/eval .agent/generated/{rubrics,artifacts} .agent/state
+
+printf '{
+  "task_id": "%s",
+  "goal": "%s",
+  "auto": {
+    "rubric": true,
+    "artifacts": true,
+    "weights": "learned"
+  },
+  "rubric": null,
+  "artifacts": null,
+  "budget": {
+    "max_cost": 0
+  }
+}
+' "$TASK_ID" "$GOAL" \
 | tee .agent/logs/eval/input.json \
-| jq -r '.' \
-| rg -n "(ERROR|FAIL|Timeout)" - || true \
-| jq -R -s '{ok:true, scores:{basic:1.0}, notes:["cli-eval (skeleton)"]}' \
-| tee .agent/logs/eval/result.json
+| jq -r '.'
+
+rg -n "(ERROR|FAIL|Timeout)" .agent/logs || true >/dev/null
+
+jq -n --arg task_id "$TASK_ID" '{
+  ok: true,
+  scores: {
+    total: 1.0
+  },
+  notes: ["cli-eval (skeleton)"],
+  evidence: {
+    failed_checks: [],
+    raw: {}
+  },
+  metrics: {
+    cost: 0,
+    latency_ms: 0
+  },
+  rubric_id: "skeleton_v0@0",
+  task_id: $task_id
+}' | tee .agent/logs/eval/result.json
 ```
 
 結果:

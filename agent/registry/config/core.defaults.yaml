@@ -1,0 +1,19 @@
+# core.defaults.yaml (registry defaults)
+
+agent:
+  planner_template_id: planner.default.v1
+  executor_template_id: executor.default.v1
+  evaluator_template_id: evaluator.default.v1
+  analyzer_template_id: analyzer.default.v1
+
+loop:
+  max_retries: 2
+  auto:
+    rubric: true
+    artifacts: true
+
+paths:
+  logs_dir: .agent/logs
+  artifacts_dir: .agent/generated/artifacts
+  rubrics_dir: .agent/generated/rubrics
+

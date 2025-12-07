@@ -13,7 +13,9 @@
 適用指針
 - 同期: pull=`agent/registry → .agent` / push=`.agent → PR → agent/registry`
 - 設定優先: `.agent/config/*` > `agent/registry/config/*.defaults.yaml` > built-in
-- 運用手順: `.cursor/commands/tasks/*.md` にプロンプトタスクとして記載
+- 運用手順: `.cursor/commands/agent/*.md` にプロンプトタスクとして記載
+- ACE常設: 各コマンドは先頭で自動初期化を実行（遅延・冪等）し、手動initは不要
+- Symlink方針: `.cursor/` は `.claude/` へのシンボリックリンク（表記は `.cursor` に統一）
 
 ## RAG設計パターン
 - 対象: `docs/**.md`, `memory-bank/**.md`
