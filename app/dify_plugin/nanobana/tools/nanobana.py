@@ -1,13 +1,12 @@
-from collections.abc import Generator
-from typing import Any
 import base64
-from datetime import datetime
 import mimetypes
 import time
 import uuid
+from collections.abc import Generator
+from datetime import datetime
+from typing import Any
 
 import requests
-
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 
@@ -39,9 +38,7 @@ class NanobanaTool(Tool):
             "contents": [
                 {
                     "role": "user",
-                    "parts": [
-                        {"text": prompt}
-                    ],
+                    "parts": [{"text": prompt}],
                 }
             ],
             "generationConfig": {
@@ -58,12 +55,16 @@ class NanobanaTool(Tool):
         resp = None
         for attempt_index in range(max_retries):
             try:
-                resp = requests.post(url, json=payload, headers=headers, timeout=120)
+                resp = requests.post(
+                    url, json=payload, headers=headers, timeout=120
+                )
                 resp.raise_for_status()
                 break
             except requests.exceptions.HTTPError as exc:
                 status_code = (
-                    exc.response.status_code if exc.response is not None else None
+                    exc.response.status_code
+                    if exc.response is not None
+                    else None
                 )
                 # 5xx はリトライ、429/408 も一時的としてリトライ
                 is_retryable = status_code in (408, 429) or (
@@ -79,7 +80,8 @@ class NanobanaTool(Tool):
                 if exc.response is not None:
                     try:
                         err_json = exc.response.json()
-                        # Generative Language API は {error:{message, status}} 形式のことが多い
+                        # Generative Language API は {error:{message, status}} 形式
+                        # で返ることが多い
                         error_detail = (
                             err_json.get("error", {}).get("message")
                             or err_json.get("message")
@@ -119,7 +121,9 @@ class NanobanaTool(Tool):
 
         candidates = data.get("candidates", [])
         if not candidates:
-            yield self.create_text_message("Gemini から候補が返ってきませんでした。")
+            yield self.create_text_message(
+                "Gemini から候補が返ってきませんでした。"
+            )
             return
 
         parts = candidates[0].get("content", {}).get("parts", [])
@@ -142,7 +146,10 @@ class NanobanaTool(Tool):
                 for p in parts
                 if isinstance(p, dict) and p.get("text")
             ]
-            text = "\n\n".join(texts) or "画像ではなくテキストのみが返されました。"
+            text = (
+                "\n\n".join(texts)
+                or "画像ではなくテキストのみが返されました。"
+            )
             yield self.create_text_message(text)
             return
 
@@ -164,7 +171,6 @@ class NanobanaTool(Tool):
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         unique_suffix = uuid.uuid4().hex[:8]
         filename = f"gemini_image_{timestamp}_{unique_suffix}{extension}"
-
 
         # Dify が内部ストレージに temp を作って /files/... に公開してくれる
         yield self.create_blob_message(

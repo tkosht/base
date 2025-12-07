@@ -12,13 +12,17 @@ class NanobanaProvider(ToolProvider):
             IMPLEMENT YOUR VALIDATION HERE
             """
         except Exception as e:
-            raise ToolProviderCredentialValidationError(str(e))
+            raise ToolProviderCredentialValidationError(str(e)) from e
 
     #########################################################################################
     # If OAuth is supported, uncomment the following functions.
     # Warning: please make sure that the sdk version is 0.4.2 or higher.
     #########################################################################################
-    # def _oauth_get_authorization_url(self, redirect_uri: str, system_credentials: Mapping[str, Any]) -> str:
+    # def _oauth_get_authorization_url(
+    #     self,
+    #     redirect_uri: str,
+    #     system_credentials: Mapping[str, Any],
+    # ) -> str:
     #     """
     #     Generate the authorization URL for nanobana OAuth.
     #     """
