@@ -3,10 +3,8 @@
 
 # nvmが管理する場所にClaude Codeをグローバルインストールする
 echo "Installing @anthropic-ai/claude-code ..."
-npm install @anthropic-ai/claude-code
-
-# --- 5. MCP追加スクリプトの実行 ---
-sh bin/add_cognee_mcp.sh
+# npm install @anthropic-ai/claude-code
+curl -fsSL https://claude.ai/install.sh | bash
 
 echo "Installation complete."
 
