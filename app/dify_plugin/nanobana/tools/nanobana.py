@@ -1,9 +1,11 @@
-from typing import Any, Dict, Generator
+from collections.abc import Generator
+from typing import Any
 import base64
-import mimetypes
 from datetime import datetime
-import uuid
+import mimetypes
 import time
+import uuid
+
 import requests
 
 from dify_plugin import Tool
@@ -15,7 +17,9 @@ class NanobanaTool(Tool):
     gemini-3-pro-image-preview を呼び出して画像 BLOB を返すツール
     """
 
-    def _invoke(self, tool_parameters: Dict[str, Any]) -> Generator[ToolInvokeMessage, None, None]:
+    def _invoke(
+        self, tool_parameters: dict[str, Any]
+    ) -> Generator[ToolInvokeMessage, None, None]:
         # Provider YAML: credentials_for_provider.api_key と対応
         api_key = self.runtime.credentials["api_key"]
 
@@ -58,9 +62,13 @@ class NanobanaTool(Tool):
                 resp.raise_for_status()
                 break
             except requests.exceptions.HTTPError as exc:
-                status_code = exc.response.status_code if exc.response is not None else None
+                status_code = (
+                    exc.response.status_code if exc.response is not None else None
+                )
                 # 5xx はリトライ、429/408 も一時的としてリトライ
-                is_retryable = status_code in (408, 429) or (status_code is not None and 500 <= status_code < 600)
+                is_retryable = status_code in (408, 429) or (
+                    status_code is not None and 500 <= status_code < 600
+                )
                 is_last_attempt = attempt_index == max_retries - 1
                 if is_retryable and not is_last_attempt:
                     time.sleep(backoff_seconds)
@@ -82,20 +90,29 @@ class NanobanaTool(Tool):
                 else:
                     error_detail = str(exc)
                 yield self.create_text_message(
-                    f"Gemini API 呼び出しでHTTPエラーが発生しました。status={status_code}, details={error_detail}"
+                    "Gemini API 呼び出しでHTTPエラーが発生しました。"
+                    f"status={status_code}, details={error_detail}"
                 )
                 return
-            except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as exc:
+            except (
+                requests.exceptions.Timeout,
+                requests.exceptions.ConnectionError,
+            ) as exc:
                 is_last_attempt = attempt_index == max_retries - 1
                 if not is_last_attempt:
                     time.sleep(backoff_seconds)
                     backoff_seconds *= 2
                     continue
-                yield self.create_text_message(f"Gemini API 呼び出しでネットワークエラーが発生しました: {exc}")
+                yield self.create_text_message(
+                    "Gemini API 呼び出しでネットワークエラーが発生しました: "
+                    f"{exc}"
+                )
                 return
 
         if resp is None:
-            yield self.create_text_message("Gemini API の呼び出しに失敗しました（応答なし）。")
+            yield self.create_text_message(
+                "Gemini API の呼び出しに失敗しました（応答なし）。"
+            )
             return
 
         data = resp.json()
@@ -120,7 +137,11 @@ class NanobanaTool(Tool):
                 break
 
         if not image_b64:
-            texts = [p.get("text", "") for p in parts if isinstance(p, dict) and p.get("text")]
+            texts = [
+                p.get("text", "")
+                for p in parts
+                if isinstance(p, dict) and p.get("text")
+            ]
             text = "\n\n".join(texts) or "画像ではなくテキストのみが返されました。"
             yield self.create_text_message(text)
             return
@@ -135,7 +156,11 @@ class NanobanaTool(Tool):
             "image/gif": ".gif",
             "image/webp": ".webp",
         }
-        extension = extension_map.get(mime_type) or mimetypes.guess_extension(mime_type) or ".bin"
+        extension = (
+            extension_map.get(mime_type)
+            or mimetypes.guess_extension(mime_type)
+            or ".bin"
+        )
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
         unique_suffix = uuid.uuid4().hex[:8]
         filename = f"gemini_image_{timestamp}_{unique_suffix}{extension}"
@@ -149,4 +174,3 @@ class NanobanaTool(Tool):
                 "filename": filename,
             },
         )
-

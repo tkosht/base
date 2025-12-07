@@ -5,7 +5,7 @@ from dify_plugin.errors.tool import ToolProviderCredentialValidationError
 
 
 class NanobanaProvider(ToolProvider):
-    
+
     def _validate_credentials(self, credentials: dict[str, Any]) -> None:
         try:
             """
@@ -29,9 +29,12 @@ class NanobanaProvider(ToolProvider):
     #     except Exception as e:
     #         raise ToolProviderOAuthError(str(e))
     #     return ""
-        
+
     # def _oauth_get_credentials(
-    #     self, redirect_uri: str, system_credentials: Mapping[str, Any], request: Request
+    #     self,
+    #     redirect_uri: str,
+    #     system_credentials: Mapping[str, Any],
+    #     request: Request,
     # ) -> Mapping[str, Any]:
     #     """
     #     Exchange code for access_token.
@@ -45,7 +48,10 @@ class NanobanaProvider(ToolProvider):
     #     return dict()
 
     # def _oauth_refresh_credentials(
-    #     self, redirect_uri: str, system_credentials: Mapping[str, Any], credentials: Mapping[str, Any]
+    #     self,
+    #     redirect_uri: str,
+    #     system_credentials: Mapping[str, Any],
+    #     credentials: Mapping[str, Any],
     # ) -> OAuthCredentials:
     #     """
     #     Refresh the credentials
