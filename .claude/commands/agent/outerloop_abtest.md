@@ -33,10 +33,28 @@ mkdir -p .agent/logs/eval/ab
 for TID in "${TEMPLATES[@]}"; do
   : > ".agent/logs/eval/ab/${TID}.jsonl"
   for i in $(seq 1 "$AB_N"); do
-    printf '{"goal":"%s","template_id":"%s","auto":{"rubric":true,"artifacts":true},"iteration":%d}\n' "$GOAL" "$TID" "$i" \
-    | jq -r '.' \
-    | rg -n "(ERROR|FAIL|Timeout)" - || true \
-    | jq -R -s --arg tid "$TID" --argjson i "$i" '{"template_id":$tid,"iteration":$i,"ok":true,"scores":{"total":1.0},"metrics":{"cost":0},"notes":["cli-eval (abtest)"]}' \
+    # 各試行ごとに一意な TASK_ID を付与し、Evaluator I/O v2 + RAS/AO 経由で評価を実施
+    TASK_ID="ab-${TID}-${i}-$(date +%s)-$RANDOM"
+    export TASK_ID GOAL TEMPLATES
+    TEMPLATE_ID="$TID"
+    export TEMPLATE_ID
+
+    # Inner-Loop Goal 実行（Evaluator I/O v2 / RAS / AO）
+    awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_goal_run.md | bash
+
+    # 評価結果（result.json）を A/B 用の1行JSONに正規化して蓄積
+    jq --arg tid "$TID" \
+       --argjson i "$i" \
+       --arg task_id "$TASK_ID" \
+       '{
+          template_id: $tid,
+          iteration: $i,
+          task_id: $task_id,
+          ok: .ok,
+          scores: .scores,
+          metrics: .metrics,
+          rubric_id: .rubric_id
+        }' .agent/logs/eval/result.json \
     | tee -a ".agent/logs/eval/ab/${TID}.jsonl" >> .agent/logs/eval/ab/summary_raw.jsonl
   done
 done
@@ -62,4 +80,3 @@ cat .agent/logs/eval/ab/summary.json
 ## 注意
 - 実運用では v2 Evaluator を用いて正確なスコアリングを行ってください。
 - 昇格基準は `outerloop_promote.md` を参照。
-

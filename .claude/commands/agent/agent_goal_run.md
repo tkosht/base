@@ -17,16 +17,68 @@ set -euo pipefail
 
 GOAL="${GOAL:-あなたのGoal}"
 
-# eval ログディレクトリを確実に作成
-mkdir -p .agent/logs/eval
+# eval ログディレクトリ / AO / RAS 生成物ディレクトリを作成
+mkdir -p .agent/logs/eval .agent/generated/rubrics .agent/generated/artifacts .agent/state
 
-# 入力（v2: rubric/artifacts を自動補完）
-printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
+# TASK_ID を決定（環境変数優先）
+TASK_ID="${TASK_ID:-$(date +%s)-$RANDOM}"
+export TASK_ID GOAL
+
+# rubric_autogen.defaults.yaml から weights デフォルトを取得（失敗時は learned）
+REFINE_WEIGHTS="learned"
+if [ -f agent/registry/config/rubric_autogen.defaults.yaml ] && command -v yq >/dev/null 2>&1; then
+  REFINE_WEIGHTS="$(yq -er '.refine.weights' agent/registry/config/rubric_autogen.defaults.yaml 2>/dev/null || echo "learned")"
+fi
+
+# Evaluator I/O v2 形式の input.json を生成
+printf '{
+  "task_id": "%s",
+  "goal": "%s",
+  "auto": {
+    "rubric": true,
+    "artifacts": true,
+    "weights": "%s"
+  },
+  "rubric": null,
+  "artifacts": null,
+  "budget": {
+    "max_cost": 0
+  }
+}
+' "$TASK_ID" "$GOAL" "$REFINE_WEIGHTS" \
 | tee .agent/logs/eval/input.json \
-| jq -r '.' \
-| rg -n "(ERROR|FAIL|Timeout)" - || true \
-| jq -R -s '{ok:true, scores:{total:1.0}, notes:["cli-eval (skeleton)"]}' \
-| tee .agent/logs/eval/result.json
+| jq -r '.'
+
+# RAS v0: Rubric 自動生成（rubrics/<task_id>.yaml + rubric_history.json）
+if [ -f .cursor/commands/agent/agent_ras_autogen.md ]; then
+  awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_ras_autogen.md | bash
+fi
+
+# AO v0: 標準 artifacts セットアップ（app.log / metrics.json / artifacts_map）
+if [ -f .cursor/commands/agent/agent_ao_run.md ]; then
+  awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_ao_run.md | bash
+fi
+
+# スケルトン Evaluator: ログをスキャンし、result.json（v2構造）を書き出す
+rg -n "(ERROR|FAIL|Timeout)" .agent/logs || true >/dev/null
+
+jq -n --arg task_id "$TASK_ID" --arg rubric_id "autogen_code_quality_v1@1" '{
+  ok: true,
+  scores: {
+    total: 1.0
+  },
+  notes: ["cli-eval (skeleton)"],
+  evidence: {
+    failed_checks: [],
+    raw: {}
+  },
+  metrics: {
+    cost: 0,
+    latency_ms: 0
+  },
+  rubric_id: $rubric_id,
+  task_id: $task_id
+}' | tee .agent/logs/eval/result.json
 ```
 
 ## 出力

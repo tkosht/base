@@ -16,10 +16,8 @@
 
 set -euo pipefail
 
-# 1) 事前: ログ/メトリクス初期化
-mkdir -p .agent/logs .agent/generated/artifacts .agent/logs/eval
-: > .agent/logs/app.log
-: > .agent/generated/artifacts/metrics.json
+# 1) 事前: AO v0 でログ/メトリクス初期化
+awk '/^```bash/{flag=1;next}/^```/{if(flag){exit}}flag' ./.cursor/commands/agent/agent_ao_run.md | bash
 
 # 2) スイート実行（例: シェルスクリプト委譲 / 無い場合はスタブで継続）
 EC=1
@@ -46,4 +44,3 @@ cat .agent/logs/eval/perturb.json
 ## 注意
 - 実際のチェック内容・生成物はプロジェクトに合わせて実装してください。
 - Gate MUST では本スイートの合格が必要です（`evaluation-governance.md`）。
-

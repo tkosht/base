@@ -17,16 +17,68 @@
 [ -f .agent/config/loop_config.yaml ]  || printf "default_loop_config: {}\n" > .agent/config/loop_config.yaml
 ```
 
-## 実行（Goalのみ入力）
-Rubric と Artifacts は省略すると自動生成されます（Evaluator I/O v2）。
+## 推奨: CLIエージェント経由での利用（人間のUI）
+
+- 人間は `GOAL=...` を手で書く必要はありません。
+- CLIエージェント（Cursor CLI / Claude Code / Gemini CLI 等）に対して、自然言語で「やりたいこと」を伝えれば、エージェント側が内部的に `GOAL` と `TASK_ID` を設定して `agent_goal_run` / `agent_full_cycle` を呼び出します。
+
+例（対話イメージ）:
+
+> 「このリポジトリで、『◯◯を達成する』ことを Goal にして agent_full_cycle を実行して。結果と Rubric / メトリクスのサマリも教えて。」
+
+これに対してエージェントは内部的に:
+
+- `GOAL="◯◯を達成する"` を設定
+- `.cursor/commands/agent/agent_goal_run.md` → `eval_perturb_suite.md` → `outerloop_abtest.md` → `outerloop_promote.md` → `agent_templates_push_pr.md`
+
+という順でコマンドを実行し、`.agent/` 以下のログと生成物を更新します。
+
+## 低レベル: シェルから直接実行する場合（開発者向け）
+Rubric と Artifacts は省略すると自動生成されます（Evaluator I/O v2）。  
+※ これは CLI エージェントの内部実装例に近く、通常のユーザには推奨しません。
 ```bash
 GOAL="あなたのGoal"
-printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
+TASK_ID="$(date +%s)-$RANDOM"
+
+mkdir -p .agent/logs/eval .agent/generated/{rubrics,artifacts} .agent/state
+
+printf '{
+  "task_id": "%s",
+  "goal": "%s",
+  "auto": {
+    "rubric": true,
+    "artifacts": true,
+    "weights": "learned"
+  },
+  "rubric": null,
+  "artifacts": null,
+  "budget": {
+    "max_cost": 0
+  }
+}
+' "$TASK_ID" "$GOAL" \
 | tee .agent/logs/eval/input.json \
-| jq -r '.' \
-| rg -n "(ERROR|FAIL|Timeout)" - || true \
-| jq -R -s '{ok:true, scores:{total:1.0}, notes:["cli-eval (skeleton)"]}' \
-| tee .agent/logs/eval/result.json
+| jq -r '.'
+
+rg -n "(ERROR|FAIL|Timeout)" .agent/logs || true >/dev/null
+
+jq -n --arg task_id "$TASK_ID" '{
+  ok: true,
+  scores: {
+    total: 1.0
+  },
+  notes: ["cli-eval (skeleton)"],
+  evidence: {
+    failed_checks: [],
+    raw: {}
+  },
+  metrics: {
+    cost: 0,
+    latency_ms: 0
+  },
+  rubric_id: "skeleton_v0@0",
+  task_id: $task_id
+}' | tee .agent/logs/eval/result.json
 ```
 
 ## 生成物の場所
@@ -34,6 +86,14 @@ printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
 - 評価入出力スナップショット: `.agent/logs/eval/*.json`
 - 生成 Rubric（RAS）: `.agent/generated/rubrics/*.yaml`
 - 整形 Artifacts（AO）: `.agent/generated/artifacts/`
+- outerloop A/B ログ:
+  - 個別試行: `.agent/logs/eval/ab/*.jsonl`
+  - 集計: `.agent/logs/eval/ab/summary_raw.jsonl`, `.agent/logs/eval/ab/summary.json`
+  - Gate 判定ログ: `.agent/logs/eval/ab/promotion.log`
+- Rubric 履歴:
+  - `.agent/state/rubric_history.json`
+- artifacts マップ:
+  - `.agent/state/artifacts_map.json`
 
 ## 失敗時のフォールバック
 - checks が不成立: 最小 rubric（`no_errors_in_logs`）で評価継続

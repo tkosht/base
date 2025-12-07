@@ -553,12 +553,47 @@ sqlite3 .agent/memory/semantic/fts.db "SELECT path, snippet(docs, 1, '[', ']', '
 
 # Goalのみで実行（rubric/artifacts は自動: RAS/AO）
 GOAL="あなたのGoal"
-printf '{"goal":"%s","auto":{"rubric":true,"artifacts":true}}' "$GOAL" \
+TASK_ID="$(date +%s)-$RANDOM"
+
+mkdir -p .agent/logs/eval .agent/generated/{rubrics,artifacts} .agent/state
+
+printf '{
+  "task_id": "%s",
+  "goal": "%s",
+  "auto": {
+    "rubric": true,
+    "artifacts": true,
+    "weights": "learned"
+  },
+  "rubric": null,
+  "artifacts": null,
+  "budget": {
+    "max_cost": 0
+  }
+}
+' "$TASK_ID" "$GOAL" \
 | tee .agent/logs/eval/input.json \
-| jq -r '.' \
-| rg -n "(ERROR|FAIL|Timeout)" - || true \
-| jq -R -s '{ok:true, scores:{total:1.0}, notes:["cli-eval (skeleton)"]}' \
-| tee .agent/logs/eval/result.json
+| jq -r '.'
+
+rg -n "(ERROR|FAIL|Timeout)" .agent/logs || true >/dev/null
+
+jq -n --arg task_id "$TASK_ID" '{
+  ok: true,
+  scores: {
+    total: 1.0
+  },
+  notes: ["cli-eval (skeleton)"],
+  evidence: {
+    failed_checks: [],
+    raw: {}
+  },
+  metrics: {
+    cost: 0,
+    latency_ms: 0
+  },
+  rubric_id: "skeleton_v0@0",
+  task_id: $task_id
+}' | tee .agent/logs/eval/result.json
 ```
 
 結果:
