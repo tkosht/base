@@ -5,40 +5,8 @@ description = "ベース開発環境"
 authors = [{ name = "AI Developer", email = "dev@example.com" }]
 requires-python = ">=3.12,<=3.14"
 dependencies = [
-    "aiohttp>=3.9.1,<4",
-    "beautifulsoup4",
     "numpy",
-    "matplotlib",
-    "python-dotenv",
-    "requests",
-    "click>=8.1.7,<8.2",
-    "typer>=0.12.5,<0.13",
-    "ipykernel",
-    "fastapi",
-    "uvicorn",
-    "httpx",
-    "pydantic",
-    "python-multipart",
-    "starlette",
-    "a2a-sdk",
-    "scipy",
-    "claude-code-sdk>=0.0.14,<0.0.15",
-    "langgraph>=0.5.3,<0.6",
-    "langchain-openai>=0.3.28,<0.4",
-    "langchain-google-genai>=2.1.8,<3",
-    "langchain-tavily>=0.2.10,<0.3",
-    "langchain-experimental>=0.3.4,<0.4",
-    "mcp>=1.12.4,<2",
-    "fastmcp>=2.11.2,<3",
-    "chainlit>=2.6.9,<3",
-    "passlib[bcrypt]>=1.7.4,<2",
-    "aiosqlite>=0.21.0,<0.22",
-    "asyncpg>=0.30.0,<0.31",
-    "psycopg2>=2.9.10,<3",
-    "gradio>=5.42.0,<6",
-    "markdown-it-py>=4.0.0,<5",
-    "gunicorn>=23.0.0,<24",
-    "sqlalchemy~=2.0",
+    "pandas",
 ]
 
 [dependency-groups]
@@ -70,6 +38,7 @@ target-version = ['py312']
 exclude = '''
 /(
     \.git
+  | \.codex
   | \.mypy_cache
   | \.pytest_cache
   | \.venv
@@ -108,6 +77,7 @@ exclude = [
 [tool.ruff]
 line-length = 88
 target-version = "py312"
+exclude = [".codex"]
 
 [tool.ruff.lint]
 # Enable common rulesets: pycodestyle (E/W), Pyflakes (F), isort (I), bugbear (B), pyupgrade (UP)

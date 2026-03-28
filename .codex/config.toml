@@ -1,12 +1,12 @@
 projects = { "/home/devuser/workspace" = { trust_level = "trusted" } }
-model = "gpt-5.1-codex-max"
-# model = "gpt-5-codex"
+model = "gpt-5.4"
 model_provider = "openai"
 approval_policy = "never"           # 完全自動
 sandbox_mode    = "danger-full-access"
 # sandbox_mode    = "workspace-write" # 読み書き可（ワークスペース内）
 # sandbox_mode    = "read-only"
-model_reasoning_effort = "high"
+model_reasoning_effort = "xhigh"
+personality = "pragmatic"
 # model_reasoning_effort = "medium"
 
 # experimental_use_rmcp_client = true     # for codex cli mcp
@@ -41,24 +41,6 @@ tool_timeout_sec = 10000
 env = { "HOME" = "/tmp/codex-mcp-home" }
 
 
-# [mcp_servers.codex_mcp]
-# # command = "codex"
-# # args = ["mcp-server"]
-# command = "bash"
-# args    = ["-lc", "cd /home/devuser/workspace/wk && exec codex mcp-server"]
-# startup_timeout_sec = 10.0
-# tool_timeout_sec = 20.0
-# env_vars = ["OPENAI_API_KEY", "HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY"]
-# startup_timeout_sec = 600.0
-# tool_timeout_sec = 600.0
-
-# [mcp_servers.codex_mcp.env]
-# OPENAI_API_KEY = "${OPENAI_API_KEY}"
-# HTTPS_PROXY    = "${HTTPS_PROXY}"
-# HTTP_PROXY     = "${HTTP_PROXY}"
-# NO_PROXY       = "${NO_PROXY}"
-
-
 [mcp_servers.context7]
 command = "npx"
 args = ["-y", "@upstash/context7-mcp"]
@@ -75,7 +57,12 @@ args = ["-y", "mcp-remote@latest", "http://serena:9121/sse", "--allow-http", "--
 hide_gpt5_1_migration_prompt = true
 "hide_gpt-5.1-codex-max_migration_prompt" = true
 
-# [mcp_servers.cognee]
-# command = "sh"
-# args = ["bin/run_cognee.sh"]
+[notice.model_migrations]
+"gpt-5.1-codex-max" = "gpt-5.4"
+
+[plugins."gmail@openai-curated"]
+enabled = true
+
+[plugins."box@openai-curated"]
+enabled = true
 

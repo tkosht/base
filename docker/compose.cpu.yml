@@ -14,15 +14,4 @@ services:
       - .:/home/$user_name/workspace
       - .ssh/:/home/$user_name/.ssh/
     working_dir: /home/$user_name/workspace
-    ports:
-      - "8000:8000"
-      - "7860:7860"
-#     networks:
-#       - base_net
-# 
-# 
-# networks:
-#   base_net:
-#     external: true
-#     name: base_net
 
