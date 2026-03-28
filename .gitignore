@@ -213,6 +213,8 @@ auth.json
 !.codex/config.toml
 !.codex/skills/
 !.codex/skills/*
+!.codex/skills/.system/
+.codex/skills/.system/
 !.codex/version.json
 
 # Agent runtime state (per worktree)
