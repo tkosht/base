@@ -3,7 +3,7 @@ name = "base"
 version = "0.1.0"
 description = "ベース開発環境"
 authors = [{ name = "AI Developer", email = "dev@example.com" }]
-requires-python = ">=3.10,<=3.14"
+requires-python = ">=3.12,<=3.14"
 dependencies = [
     "aiohttp>=3.9.1,<4",
     "beautifulsoup4",
@@ -37,7 +37,7 @@ dependencies = [
     "psycopg2>=2.9.10,<3",
     "gradio>=5.42.0,<6",
     "markdown-it-py>=4.0.0,<5",
-    "gunicorn[uvicorn]>=23.0.0,<24",
+    "gunicorn>=23.0.0,<24",
     "sqlalchemy~=2.0",
 ]
 
@@ -66,7 +66,7 @@ build-backend = "hatchling.build"
 
 [tool.black]
 line-length = 79
-target-version = ['py310']
+target-version = ['py312']
 exclude = '''
 /(
     \.git
@@ -199,4 +199,3 @@ exclude_lines = [
     "raise NotImplementedError",
     "if __name__ == .__main__.:",
 ]
-

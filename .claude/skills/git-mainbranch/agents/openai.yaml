@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Mainbranch Cleanup"
+  short_description: "マージ後に main/master 復帰と安全掃除を実行"
+  default_prompt: "Use $git-mainbranch to switch back to main/master, sync safely, and clean merged local branches."

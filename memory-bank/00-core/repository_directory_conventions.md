@@ -1,5 +1,10 @@
 # Repository Directory Conventions (Meaning & Placement Rules)
 
+- Status: Reference
+- Load: OnDemand
+- Authority: Operational
+- Canonical: `AGENTS.md`
+
 タグ: `directory-conventions`, `placement-policy`, `knowledge-architecture`
 
 ## 1. Canonical Rules
@@ -41,4 +46,3 @@
 1) テンプレを複製して `checklists/` に作成
 2) 進行中は `checklists/` を更新
 3) 解決/収束後、学びを `memory-bank/06-project/progress/` 等へ要点記録
-

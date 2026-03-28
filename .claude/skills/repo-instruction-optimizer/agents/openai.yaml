@@ -1,0 +1,4 @@
+interface:
+  display_name: "Repo Instruction Optimizer"
+  short_description: "AGENTS/adapter/context surface を整理し、軽量評価まで設計する"
+  default_prompt: "Use $repo-instruction-optimizer to simplify and canonicalize this repo's instruction surface, keep adapters thin, reduce always-loaded context, and run a lightweight evaluation loop that protects currentness, scoped edit evidence, and review finding quality."

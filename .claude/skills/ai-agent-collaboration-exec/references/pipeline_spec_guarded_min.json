@@ -1,0 +1,27 @@
+{
+  "allow_dynamic_stages": false,
+  "allowed_stage_ids": [
+    "draft",
+    "execute",
+    "review",
+    "verify"
+  ],
+  "stages": [
+    {
+      "id": "draft",
+      "instructions": "目的: 最小のチェック設計を定義する。手順: 1) capsule_patch は1件のみ。2) /draft を置換し、checklist と rules のみ。3) 文字列は1行のみ、改行や\\nは禁止。4) JSONは単一行で出力。"
+    },
+    {
+      "id": "execute",
+      "instructions": "目的: チェック項目ごとの判定を記録する。手順: 1) capsule_patch は1件のみ。2) /facts を置換し、最大5件の結果(item/evidence/source/status)。3) 文字列は1行のみ。4) JSONは単一行。"
+    },
+    {
+      "id": "review",
+      "instructions": "目的: /facts の妥当性を簡潔にレビューする。手順: 1) capsule_patch は1件のみ。2) /critique を置換し、issues 最大3件。3) 文字列は1行のみ。"
+    },
+    {
+      "id": "verify",
+      "instructions": "目的: 追加確認が不要であることを宣言する。手順: 1) capsule_patch は空配列でOK。2) JSONは単一行。"
+    }
+  ]
+}

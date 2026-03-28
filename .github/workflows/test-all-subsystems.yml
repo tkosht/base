@@ -23,6 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
+      has_subsystems: ${{ steps.set-matrix.outputs.has_subsystems }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -30,18 +31,33 @@ jobs:
       - name: Discover subsystems
         id: set-matrix
         run: |
-          # Find all directories under app/ that contain pyproject.toml
-          SUBSYSTEMS=$(find app -name "pyproject.toml" -type f | xargs dirname | jq -R -s -c 'split("\n")[:-1]')
+          mapfile -t subsystem_dirs < <(find app -name "pyproject.toml" -type f -print 2>/dev/null | xargs -r -n1 dirname | sort -u)
+
+          if [ "${#subsystem_dirs[@]}" -eq 0 ]; then
+            if [ -f "pyproject.toml" ]; then
+              SUBSYSTEMS='["."]'
+            else
+              SUBSYSTEMS='[]'
+            fi
+          else
+            SUBSYSTEMS=$(printf '%s\n' "${subsystem_dirs[@]}" | jq -R -s -c 'split("\n")[:-1]')
+          fi
+
           echo "Found subsystems: $SUBSYSTEMS"
-          echo "matrix={\"subsystem\":$SUBSYSTEMS}" >> $GITHUB_OUTPUT
+          echo "matrix={\"subsystem\":$SUBSYSTEMS}" >> "$GITHUB_OUTPUT"
+          if [ "$SUBSYSTEMS" = '[]' ]; then
+            echo "has_subsystems=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_subsystems=true" >> "$GITHUB_OUTPUT"
+          fi
 
   test-subsystem:
     needs: discover-subsystems
+    if: needs.discover-subsystems.outputs.has_subsystems == 'true'
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        python-version: ['3.10', '3.11', '3.12']
         subsystem: ${{ fromJson(needs.discover-subsystems.outputs.matrix).subsystem }}
     defaults:
       run:
@@ -52,73 +68,89 @@ jobs:
         uses: actions/checkout@v4
       
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
           uv sync --all-groups --all-extras
-      
-      - name: Run linters
+
+      - name: Detect test targets
+        id: detect_targets
         run: |
           if [ -d "src" ]; then
-            uv run ruff check src/ tests/ || echo "Ruff not available, skipping"
-            uv run black --check src/ tests/ || echo "Black not available, skipping"
+            echo "lint_target=src tests" >> "$GITHUB_OUTPUT"
+            echo "type_target=src" >> "$GITHUB_OUTPUT"
           elif [ -d "app" ]; then
-            uv run ruff check app/ tests/ || echo "Ruff not available, skipping"
-            uv run black --check app/ tests/ || echo "Black not available, skipping"
+            echo "lint_target=app tests" >> "$GITHUB_OUTPUT"
+            echo "type_target=app" >> "$GITHUB_OUTPUT"
           else
-            echo "No src directory found, skipping linters"
+            echo "lint_target=" >> "$GITHUB_OUTPUT"
+            echo "type_target=" >> "$GITHUB_OUTPUT"
           fi
+
+          if [ -d "tests" ] && find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
+            echo "has_tests=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_tests=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run linters
+        if: steps.detect_targets.outputs.lint_target != ''
+        run: |
+          uv run ruff check ${{ steps.detect_targets.outputs.lint_target }} || echo "Ruff not available, skipping"
+          uv run black --check ${{ steps.detect_targets.outputs.lint_target }} || echo "Black not available, skipping"
 
       - name: Type checking
+        if: steps.detect_targets.outputs.type_target != ''
         run: |
-          if [ -d "src" ]; then
-            uv run mypy src/ --ignore-missing-imports --explicit-package-bases || echo "Mypy not available, skipping"
-          elif [ -d "app" ]; then
-            uv run mypy app/ --ignore-missing-imports --explicit-package-bases || echo "Mypy not available, skipping"
-          else
-            echo "No src directory found, skipping type checking"
-          fi
+          uv run mypy ${{ steps.detect_targets.outputs.type_target }} --ignore-missing-imports --explicit-package-bases || echo "Mypy not available, skipping"
 
       - name: Run unit tests with coverage
+        if: steps.detect_targets.outputs.has_tests == 'true'
         run: |
-          if [ -d "tests" ]; then
-            # Run only unit tests in CI to avoid timeout issues with integration tests
-            if [ -d "src" ]; then
-              uv run pytest tests/unit/ \
-                --cov=src \
-                --cov-report=xml \
-                --cov-report=term-missing \
-                --cov-fail-under=85 \
-                -v || echo "No unit tests found"
-            else
-              uv run pytest -v || echo "No unit tests found"
-            fi
+          # Run only unit tests in CI to avoid timeout issues with integration tests
+          if [ -d "tests/unit" ]; then
+            uv run pytest tests/unit/ -v || echo "No unit tests found"
           else
-            echo "No tests directory found"
+            uv run pytest -v || echo "No unit tests found"
           fi
-      
+
+      - name: Discover coverage report
+        id: coverage
+        if: always() && steps.detect_targets.outputs.has_tests == 'true'
+        run: |
+          prefix="${{ matrix.subsystem }}"
+          if [ "$prefix" = "." ]; then
+            prefix=""
+          else
+            prefix="$prefix/"
+          fi
+
+          if [ -f "output/coverage/coverage.xml" ]; then
+            echo "file=${prefix}output/coverage/coverage.xml" >> "$GITHUB_OUTPUT"
+          elif [ -f "coverage.xml" ]; then
+            echo "file=${prefix}coverage.xml" >> "$GITHUB_OUTPUT"
+          else
+            echo "file=" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Upload coverage reports
-        if: always()
+        if: always() && steps.coverage.outputs.file != ''
         uses: codecov/codecov-action@v4
         with:
-          file: ./${{ matrix.subsystem }}/coverage.xml
+          file: ${{ steps.coverage.outputs.file }}
           fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ matrix.subsystem }}-py${{ matrix.python-version }}
+          flags: ${{ matrix.subsystem }}-py312
         continue-on-error: true
 
   integration-tests:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.11']  # Run integration tests only on one Python version
-        subsystem: ['.']  # Single root subsystem in this repo
     defaults:
       run:
-        working-directory: ${{ matrix.subsystem }}
+        working-directory: .
     env:
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
@@ -127,28 +159,33 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
           uv sync --all-groups --all-extras
-      
-      - name: Run integration tests
-        if: env.OPENAI_API_KEY != '' || env.ANTHROPIC_API_KEY != '' || env.GOOGLE_API_KEY != ''
+
+      - name: Detect integration tests
+        id: detect_integration
         run: |
-          if [ -d "tests/integration" ]; then
-            uv run pytest tests/integration/ \
-              -v \
-              --tb=short \
-              --timeout=300 \
-              -k "not test_performance_baseline" || true
+          if [ -d "tests/integration" ] && find tests/integration -type f -name 'test_*.py' -print -quit | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
           else
-            echo "No integration tests directory, skipping"
+            echo "run=false" >> "$GITHUB_OUTPUT"
           fi
+
+      - name: Run integration tests
+        if: steps.detect_integration.outputs.run == 'true' && (env.OPENAI_API_KEY != '' || env.ANTHROPIC_API_KEY != '' || env.GOOGLE_API_KEY != '')
+        run: |
+          uv run pytest tests/integration/ \
+            -v \
+            --tb=short \
+            --timeout=300 \
+            -k "not test_performance_baseline" || true
         continue-on-error: true
 
   summary:

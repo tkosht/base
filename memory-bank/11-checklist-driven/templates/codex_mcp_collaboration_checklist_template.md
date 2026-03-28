@@ -1,5 +1,10 @@
 # codex_mcp 協働相談チェックリスト（テンプレート）
 
+- Status: Reference
+- Load: OnDemand
+- Authority: Operational
+- Canonical: `AGENTS.md`
+
 困難タスクの打開を目的に、別AIエージェントと codex_mcp で協働するための運用テンプレート。推測禁止・事実ベース・セキュリティ厳守。
 
 > 使い方: このテンプレをコピーし、実タスク用に `checklists/<date|issue>_codex_mcp_<topic>_checklist.md` を作成して運用してください。
@@ -88,4 +93,3 @@
 [Artifacts]
 - パス/行/PR/テスト: 
 ```
-

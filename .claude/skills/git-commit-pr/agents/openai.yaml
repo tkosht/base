@@ -1,0 +1,4 @@
+interface:
+  display_name: "Git Commit PR"
+  short_description: "コミット・push・PR発行を一気通貫で進める"
+  default_prompt: "Use $git-commit-pr to inspect the current diff, commit with the defined format, push the branch, and return the pull request URL."
