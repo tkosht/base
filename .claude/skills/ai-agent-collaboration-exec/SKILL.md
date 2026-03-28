@@ -137,7 +137,7 @@ metadata:
   ```
 - ログ: `.codex/sessions/codex_exec/{human|auto}/YYYY/MM/DD/run-*.jsonl`
 - capsule（`--capsule-store file|auto`）: `.codex/sessions/codex_exec/{human|auto}/artifacts/<pipeline_run_id>/capsule.json`
-- レビュー/検証の成果物: `review_output_dir`（既定は `docs/ai-agent-reviews/`）
+- レビュー/検証の成果物: `review_output_dir`（既定は `output/reviews/`）
 
 ## 実行ポリシー（品質優先）
 - タスク難易度や要求水準を下げての短縮はしない。
@@ -170,7 +170,7 @@ metadata:
 - `--max-stages`: `10`
 
 ## 成果物命名（推奨）
-- 基本ディレクトリ: `docs/ai-agent-reviews/`
+- 基本ディレクトリ: `output/reviews/`
 - パイプライン spec: `<topic>_pipeline_spec_YYYY-MM-DD.json`
 - サブエージェント依頼文: `<topic>_subagent_prompts_YYYY-MM-DD.md`
 - テスト計画: `<topic>_test_plan_YYYY-MM-DD.md`

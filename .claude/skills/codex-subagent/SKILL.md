@@ -76,22 +76,23 @@ uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
 
 **失敗パターン**（タイムアウト）:
 ```
-app/sharepoint_list の整合性を分析してください。
-対象: README.md, internal/, tools/, tests/
+repo 全体の整合性を分析してください。
+対象: いろいろ
 ```
 → エージェントがファイルを1つずつ探索してタイムアウト
 
 **成功パターン**:
 ```
 ## 対象ファイル（これらのみを対象とすること）
-- app/sharepoint_list/README.md
-- app/sharepoint_list/internal/validators.py
-- tests/sharepoint_list/test_validators.py
+- AGENTS.md
+- docs/04.knowledge/base_harness_set.md
+- docs/04.knowledge/base_harness_set.toml
+- tests/test_base_harness_set.py
 
 ## チェック項目（以下の3点のみを評価）
-1. select_fields 仕様が一致しているか
-2. filters 仕様が一致しているか
-3. list_url 検証ロジックがテストでカバーされているか
+1. AGENTS の Load Map が manifest と一致しているか
+2. retain / exclude の説明が summary と manifest で一致しているか
+3. 検証テストが keep-set を正しく表現しているか
 
 ## 出力形式
 各チェック項目: 整合: YES/NO、根拠: ファイル名と行番号、ギャップ

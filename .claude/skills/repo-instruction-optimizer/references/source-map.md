@@ -23,14 +23,13 @@
 
 | Path | Why it matters |
 | --- | --- |
-| `docs/ai-agent-reviews/agent_instruction_simplification_review_2026-03-15_round1.md` | 初回レビューで出た欠陥パターン |
-| `docs/ai-agent-reviews/agent_instruction_simplification_review_2026-03-15_round1_response.md` | round1 findings の fix 方針と verification |
-| `docs/ai-agent-reviews/agent_instruction_simplification_review_2026-03-16_round2.md` | apples-to-apples measurement mismatch の再指摘 |
-| `docs/ai-agent-reviews/agent_instruction_simplification_review_2026-03-16_round2_response.md` | measurement rule の補正例 |
+| `docs/04.knowledge/base_harness_set.toml` | 現在の retained harness inventory の正本 |
+| `docs/04.knowledge/base_harness_set.md` | 人が読むための retained harness 要約 |
+| `memory-bank/07-external-research/agent_instruction_simplification_2026-03-15.md` | source-to-claim と before / after load matrix |
 
 ## How To Read This Repo
 
 1. まず `AGENTS.md` を読む。
 2. 次に adapter 面 (`CLAUDE.md`, `GEMINI.md`, Cursor rules) を見て、正本への実導線を確認する。
 3. 設計根拠が必要なら research note を読む。
-4. 落とし穴と修正例が必要なら round1 / round2 review と response を読む。
+4. retain / exclude の背景が必要なら base harness set と external research note を読む。

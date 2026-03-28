@@ -4,39 +4,63 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'app/**'
-      - 'tests/**'
+      - '.claude/**'
+      - '.codex/config.toml'
+      - '.codex/version.json'
+      - '.cursor/**'
+      - '.github/workflows/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'GEMINI.md'
+      - 'README.md'
+      - 'Makefile'
+      - 'bin/**'
+      - 'docker/**'
+      - 'compose.yml'
+      - 'compose.override.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'docs/04.knowledge/base_harness_set.md'
+      - 'docs/04.knowledge/base_harness_set.toml'
+      - 'memory-bank/**'
+      - 'tests/codex_subagent/**'
+      - 'tests/test_base_harness_set.py'
       - 'pyproject.toml'
       - 'uv.lock'
-      - '.github/workflows/ci.yml'
   pull_request:
     branches: [ main ]
     paths:
-      - 'app/**'
-      - 'tests/**'
+      - '.claude/**'
+      - '.codex/config.toml'
+      - '.codex/version.json'
+      - '.cursor/**'
+      - '.github/workflows/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'GEMINI.md'
+      - 'README.md'
+      - 'Makefile'
+      - 'bin/**'
+      - 'docker/**'
+      - 'compose.yml'
+      - 'compose.override.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'docs/04.knowledge/base_harness_set.md'
+      - 'docs/04.knowledge/base_harness_set.toml'
+      - 'memory-bank/**'
+      - 'tests/codex_subagent/**'
+      - 'tests/test_base_harness_set.py'
       - 'pyproject.toml'
       - 'uv.lock'
-      - '.github/workflows/ci.yml'
 
 jobs:
   test:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Detect Python tests
-        id: detect_tests
-        run: |
-          if [ -d "tests" ] && find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
@@ -52,31 +76,6 @@ jobs:
           uv run ruff check .
           uv run black --check .
 
-      - name: Type checking
+      - name: Run harness tests
         run: |
-          # Make mypy non-blocking in this CI job to avoid false negatives from
-          # third-party union types. We keep type checks informative and fix
-          # incrementally while preventing CI flakes.
-          if [ -d "src" ]; then
-            uv run mypy src/ --ignore-missing-imports --explicit-package-bases || true
-          elif [ -d "app" ]; then
-            uv run mypy app/ --ignore-missing-imports --explicit-package-bases || true
-          else
-            echo "No src/ or app/ directory found, skipping mypy"
-          fi
-
-      - name: Run tests with coverage
-        run: |
-          # Run only unit tests in CI to avoid timeout issues
-          # Integration tests are run separately with proper API key setup
-          uv run pytest -q
-        if: steps.detect_tests.outputs.run == 'true'
-
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          file: ./output/coverage/coverage.xml
-          fail_ci_if_error: false  # Make codecov optional
-          token: ${{ secrets.CODECOV_TOKEN }}
-        continue-on-error: true
-        if: steps.detect_tests.outputs.run == 'true'
+          uv run pytest -q tests/test_base_harness_set.py tests/codex_subagent

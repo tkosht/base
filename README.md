@@ -1,10 +1,18 @@
-# Base Project
+# Base Harness Repository
 
-基本プロジェクト
+このリポジトリは、repo-local instruction surface、再利用 skill、GitHub Actions、検証テスト、運用補助ファイルを保持するためのハーネス専用リポジトリです。
 
-## ドキュメント要約リンク
+## Canonical References
 
-- Gradio×FastAPI Threads UI 連携の設計・拡張・注意点（要点まとめ）
-  - [gradio_fastapi_threads_ui_lessons.md](./docs/04.knowledge/gradio_fastapi_threads_ui_lessons.md)
-  - JS↔Python 連携の実体、拡張手順チェックリスト、落とし穴、Mermaid図を収録
+- ハーネスセットの正本: [docs/04.knowledge/base_harness_set.toml](./docs/04.knowledge/base_harness_set.toml)
+- 人間向け要約: [docs/04.knowledge/base_harness_set.md](./docs/04.knowledge/base_harness_set.md)
+- repo-local instruction の正本: [AGENTS.md](./AGENTS.md)
 
+## What Stays Here
+
+- `AGENTS.md`, `CLAUDE.md`, `GEMINI.md`, `.cursor/rules/*`
+- `.claude/skills/*` と `.codex/skills/*`
+- `.claude/commands/tasks/codex-subagent.md`, `commit.md`, `mainbranch.md`
+- `.github/workflows/*`
+- `tests/codex_subagent/*`, `tests/test_base_harness_set.py`
+- `bin/`, `docker/`, `compose*.yml`, `Makefile`, `package*.json`

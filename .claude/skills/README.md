@@ -8,7 +8,7 @@
 
 ### Input Handoff
 - review_output_dir has no codex-subagent CLI parameter; pass via prompt/artifact paths.
-- Example default review_output_dir: `docs/ai-agent-reviews/`.
+- Example default review_output_dir: `output/reviews/`.
 
 ### Defaults / Workflow Policy
 - allow_dynamic_stages default: false when not set in pipeline spec (codex_exec.py).
