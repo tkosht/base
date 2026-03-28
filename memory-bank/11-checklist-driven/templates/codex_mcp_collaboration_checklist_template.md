@@ -7,7 +7,7 @@
 
 困難タスクの打開を目的に、別AIエージェントと codex_mcp で協働するための運用テンプレート。推測禁止・事実ベース・セキュリティ厳守。
 
-> 使い方: このテンプレをコピーし、実タスク用に `checklists/<date|issue>_codex_mcp_<topic>_checklist.md` を作成して運用してください。
+> 使い方: このテンプレをコピーし、実タスク用に `output/checklists/<date|issue>_codex_mcp_<topic>_checklist.md` を作成して運用してください。
 
 ## 0. 原則・方針
 - [ ] 推測禁止（事実/再現/ログ/差分ベースで記述）
@@ -34,7 +34,7 @@
 
 ## 3. 初回相談（新規セッション）
 - [ ] codex_mcp にテンプレに沿った prompt を投げる
-- [ ] 返却された Session ID を記録（例: memory-bank/06-project/context/active_context.md）
+- [ ] 返却された Session ID を作業メモに記録
 - [ ] 提案事項を可観測なタスクに分解
 
 ## 4. 継続相談（同セッション）

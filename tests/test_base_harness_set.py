@@ -67,6 +67,20 @@ def test_manifest_command_docs_and_workflows_exist() -> None:
             assert (ROOT / rel).exists(), rel
 
 
+def test_only_expected_task_command_docs_remain() -> None:
+    manifest = load_manifest()
+    command_docs = manifest["command_docs"]
+    assert isinstance(command_docs, list)
+
+    expected = sorted(Path(rel).name for rel in command_docs)
+    actual = sorted(
+        path.name
+        for path in (ROOT / ".claude" / "commands" / "tasks").iterdir()
+        if path.is_file()
+    )
+    assert actual == expected
+
+
 def test_agents_load_map_references_exist() -> None:
     agents_text = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
     matches = re.findall(r"`([^`]+)`", agents_text)
@@ -92,8 +106,7 @@ def test_python_baseline_is_312_everywhere() -> None:
     workflow_expectations = {
         ".github/workflows/ci.yml": ["python-version: '3.12'"],
         ".github/workflows/test-all-subsystems.yml": [
-            "python-version: '3.12'",
-            "flags: ${{ matrix.subsystem }}-py312",
+            "python-version: '3.12'"
         ],
         ".github/workflows/claude.yml": ["python-version: '3.12'"],
     }

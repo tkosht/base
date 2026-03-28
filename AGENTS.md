@@ -28,7 +28,7 @@ system / developer / user などの高優先度指示がある場合はそちら
 - `AGENTS.md`: repo-local の正本。
 - `CLAUDE.md` / `GEMINI.md` / `.cursor/rules/rules.mdc` / `.cursor/rules/core.mdc` / `.cursor/rules/project.mdc`: ツール別アダプタ。
 - `memory-bank/...`: 必要時に読むプレイブック・参考資料。
-- `checklists/...`: タスク単位の作業記録。普遍ルールではない。
+- `output/checklists/...`: 必要時に作る一時的な作業記録。repo の正本ではない。
 
 ## Core Rules
 

@@ -4,69 +4,64 @@ on:
   push:
     branches: [ main, develop ]
     paths:
-      - 'app/**'
-      - 'tests/**'
-      - '**/pyproject.toml'
-      - '**/uv.lock'
-      - '.github/workflows/test-all-subsystems.yml'
+      - '.claude/**'
+      - '.codex/config.toml'
+      - '.codex/version.json'
+      - '.cursor/**'
+      - '.github/workflows/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'GEMINI.md'
+      - 'README.md'
+      - 'Makefile'
+      - 'bin/**'
+      - 'docker/**'
+      - 'compose.yml'
+      - 'compose.override.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'docs/04.knowledge/base_harness_set.md'
+      - 'docs/04.knowledge/base_harness_set.toml'
+      - 'memory-bank/**'
+      - 'tests/codex_subagent/**'
+      - 'tests/test_base_harness_set.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
   pull_request:
     branches: [ main ]
     paths:
-      - 'app/**'
-      - 'tests/**'
-      - '**/pyproject.toml'
-      - '**/uv.lock'
-      - '.github/workflows/test-all-subsystems.yml'
+      - '.claude/**'
+      - '.codex/config.toml'
+      - '.codex/version.json'
+      - '.cursor/**'
+      - '.github/workflows/**'
+      - 'AGENTS.md'
+      - 'CLAUDE.md'
+      - 'GEMINI.md'
+      - 'README.md'
+      - 'Makefile'
+      - 'bin/**'
+      - 'docker/**'
+      - 'compose.yml'
+      - 'compose.override.yml'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'docs/04.knowledge/base_harness_set.md'
+      - 'docs/04.knowledge/base_harness_set.toml'
+      - 'memory-bank/**'
+      - 'tests/codex_subagent/**'
+      - 'tests/test_base_harness_set.py'
+      - 'pyproject.toml'
+      - 'uv.lock'
 
 jobs:
-  discover-subsystems:
+  test-harness:
     runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-      has_subsystems: ${{ steps.set-matrix.outputs.has_subsystems }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
-      - name: Discover subsystems
-        id: set-matrix
-        run: |
-          mapfile -t subsystem_dirs < <(find app -name "pyproject.toml" -type f -print 2>/dev/null | xargs -r -n1 dirname | sort -u)
 
-          if [ "${#subsystem_dirs[@]}" -eq 0 ]; then
-            if [ -f "pyproject.toml" ]; then
-              SUBSYSTEMS='["."]'
-            else
-              SUBSYSTEMS='[]'
-            fi
-          else
-            SUBSYSTEMS=$(printf '%s\n' "${subsystem_dirs[@]}" | jq -R -s -c 'split("\n")[:-1]')
-          fi
-
-          echo "Found subsystems: $SUBSYSTEMS"
-          echo "matrix={\"subsystem\":$SUBSYSTEMS}" >> "$GITHUB_OUTPUT"
-          if [ "$SUBSYSTEMS" = '[]' ]; then
-            echo "has_subsystems=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_subsystems=true" >> "$GITHUB_OUTPUT"
-          fi
-
-  test-subsystem:
-    needs: discover-subsystems
-    if: needs.discover-subsystems.outputs.has_subsystems == 'true'
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        subsystem: ${{ fromJson(needs.discover-subsystems.outputs.matrix).subsystem }}
-    defaults:
-      run:
-        working-directory: ${{ matrix.subsystem }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-      
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
         with:
@@ -75,121 +70,18 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --all-groups --all-extras
-
-      - name: Detect test targets
-        id: detect_targets
-        run: |
-          if [ -d "src" ]; then
-            echo "lint_target=src tests" >> "$GITHUB_OUTPUT"
-            echo "type_target=src" >> "$GITHUB_OUTPUT"
-          elif [ -d "app" ]; then
-            echo "lint_target=app tests" >> "$GITHUB_OUTPUT"
-            echo "type_target=app" >> "$GITHUB_OUTPUT"
-          else
-            echo "lint_target=" >> "$GITHUB_OUTPUT"
-            echo "type_target=" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ -d "tests" ] && find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
-            echo "has_tests=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "has_tests=false" >> "$GITHUB_OUTPUT"
-          fi
 
       - name: Run linters
-        if: steps.detect_targets.outputs.lint_target != ''
         run: |
-          uv run ruff check ${{ steps.detect_targets.outputs.lint_target }} || echo "Ruff not available, skipping"
-          uv run black --check ${{ steps.detect_targets.outputs.lint_target }} || echo "Black not available, skipping"
+          uv run ruff check .
+          uv run black --check .
 
-      - name: Type checking
-        if: steps.detect_targets.outputs.type_target != ''
+      - name: Run harness tests
         run: |
-          uv run mypy ${{ steps.detect_targets.outputs.type_target }} --ignore-missing-imports --explicit-package-bases || echo "Mypy not available, skipping"
-
-      - name: Run unit tests with coverage
-        if: steps.detect_targets.outputs.has_tests == 'true'
-        run: |
-          # Run only unit tests in CI to avoid timeout issues with integration tests
-          if [ -d "tests/unit" ]; then
-            uv run pytest tests/unit/ -v || echo "No unit tests found"
-          else
-            uv run pytest -v || echo "No unit tests found"
-          fi
-
-      - name: Discover coverage report
-        id: coverage
-        if: always() && steps.detect_targets.outputs.has_tests == 'true'
-        run: |
-          prefix="${{ matrix.subsystem }}"
-          if [ "$prefix" = "." ]; then
-            prefix=""
-          else
-            prefix="$prefix/"
-          fi
-
-          if [ -f "output/coverage/coverage.xml" ]; then
-            echo "file=${prefix}output/coverage/coverage.xml" >> "$GITHUB_OUTPUT"
-          elif [ -f "coverage.xml" ]; then
-            echo "file=${prefix}coverage.xml" >> "$GITHUB_OUTPUT"
-          else
-            echo "file=" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Upload coverage reports
-        if: always() && steps.coverage.outputs.file != ''
-        uses: codecov/codecov-action@v4
-        with:
-          file: ${{ steps.coverage.outputs.file }}
-          fail_ci_if_error: false
-          token: ${{ secrets.CODECOV_TOKEN }}
-          flags: ${{ matrix.subsystem }}-py312
-        continue-on-error: true
-
-  integration-tests:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: .
-    env:
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up uv
-        uses: astral-sh/setup-uv@v7
-        with:
-          python-version: '3.12'
-
-      - name: Install dependencies
-        run: |
-          uv sync --all-groups --all-extras
-
-      - name: Detect integration tests
-        id: detect_integration
-        run: |
-          if [ -d "tests/integration" ] && find tests/integration -type f -name 'test_*.py' -print -quit | grep -q .; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run integration tests
-        if: steps.detect_integration.outputs.run == 'true' && (env.OPENAI_API_KEY != '' || env.ANTHROPIC_API_KEY != '' || env.GOOGLE_API_KEY != '')
-        run: |
-          uv run pytest tests/integration/ \
-            -v \
-            --tb=short \
-            --timeout=300 \
-            -k "not test_performance_baseline" || true
-        continue-on-error: true
+          uv run pytest -q tests/test_base_harness_set.py tests/codex_subagent
 
   summary:
-    needs: [test-subsystem, integration-tests]
+    needs: [test-harness]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -197,5 +89,5 @@ jobs:
         run: |
           echo "## Test Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "All subsystem tests have been executed." >> $GITHUB_STEP_SUMMARY
-          echo "Check individual job results for details." >> $GITHUB_STEP_SUMMARY
+          echo "Harness workflows and validation tests have been executed." >> $GITHUB_STEP_SUMMARY
+          echo "Check the harness test job for details." >> $GITHUB_STEP_SUMMARY

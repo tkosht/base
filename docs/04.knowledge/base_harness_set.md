@@ -37,18 +37,27 @@
 - validation
   - `tests/codex_subagent/*`
   - `tests/test_base_harness_set.py`
+- ops scaffold
+  - `.codex/config.toml`
+  - `.codex/version.json`
+  - `README.md`
+  - `Makefile`
+  - `bin/`
+  - `docker/`
+  - `compose*.yml`
+  - `package*.json`
 
 ## 残さないもの
 
-- Dify 固有 skill
-  - `app-security-review`
-  - `dify-plugin-dev-generic`
-  - `dify-plugin-dev-repo`
-- Dify 固有レビュー履歴
-  - `docs/ai-agent-reviews/**`
+- `app/` と app 依存の `tests/test_*.py`
+- `docs/` のうち base harness set 以外
+- `memory-bank/` のうち AGENTS / retained skills が参照しないもの
+- `checklists/`, `agent/`, `notebooks/`, `public/`
+- `.claude/commands/` のうち retained task docs 以外
 - `.codex` 配下の runtime state や cache
 
 ## 検証
 
-- `tests/test_base_harness_set.py` で、一覧どおりに存在しているかを確認する
+- `tests/test_base_harness_set.py` で、一覧どおりに存在しているかと削除対象が消えているかを確認する
 - `tests/codex_subagent/*` で `codex-subagent` の unit/結合検証面を維持する
+- `ci.yml` / `test-all-subsystems.yml` は harness-only repo 前提で pytest を実行する

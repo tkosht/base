@@ -14,7 +14,7 @@ uv run pytest tests/codex_subagent/test_pipeline_spec.py --no-cov
 ```
 
 2) prompt を用意（FACTS INPUT は本文要約 + 行番号）
-- 例: docs/ai-agent-reviews/<topic>_dynamic_prompt_YYYY-MM-DD.txt
+- 例: output/reviews/<topic>_dynamic_prompt_YYYY-MM-DD.txt
 - 重要: 文字列に改行を入れない、next_stages は {id} のみ
 
 3) pipeline 実行
