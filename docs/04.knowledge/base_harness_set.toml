@@ -1,0 +1,57 @@
+title = "base harness set"
+version = 1
+
+skills = [
+  "ai-agent-collaboration-exec",
+  "codex-subagent",
+  "git-commit-pr",
+  "git-mainbranch",
+  "repo-instruction-optimizer",
+  "skill-authoring",
+]
+
+command_docs = [
+  ".claude/commands/tasks/codex-subagent.md",
+  ".claude/commands/tasks/commit.md",
+  ".claude/commands/tasks/mainbranch.md",
+]
+
+workflows = [
+  ".github/workflows/ci.yml",
+  ".github/workflows/test-all-subsystems.yml",
+  ".github/workflows/claude.yml",
+]
+
+included_paths = [
+  ".gitignore",
+  "AGENTS.md",
+  "CLAUDE.md",
+  "GEMINI.md",
+  ".cursor/rules/rules.mdc",
+  ".cursor/rules/core.mdc",
+  ".cursor/rules/project.mdc",
+  ".claude/skills/README.md",
+  ".codex/skills",
+  "memory-bank/00-core/mandatory_rules_checklist.md",
+  "memory-bank/00-core/knowledge_access_principles_mandatory.md",
+  "memory-bank/00-core/repository_directory_conventions.md",
+  "memory-bank/00-core/knowledge_loading_functions.md",
+  "memory-bank/00-core/session_initialization_script.md",
+  "memory-bank/02-organization/tmux_organization_success_patterns.md",
+  "memory-bank/03-patterns/ai-agent-collaboration-exec_skill_usability_review_2026-01-05.md",
+  "memory-bank/07-external-research/agent_instruction_simplification_2026-03-15.md",
+  "memory-bank/11-checklist-driven/checklist_driven_execution_framework.md",
+  "memory-bank/11-checklist-driven/templates/codex_mcp_collaboration_checklist_template.md",
+  "tests/codex_subagent",
+]
+
+excluded_paths = [
+  ".claude/skills/app-security-review",
+  ".claude/skills/dify-plugin-dev-generic",
+  ".claude/skills/dify-plugin-dev-repo",
+  "docs/ai-agent-reviews",
+]
+
+[python]
+version = "3.12"
+requires_python = ">=3.12,<=3.14"

@@ -1,4 +1,4 @@
-# Python 3.10 / Gradio 5.43.1
+# Python 3.12 / Gradio 5.43.1
 import gradio as gr
 
 

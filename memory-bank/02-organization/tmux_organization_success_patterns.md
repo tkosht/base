@@ -1,5 +1,12 @@
 # tmux組織活動成功パターン集 (Proven Success Patterns)
 
+- Status: Reference
+- Load: OnDemand
+- Authority: Operational
+- Canonical: `AGENTS.md`
+
+注記: 現役手順は「Current Entry Point」節のみです。それ以外は歴史的サンプルとして扱い、実行前に現行の環境・ファイル・コマンド存在を確認してください。
+
 **制定日**: 2025-01-04  
 **制定根拠**: Team04組織活動テスト実証結果  
 **適用範囲**: 全tmux AIエージェント組織活動  
@@ -15,7 +22,42 @@
 
 ---
 
-## 🏆 PROVEN SUCCESS PATTERN (実証済み成功パターン)
+## Current Entry Point (2026-03-15)
+
+この節だけを現役導線として扱います。以下の historical appendix は 2025 年時点の検証記録であり、そのまま実行しません。
+
+### Active prerequisites
+- `tmux` コマンドが利用可能であること。
+- repo-local の正本として `AGENTS.md` が存在すること。
+- 複雑タスクでは、必要に応じて `memory-bank/11-checklist-driven/templates/codex_mcp_collaboration_checklist_template.md` を併用すること。
+
+### Current startup checklist
+```bash
+command -v tmux >/dev/null 2>&1 || { echo "tmux not found"; exit 1; }
+test -f /home/devuser/workspace/AGENTS.md
+tmux list-panes -F '#{session_name}:#{window_index}.#{pane_index} #{pane_id} #{pane_current_path}'
+```
+
+### Current operating rules
+- 正本は `AGENTS.md`。tmux 用の追加手順は必要時のみこの文書を参照する。
+- メッセージ送信は `tmux send-keys` と `Enter` を分け、送信後に pane 出力で受領を確認する。
+- 長引く調査や設計トレードオフでは、協働チェックリストを起点にサブエージェント相談へ進む。
+
+### Historical-only items
+- `smart_knowledge_load()`
+- `/home/devuser/workspace/.claude/hooks/organization_state_manager.sh`
+- `memory-bank/02-organization/tmux_claude_agent_organization.md`
+- `memory-bank/02-organization/ai_agent_coordination_mandatory.md`
+- `memory-bank/00-core/ai_coordination_mandatory_rules.md`
+- `CLAUDE.md` を前提にした旧導線
+
+---
+
+## Historical Appendix (2025 sample; do not execute as-is)
+
+以下は 2025 年時点の検証ログと旧レイアウト前提のサンプルです。欠落ファイル参照、`CLAUDE.md` 前提、deprecated loader を含むため、現行環境では読み替え用の資料としてのみ扱います。
+
+### 🏆 PROVEN SUCCESS PATTERN (実証済み成功パターン)
 
 ### Pattern Overview
 ```bash
@@ -57,11 +99,11 @@ function foundation_setup() {
     fi
     
     # 1. Organization state activation
-    source /home/devuser/workspace/.claude/hooks/organization_state_manager.sh
+    # historical only: source /home/devuser/workspace/.claude/hooks/organization_state_manager.sh
     start_organization_state "team-$(date +%Y%m%d-%H%M%S)" 0
     
-    # 2. Knowledge loading (smart_knowledge_load by default)
-    smart_knowledge_load "organization" "team-coordination"
+    # 2. Knowledge loading (historical sample)
+    # historical only: smart_knowledge_load "organization" "team-coordination"
     
     # 3. Verify tmux environment
     verify_tmux_communication_integrity
@@ -301,7 +343,7 @@ function completion_review() {
     update_success_knowledge
     
     # 4. Stop organization state
-    source /home/devuser/workspace/.claude/hooks/organization_state_manager.sh
+    # historical only: source /home/devuser/workspace/.claude/hooks/organization_state_manager.sh
     stop_organization_state
     
     echo "✅ Step4: Completion Review Complete"

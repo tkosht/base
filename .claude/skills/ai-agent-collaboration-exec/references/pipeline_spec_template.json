@@ -1,0 +1,37 @@
+{
+  "allow_dynamic_stages": true,
+  "allowed_stage_ids": [
+    "draft",
+    "execute",
+    "review",
+    "revise",
+    "verify",
+    "release"
+  ],
+  "stages": [
+    {
+      "id": "draft",
+      "instructions": "目的: タスクに最適な実行プロセスを定義し、成果物仕様を確定する。手順: 1) 入力から事実のみを抽出し /facts に記録(記録は item/evidence/source/status を持つ配列)。2) 目的・成功条件・制約・対象範囲・依存関係を整理し、不明は 不明 と明記。3) 既定パイプラインの踏襲は禁止。初期ステージ/動的追加ステージ/ループ条件をタスクに合わせて設計し、理由と最適化観点を /draft.proposal に記録。4) /open_questions の記録形式(文字列配列: 1件1行で「質問 / 理由 / 次のアクション」を簡潔記載)を /draft.proposal に整理。5) トップレベルキーは allow_dynamic_stages, allowed_stage_ids, stages, max_total_prompt_chars のみ、ステージキーは id, instructions, prompt のみ。allowed_stage_ids は初期/動的追加を含む採用ステージに合わせる。stages は初期実行順のみを列挙し、順序を明記。6) 更新JSONを /draft.updated_json に文字列で出力。7) 推測禁止。不明は 不明 と記録。"
+    },
+    {
+      "id": "execute",
+      "instructions": "目的: /draft のプロセス設計に従い作業を実行する。手順: 1) /draft.proposal に従い実ファイル変更とテスト実行を行う。2) 実施内容、変更点、テスト結果、ログを /facts に記録(記録形式は /draft.proposal に従う)。3) 未実施の場合は /facts に 未実施 と理由を記録。4) 新たな制約や未解決事項は /open_questions に記録(記録形式は /draft.proposal に従う)。5) 推測禁止。不明は 不明 と記録。"
+    },
+    {
+      "id": "review",
+      "instructions": "目的: 成果物の問題点とリスクを事実ベースで特定する。手順: 1) /facts と実変更の内容を検証し、仕様適合性を確認。2) 指摘事項とリスクを /critique に根拠付きで記録(重大度・影響範囲を明記)。3) テスト不足、仕様逸脱、回帰リスクを明確化。4) 推測禁止。不明は 不明 と記録。"
+    },
+    {
+      "id": "revise",
+      "instructions": "目的: /critique を解消し最終成果物を確定する。手順: 1) 指摘事項の修正を実施。2) 修正内容と差分要約を /revise.changes に記録。3) 最終JSONを /revise.final_json に文字列で出力。4) 未解決事項は /open_questions に記録(記録形式は /draft.proposal に従う)。5) 推測禁止。不明は 不明 と記録。"
+    },
+    {
+      "id": "verify",
+      "instructions": "目的: 最終成果物が成功条件を満たすことを検証する。手順: 1) /draft の成功条件と検証計画に基づき再検証/再テストを実施。2) 結果とログを /facts に追記(記録形式は /draft.proposal に従う)。3) 未実施の場合は /facts に 未実施 と理由を記録。4) 失敗時は原因と次のアクションを /open_questions に記録(記録形式は /draft.proposal に従う)。5) 推測禁止。不明は 不明 と記録。"
+    },
+    {
+      "id": "release",
+      "instructions": "目的: 運用作業を必要時にのみ実施する。手順: 1) コミット/PR/リリース等の運用作業を必要時のみ実施。2) 実施内容を /facts に記録(記録形式は /draft.proposal に従う)。3) 未実施の場合は /facts に 未実施 と記録。4) 推測禁止。不明は 不明 と記録。"
+    }
+  ]
+}

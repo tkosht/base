@@ -20,7 +20,7 @@ You can create:
 ## Setup
 
 ### Requirements
-- Python 3.11+
+- Python 3.12+
 - Dependencies: `pip install -r requirements.txt`
 
 ## Development Process

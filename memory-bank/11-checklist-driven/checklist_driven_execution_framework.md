@@ -1,5 +1,10 @@
 # Checklist-Driven Task Execution Framework (CDTE)
 
+- Status: Reference
+- Load: OnDemand
+- Authority: Operational
+- Canonical: `AGENTS.md`
+
 **作成日**: 2025-07-04  
 **カテゴリ**: 開発方法論, プロセス管理, 品質保証  
 **問題領域**: efficiency, quality, collaboration  

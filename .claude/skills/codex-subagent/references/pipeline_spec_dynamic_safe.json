@@ -1,0 +1,24 @@
+{
+  "allow_dynamic_stages": true,
+  "allowed_stage_ids": [
+    "draft",
+    "execute",
+    "review",
+    "verify",
+    "revise"
+  ],
+  "stages": [
+    {
+      "id": "draft",
+      "instructions": "目的: チェック設計と動的追加条件を確定する。手順: 1) /draft.proposal に next_stages の条件を記録。2) stage_result は単一行JSON。3) capsule_patch は1件のみ。"
+    },
+    {
+      "id": "execute",
+      "instructions": "目的: 根拠を収集し /facts に記録。手順: 1) stage_result は単一行JSON。2) capsule_patch は1件のみ。3) next_stages は必要時のみ追加(1件まで)。"
+    },
+    {
+      "id": "review",
+      "instructions": "目的: 重要な不一致/ギャップを /critique に整理。手順: 1) stage_result は単一行JSON。2) capsule_patch は1件のみ。3) next_stages は必要時のみ追加(1件まで)。"
+    }
+  ]
+}

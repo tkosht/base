@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "stage_id",
+    "status",
+    "output_is_partial",
+    "capsule_patch"
+  ],
+  "$defs": {
+    "stage_spec": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "prompt": {
+          "type": "string"
+        },
+        "instructions": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": false
+    }
+  },
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "const": "1.1"
+    },
+    "stage_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "status": {
+      "type": "string",
+      "enum": ["ok", "retryable_error", "fatal_error"]
+    },
+    "output_is_partial": {
+      "type": "boolean"
+    },
+    "capsule_patch": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "summary": {
+      "type": "string"
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "next_stages": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/stage_spec"
+      }
+    }
+  },
+  "additionalProperties": false
+}

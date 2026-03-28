@@ -21,24 +21,27 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # PR では代表 3.11 のみ、push/main/develop では 3.10/3.11/3.12 を実行
-        python-version: ${{ fromJSON(github.event_name == 'pull_request' && '["3.11"]' || '["3.10","3.11","3.12"]') }}
     defaults:
       run:
         working-directory: .
-    env:
-      GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      
+
+      - name: Detect Python tests
+        id: detect_tests
+        run: |
+          if [ -d "tests" ] && find tests -type f -name 'test_*.py' -print -quit | grep -q .; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Set up uv
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@v7
         with:
-          python-version: ${{ matrix.python-version }}
+          python-version: '3.12'
 
       - name: Install dependencies
         run: |
@@ -54,14 +57,21 @@ jobs:
           # Make mypy non-blocking in this CI job to avoid false negatives from
           # third-party union types. We keep type checks informative and fix
           # incrementally while preventing CI flakes.
-          uv run mypy app/ --ignore-missing-imports --explicit-package-bases || true
+          if [ -d "src" ]; then
+            uv run mypy src/ --ignore-missing-imports --explicit-package-bases || true
+          elif [ -d "app" ]; then
+            uv run mypy app/ --ignore-missing-imports --explicit-package-bases || true
+          else
+            echo "No src/ or app/ directory found, skipping mypy"
+          fi
 
       - name: Run tests with coverage
         run: |
           # Run only unit tests in CI to avoid timeout issues
           # Integration tests are run separately with proper API key setup
           uv run pytest -q
-      
+        if: steps.detect_tests.outputs.run == 'true'
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         with:
@@ -69,3 +79,4 @@ jobs:
           fail_ci_if_error: false  # Make codecov optional
           token: ${{ secrets.CODECOV_TOKEN }}
         continue-on-error: true
+        if: steps.detect_tests.outputs.run == 'true'
