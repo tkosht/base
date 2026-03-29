@@ -1,0 +1,1 @@
+"""Minimal Python starter package."""

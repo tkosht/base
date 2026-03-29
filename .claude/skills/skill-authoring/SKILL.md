@@ -7,7 +7,7 @@ description: "Create or update project-local Codex skills (SKILL.md) in this rep
 
 ## Scope
 - Create or update skills stored under `.claude/skills/<skill-name>`.
-- Keep project discovery in sync by adding a symlink in `.codex/skills/<skill-name>`.
+- Keep project discovery in sync by adding symlinks in `.agents/skills/<skill-name>` and `.codex/skills/<skill-name>`.
 - Avoid introducing a top-level `scripts/` directory.
 - Do not use Cognee; use Serena or an active MCP when available.
 
@@ -18,7 +18,8 @@ description: "Create or update project-local Codex skills (SKILL.md) in this rep
 4. Add optional `references/` or `assets/` only when needed.
 5. If any Python scripts are included inside the skill, run them with `uv run python` or `python3`.
 6. Create symlink for discovery:
-   - `ln -s ../../.claude/skills/<skill-name> .codex/skills/<skill-name>`
+   - `ln -s ../../.claude/skills/<skill-name> .agents/skills/<skill-name>`
+   - `ln -s ../../.agents/skills/<skill-name> .codex/skills/<skill-name>`
 7. Sanity check by listing skill files and ensuring the symlink resolves.
 
 ## SKILL.md Skeleton

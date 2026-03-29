@@ -85,12 +85,13 @@ repo 全体の整合性を分析してください。
 ```
 ## 対象ファイル（これらのみを対象とすること）
 - AGENTS.md
-- docs/04.knowledge/base_harness_set.md
-- docs/04.knowledge/base_harness_set.toml
+- docs/architecture/knowledge-architecture.md
+- docs/architecture/base-harness-set.md
+- docs/architecture/base-harness-set.toml
 - tests/test_base_harness_set.py
 
 ## チェック項目（以下の3点のみを評価）
-1. AGENTS の Load Map が manifest と一致しているか
+1. AGENTS の参照先が知識配置と一致しているか
 2. retain / exclude の説明が summary と manifest で一致しているか
 3. 検証テストが keep-set を正しく表現しているか
 

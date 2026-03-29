@@ -1,71 +1,28 @@
-default: all
+.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter
 
-all: up install
+bootstrap:
+	uv sync --all-groups --all-extras
+	npm ci
 
-install: install-venv install-agent-cli
+doctor:
+	uv run python scripts/ci/validate_template.py
 
-install-venv:
-	docker compose exec app bash bin/make_venv.sh
+lint:
+	uv run ruff check .
+	uv run black --check .
 
-install-agent-cli:
-	docker compose exec app bash bin/install_agentcli.sh
+test:
+	uv run pytest -q -m "not codex_live" tests/test_base_harness_set.py tests/test_template_contract.py tests/template_smoke tests/codex_subagent
 
+test-codex-live:
+	@command -v codex >/dev/null 2>&1 || { echo "codex CLI が見つかりません。まず make bootstrap を実行してください。"; exit 1; }
+	CODEX_INTEGRATION=1 uv run pytest -q -m codex_live tests/codex_subagent
 
-# ==========
-# interaction tasks
-bash:
-	docker compose exec app bash
+template-smoke:
+	uv run pytest -q tests/template_smoke
 
-python:
-	docker compose exec app bash -i -c 'uv run python'
+use-python-starter:
+	uv run python scripts/template/apply_overlay.py --template python-minimal
 
-
-# switch mode
-cpu gpu:
-	@rm -f compose.yml
-	@ln -s docker/compose.$@.yml compose.yml
-
-mode:
-	@echo $$(ls -l compose.yml | awk -F. '{print $$(NF-1)}')
-
-
-# ==========
-# docker compose aliases
-up:
-	docker compose up -d --build
-	docker compose exec app sudo service docker start
-
-active:
-	docker compose up
-
-ps images down:
-	docker compose $@
-
-im:images
-
-build:
-	docker compose build
-
-build-no-cache:
-	docker compose build --no-cache
-
-reup: down up
-
-clean: clean-container clean-venv clean-npm clean-logs
-
-clean-container:
-	docker compose down --rmi all
-	rm -rf app/__pycache__
-
-clean-venv:
-	rm -rf .venv uv.lock
-
-clean-npm:
-	rm -rf .npm-global
-
-clean-logs:
-	rm -rf logs/*.log
-
-clean-repository: clean-venv clean-logs
-	rm -rf app/* tests/* data/*
-
+use-nextjs-starter:
+	uv run python scripts/template/apply_overlay.py --template nextjs-app

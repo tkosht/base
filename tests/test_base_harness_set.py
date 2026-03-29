@@ -5,7 +5,7 @@ import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST_PATH = ROOT / "docs" / "04.knowledge" / "base_harness_set.toml"
+MANIFEST_PATH = ROOT / "docs" / "architecture" / "base-harness-set.toml"
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 
 
@@ -51,8 +51,14 @@ def test_manifest_skills_match_repo_layout() -> None:
         for path in (ROOT / ".codex" / "skills").iterdir()
         if path.is_symlink()
     )
+    actual_agent_symlinks = sorted(
+        path.name
+        for path in (ROOT / ".agents" / "skills").iterdir()
+        if path.is_symlink()
+    )
 
     assert actual_skill_dirs == expected
+    assert actual_agent_symlinks == expected
     assert actual_symlinks == expected
 
 

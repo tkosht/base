@@ -1,13 +1,12 @@
 [project]
-name = "base"
+name = "ai-agent-repository-template"
 version = "0.1.0"
-description = "ベース開発環境"
+description = "AI agent repository template control plane"
 authors = [{ name = "AI Developer", email = "dev@example.com" }]
 requires-python = ">=3.12,<=3.14"
 dependencies = [
     "jsonschema",
-    "numpy",
-    "pandas",
+    "pyyaml",
 ]
 
 [dependency-groups]
@@ -93,7 +92,7 @@ combine-as-imports = true
 "bin/claude_slash_runner.py" = ["E501"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests/codex_subagent", "tests/test_base_harness_set.py"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -101,6 +100,7 @@ pythonpath = ["."]
 markers = [
     "unit: 単体テスト（高速・独立）",
     "integration: 統合テスト（中速・依存あり）",
+    "codex_live: ChatGPT にログイン済みの Codex CLI を実際に呼ぶローカル専用テスト",
     "e2e: E2Eテスト（低速・完全シナリオ）",
     "slow: 実行時間の長いテスト",
     "security: セキュリティ関連テスト",

@@ -1,0 +1,15 @@
+templates:
+  - id: python-minimal
+    description: Minimal Python sample under src/ and tests/
+    root_copy_from: templates/python-minimal
+    validation:
+      - command: uv run pytest -q tests/template_python
+      - command: uv run ruff check src/template_python_app tests/template_python
+  - id: nextjs-app
+    description: Minimal Next.js sample under apps/web/
+    root_copy_from: templates/nextjs-app
+    validation:
+      - command: npm run lint
+        working_directory: apps/web
+      - command: npm run test
+        working_directory: apps/web

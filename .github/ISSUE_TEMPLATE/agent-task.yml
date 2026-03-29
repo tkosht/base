@@ -1,0 +1,25 @@
+name: Agent task
+description: Request an AI-agent-friendly task with explicit inputs and acceptance criteria
+labels: ["agent-task", "triage"]
+body:
+  - type: textarea
+    id: goal
+    attributes:
+      label: Goal
+      placeholder: What should the agent accomplish?
+    validations:
+      required: true
+  - type: textarea
+    id: constraints
+    attributes:
+      label: Constraints
+      placeholder: Include protected paths, non-goals, or rollout constraints.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      placeholder: What result proves the task is complete?
+    validations:
+      required: true

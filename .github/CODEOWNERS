@@ -1,0 +1,9 @@
+# Replace the placeholder owners after creating a repo from this template.
+* @your-org/maintainers
+
+.github/ @your-org/platform
+.claude/ @your-org/platform
+.codex/ @your-org/platform
+.agents/ @your-org/platform
+docs/ @your-org/maintainers
+templates/ @your-org/maintainers

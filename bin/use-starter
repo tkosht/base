@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: bin/use-starter <python-minimal|nextjs-app>" >&2
+  exit 1
+fi
+
+uv run python scripts/template/apply_overlay.py --template "$1"
