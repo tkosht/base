@@ -20,11 +20,10 @@ on:
       - 'compose.override.yml'
       - 'package.json'
       - 'package-lock.json'
-      - 'docs/04.knowledge/base_harness_set.md'
-      - 'docs/04.knowledge/base_harness_set.toml'
-      - 'memory-bank/**'
-      - 'tests/codex_subagent/**'
-      - 'tests/test_base_harness_set.py'
+      - 'docs/**'
+      - 'scripts/**'
+      - 'templates/**'
+      - 'tests/**'
       - 'pyproject.toml'
       - 'uv.lock'
   pull_request:
@@ -46,11 +45,10 @@ on:
       - 'compose.override.yml'
       - 'package.json'
       - 'package-lock.json'
-      - 'docs/04.knowledge/base_harness_set.md'
-      - 'docs/04.knowledge/base_harness_set.toml'
-      - 'memory-bank/**'
-      - 'tests/codex_subagent/**'
-      - 'tests/test_base_harness_set.py'
+      - 'docs/**'
+      - 'scripts/**'
+      - 'templates/**'
+      - 'tests/**'
       - 'pyproject.toml'
       - 'uv.lock'
 
@@ -68,17 +66,16 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: |
-          uv sync --all-groups --all-extras
+        run: uv sync --all-groups --all-extras
+
+      - name: Validate harness structure
+        run: make doctor
 
       - name: Run linters
-        run: |
-          uv run ruff check .
-          uv run black --check .
+        run: make lint
 
       - name: Run harness tests
-        run: |
-          uv run pytest -q tests/test_base_harness_set.py tests/codex_subagent
+        run: make test
 
   summary:
     needs: [test-harness]

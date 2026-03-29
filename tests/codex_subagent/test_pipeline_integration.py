@@ -23,10 +23,16 @@ SCRIPT = (
 RUN_INTEGRATION = os.environ.get("CODEX_INTEGRATION") == "1"
 HAS_CODEX = shutil.which("codex") is not None
 
-pytestmark = pytest.mark.skipif(
-    not RUN_INTEGRATION or not HAS_CODEX,
-    reason="set CODEX_INTEGRATION=1 and ensure codex is on PATH",
-)
+pytestmark = [
+    pytest.mark.codex_live,
+    pytest.mark.skipif(
+        not RUN_INTEGRATION or not HAS_CODEX,
+        reason=(
+            "set CODEX_INTEGRATION=1 and use a ChatGPT-authenticated "
+            "codex on PATH"
+        ),
+    ),
+]
 
 import codex_exec  # noqa: E402
 

@@ -1,13 +1,13 @@
-# Architecture Overview
+# 構成概要
 
 ## Intent
 
-このテンプレートは、GitHub の standard repository features と AI agent workflows を同時に立ち上げるための control-plane を提供します。
+このテンプレートは、GitHub の標準機能と AI エージェント運用を同時に立ち上げるための共通運用面を提供します。
 
 ## Layering
 
 - root: 人間と agent の入口、shared settings、GitHub governance
-- `docs/`: 長文の source of truth
+- `docs/`: 長文の正本
 - `.claude/`, `.codex/`, `.agents/`: tool-specific settings / entrypoints
 - `scripts/ci/`: template 健全性検証
 - `scripts/template/`: starter overlay 適用ロジック
@@ -21,9 +21,12 @@
 
 この切り分けにより、root の control-plane を壊さずに複数 stack を配布できます。
 
-## Compatibility Surface
+## Knowledge Surface
 
-`memory-bank/`, `docs/04.knowledge/`, `.cursor/`, `GEMINI.md`, `.codex/skills/` は互換や移行のために残ることがあります。新しい設計では、追加の正本は `docs/ai/`, `docs/architecture/`, `docs/standards/` に置きます。
+- 運用中の正本は `docs/ai/`, `docs/architecture/`, `docs/standards/` に置く
+- `docs/repository-template-design.md` は入力設計書として残すが、更新の中心にはしない
+- `.cursor/`, `GEMINI.md`, `.codex/skills/` は互換面として残ることがある
+- どこに何を書くか迷う場合は `docs/architecture/knowledge-architecture.md` を参照する
 
 ## After Template Creation
 

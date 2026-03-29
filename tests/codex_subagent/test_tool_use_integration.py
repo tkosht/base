@@ -20,16 +20,22 @@ SCRIPT = (
 RUN_INTEGRATION = os.environ.get("CODEX_INTEGRATION") == "1"
 HAS_CODEX = shutil.which("codex") is not None
 
-pytestmark = pytest.mark.skipif(
-    not RUN_INTEGRATION or not HAS_CODEX,
-    reason="set CODEX_INTEGRATION=1 and ensure codex is on PATH",
-)
+pytestmark = [
+    pytest.mark.codex_live,
+    pytest.mark.skipif(
+        not RUN_INTEGRATION or not HAS_CODEX,
+        reason=(
+            "set CODEX_INTEGRATION=1 and use a ChatGPT-authenticated "
+            "codex on PATH"
+        ),
+    ),
+]
 TOOL_LOAD_MARKER = "TOOL_USE_LOAD_TEST_V1"
 
 
 def _build_prompt() -> str:
     files = [
-        "memory-bank/03-patterns/ai-agent-collaboration-exec_skill_usability_review_2026-01-05.md",
+        "docs/ai/skills/ai-agent-collaboration-exec.md",
         ".claude/skills/ai-agent-collaboration-exec/SKILL.md",
         ".claude/skills/ai-agent-collaboration-exec/references/execution_framework.md",
         ".claude/skills/ai-agent-collaboration-exec/references/pipeline_spec_template.json",
@@ -41,7 +47,7 @@ def _build_prompt() -> str:
         "Use read_file to read each file in the list below exactly once.",
         "Do not use any other tools.",
         "Output JSON only with these keys:",
-        "review_title, skill_role_section_title, framework_title,",
+        "skill_doc_title, skill_role_section_title, framework_title,",
         "pipeline_stage_ids, prompt_template_title, contract_title, result.",
         'Set result to "ok".',
         'If you cannot extract a value, set it to "UNKNOWN".',
@@ -54,7 +60,7 @@ def _build_prompt() -> str:
 
 def _build_tool_load_prompt() -> tuple[str, list[str]]:
     files = [
-        "memory-bank/03-patterns/ai-agent-collaboration-exec_skill_usability_review_2026-01-05.md",
+        "docs/ai/skills/ai-agent-collaboration-exec.md",
         ".claude/skills/ai-agent-collaboration-exec/SKILL.md",
         ".claude/skills/ai-agent-collaboration-exec/references/execution_framework.md",
         ".claude/skills/ai-agent-collaboration-exec/references/pipeline_spec_template.json",
@@ -113,7 +119,7 @@ def test_single_tool_use_completes_with_default_timeout():
 
     output = json.loads(payload["output"])
     for key in (
-        "review_title",
+        "skill_doc_title",
         "skill_role_section_title",
         "framework_title",
         "pipeline_stage_ids",
@@ -124,6 +130,7 @@ def test_single_tool_use_completes_with_default_timeout():
         assert key in output
         assert output[key] != "UNKNOWN"
     assert output["result"] == "ok"
+    assert output["skill_doc_title"] == "AI エージェント協調実行"
     assert output["pipeline_stage_ids"] == [
         "draft",
         "execute",

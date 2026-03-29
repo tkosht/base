@@ -100,6 +100,7 @@ pythonpath = ["."]
 markers = [
     "unit: 単体テスト（高速・独立）",
     "integration: 統合テスト（中速・依存あり）",
+    "codex_live: ChatGPT にログイン済みの Codex CLI を実際に呼ぶローカル専用テスト",
     "e2e: E2Eテスト（低速・完全シナリオ）",
     "slow: 実行時間の長いテスト",
     "security: セキュリティ関連テスト",

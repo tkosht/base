@@ -18,10 +18,10 @@
 | Path | Why it matters |
 | --- | --- |
 | `docs/repository-template-design.md` | AI agent template の親設計文書 |
-| `memory-bank/00-core/knowledge_access_principles_mandatory.md` | canonical / adapter / OnDemand 分離の原則 |
-| `memory-bank/00-core/mandatory_rules_checklist.md` | 正本から切り出した軽量確認表 |
-| `memory-bank/02-organization/tmux_organization_success_patterns.md` | deprecated 手順の隔離例 |
-| `memory-bank/07-external-research/agent_instruction_simplification_2026-03-15.md` | before / after load matrix、source-to-claim、sizing ルール |
+| `docs/architecture/knowledge-architecture.md` | canonical / adapter / OnDemand 分離を現在の docs 面で確認するとき |
+| `docs/ai/operator-checklist.md` | 正本から切り出した軽量確認表を参照するとき |
+| `docs/ai/execution-playbooks.md` | 複雑タスクでの実行プレイブックを参照するとき |
+| `docs/architecture/decision-records/knowledge-surface-consolidation.md` | 知識面の統合理由と legacy removal を確認するとき |
 
 ## Review And Audit Evidence
 
@@ -29,14 +29,14 @@
 | --- | --- |
 | `scripts/ci/validate_template.py` | 新しい template health の構造検証 |
 | `tests/test_template_contract.py` | control-plane contract の単体検証 |
-| `docs/04.knowledge/base_harness_set.toml` | 現在の retained harness inventory の正本 |
-| `docs/04.knowledge/base_harness_set.md` | 人が読むための retained harness 要約 |
-| `memory-bank/07-external-research/agent_instruction_simplification_2026-03-15.md` | source-to-claim と before / after load matrix |
+| `docs/architecture/base-harness-set.toml` | 現在の retained harness inventory の正本 |
+| `docs/architecture/base-harness-set.md` | 人が読むための retained harness 要約 |
+| `docs/architecture/decision-records/knowledge-surface-consolidation.md` | source-to-claim を蒸留した判断の要約 |
 
 ## How To Read This Repo
 
 1. まず `AGENTS.md` を読む。
 2. 次に `docs/ai/repo-contract.md` と `docs/architecture/overview.md` を見て、詳細 contract と責務分離を確認する。
 3. adapter 面 (`CLAUDE.md`, `GEMINI.md`, Cursor rules) を見て、正本への実導線を確認する。
-4. 設計根拠が必要なら `docs/repository-template-design.md` と research note を読む。
-5. retain / exclude の背景が必要なら base harness set と external research note を読む。
+4. 設計根拠が必要なら `docs/repository-template-design.md` と設計判断メモを読む。
+5. retain / exclude の背景が必要なら base harness set と knowledge architecture を読む。
