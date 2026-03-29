@@ -17,6 +17,63 @@
           "type": "string",
           "minLength": 1
         },
+        "role": {
+          "type": "string",
+          "enum": [
+            "planner",
+            "executor",
+            "reviewer",
+            "verifier",
+            "releaser",
+            "reducer"
+          ]
+        },
+        "sandbox": {
+          "type": "string",
+          "enum": [
+            "read-only",
+            "workspace-write",
+            "danger-full-access"
+          ]
+        },
+        "workdir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "write_roots": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "input_keys": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "max_attempts": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "depends_on": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "merge_strategy": {
+          "type": "string",
+          "enum": [
+            "concat",
+            "dedup",
+            "priority",
+            "consensus"
+          ]
+        },
         "prompt": {
           "type": "string"
         },

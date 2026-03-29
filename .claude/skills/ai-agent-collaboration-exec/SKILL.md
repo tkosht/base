@@ -104,6 +104,7 @@ metadata:
 
 ## 検証手順（必須）
 - pipeline spec の妥当性検証: `uv run pytest tests/codex_subagent/test_pipeline_spec.py --no-cov`
+- v2 runtime の検証: `uv run pytest tests/codex_subagent/test_v2_runtime.py --no-cov`
 - 動的ステージ運用時の実行テンプレ: `references/pipeline_dynamic_test_run_template.md`
 
 ## Capsule パッチルール（必須）
@@ -114,15 +115,48 @@ metadata:
   `{ "op": "add", "path": "/facts/-", "value": { "type": "commands", "items": ["cmd1"], "evidence": "shell" } }`
 
 ## 最小 pipeline spec 例
-※この例は `--pipeline-spec` 使用前提（`--pipeline-stages` の既定は `draft,critique,revise` のみ）。`stages` は初期実行のみを記載し、動的追加は `next_stages` で行う。
+※新規 spec は `schema_version: "2.0"` を前提にする。`depends_on` で linear / branch / join を表現し、`--pipeline-stages` は legacy shorthand としてだけ扱う。
 ```json
 {
-  "allow_dynamic_stages": true,
-  "allowed_stage_ids": ["draft", "execute", "review", "revise", "verify", "release"],
+  "schema_version": "2.0",
+  "allow_dynamic_stages": false,
+  "allowed_stage_ids": ["draft", "execute", "review", "verify"],
   "stages": [
-    { "id": "draft", "instructions": "パイプライン設計と成功条件を /draft に記録。根拠は /facts。" },
-    { "id": "execute", "instructions": "実行結果/ログを /facts に記録。" },
-    { "id": "review", "instructions": "独立レビューを /critique に記録。根拠必須。" }
+    {
+      "id": "draft",
+      "role": "planner",
+      "sandbox": "read-only",
+      "write_roots": [],
+      "max_attempts": 1,
+      "instructions": "パイプライン設計と成功条件を /draft に記録。根拠は /facts。"
+    },
+    {
+      "id": "execute",
+      "role": "executor",
+      "sandbox": "workspace-write",
+      "write_roots": ["src", "tests"],
+      "max_attempts": 2,
+      "depends_on": ["draft"],
+      "instructions": "実行結果/ログを /facts に記録し、必要なコード変更だけ行う。"
+    },
+    {
+      "id": "review",
+      "role": "reviewer",
+      "sandbox": "read-only",
+      "write_roots": [],
+      "max_attempts": 1,
+      "depends_on": ["execute"],
+      "instructions": "独立レビューを /critique に記録。根拠必須。"
+    },
+    {
+      "id": "verify",
+      "role": "verifier",
+      "sandbox": "read-only",
+      "write_roots": [],
+      "max_attempts": 1,
+      "depends_on": ["review"],
+      "instructions": "テスト・検証結果を /facts に追加し、release 可否を判定する。"
+    }
   ]
 }
 ```
@@ -135,8 +169,14 @@ metadata:
     --mode pipeline --pipeline-spec <spec.json> \
     --capsule-store auto --sandbox read-only --json --prompt "$PROMPT"
   ```
+- 再開例:
+  ```bash
+  uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
+    --mode pipeline --resume-run <run_id_or_state.json> --json --prompt "$PROMPT"
+  ```
 - ログ: `.codex/sessions/codex_exec/{human|auto}/YYYY/MM/DD/run-*.jsonl`
 - capsule（`--capsule-store file|auto`）: `.codex/sessions/codex_exec/{human|auto}/artifacts/<pipeline_run_id>/capsule.json`
+- checkpoint state: `.codex/sessions/codex_exec/{human|auto}/artifacts/<pipeline_run_id>/state.json`
 - レビュー/検証の成果物: `review_output_dir`（既定は `output/reviews/`）
 
 ## 実行ポリシー（品質優先）

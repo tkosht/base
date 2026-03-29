@@ -53,6 +53,7 @@
 
 - `.claude/settings.json`: Claude Code の shared project settings
 - `.codex/config.toml`: Codex のコマンドラインツール（CLI）向け repo-scoped defaults
+  この template の shipped default は `approval_policy = "never"`、`sandbox_mode = "workspace-write"`、`network_access = false`。maintainer-local override ではなく、review 済みの shared setting として扱う
 - `.mcp.json`: Claude 向け shared Model Context Protocol（MCP）設定
 - `.agents/skills/`: Codex 向け skill entrypoint
 - `.claude/skills/`: Claude 向け skill entrypoint
@@ -73,6 +74,7 @@
 2. `docs/architecture/overview.md`
 3. `docs/standards/*.md`
 4. `.codex/config.toml`
+   `approval_policy`、`sandbox_mode`、`network_access` を、自分たちの threat model、mount 範囲、秘密情報の配置、環境の破棄容易性に合わせて見直す
 5. `.claude/settings.json`
 6. `.mcp.json`
 

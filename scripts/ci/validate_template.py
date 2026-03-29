@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 if __package__ in {None, ""}:
@@ -52,6 +53,7 @@ REQUIRED_PATHS = [
     "docs/architecture/base-harness-set.md",
     "docs/architecture/base-harness-set.toml",
     "docs/architecture/decision-records/README.md",
+    "docs/architecture/decision-records/codex-shared-defaults.md",
     "docs/architecture/decision-records/knowledge-surface-consolidation.md",
     "docs/standards/coding.md",
     "docs/standards/testing.md",
@@ -83,6 +85,7 @@ PRIMARY_DOCS = [
     "docs/architecture/knowledge-architecture.md",
     "docs/architecture/base-harness-set.md",
     "docs/architecture/decision-records/README.md",
+    "docs/architecture/decision-records/codex-shared-defaults.md",
     "docs/architecture/decision-records/knowledge-surface-consolidation.md",
     "docs/standards/coding.md",
     "docs/standards/testing.md",
@@ -113,6 +116,55 @@ def _check_primary_terminology(root: Path, errors: list[str]) -> None:
             ):
                 errors.append(
                     f"{rel} uses {term} without an approved expansion"
+                )
+
+
+def _check_codex_shared_defaults(root: Path, errors: list[str]) -> None:
+    config_text = (root / ".codex/config.toml").read_text(encoding="utf-8")
+    config = tomllib.loads(config_text)
+    if config.get("approval_policy") != "never":
+        return
+    if config.get("sandbox_mode") != "workspace-write":
+        errors.append(
+            '.codex/config.toml must keep sandbox_mode = "workspace-write" '
+            'when approval_policy = "never" is shipped'
+        )
+    workspace_write = config.get("sandbox_workspace_write")
+    if not isinstance(workspace_write, dict) or (
+        workspace_write.get("network_access") is not False
+    ):
+        errors.append(
+            ".codex/config.toml must keep "
+            "sandbox_workspace_write.network_access = false "
+            'when approval_policy = "never" is shipped'
+        )
+
+    expectations = {
+        "docs/standards/security.md": (
+            'approval_policy = "never"',
+            'sandbox_mode = "workspace-write"',
+            "network_access = false",
+            "generated repo",
+        ),
+        "docs/ai/repo-contract.md": (
+            'approval_policy = "never"',
+            'sandbox_mode = "workspace-write"',
+            "network_access = false",
+            "threat model",
+        ),
+        "docs/architecture/decision-records/codex-shared-defaults.md": (
+            'approval_policy = "never"',
+            'sandbox_mode = "workspace-write"',
+            "network_access = false",
+            "generated repo",
+        ),
+    }
+    for rel, needles in expectations.items():
+        text = (root / rel).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                errors.append(
+                    f"{rel} missing Codex shared default contract: {needle}"
                 )
 
 
@@ -235,6 +287,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
             )
 
     _check_primary_terminology(root, errors)
+    _check_codex_shared_defaults(root, errors)
 
     workflow_expectations = {
         ".github/workflows/template-health.yml": (

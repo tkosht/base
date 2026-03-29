@@ -15,6 +15,9 @@
 
 - 親エージェントは要件整理、優先順位付け、最終報告だけを担当する
 - Executor、Reviewer、Verifier の責務と書き込み範囲を最初に固定する
+- 新規 pipeline spec は `schema_version: "2.0"` を使い、`depends_on` で branch / join を表現する
+- graph で writer stage を使う場合は `write_roots` を明示し、parallel branch は isolated workspace で実行する
+- `retryable_error` を前提にする stage には `max_attempts` を与え、checkpoint と `--resume-run` を前提に設計する
 - `review_output_dir` のような成果物の置き場を事前に決める
 - `codex-subagent` を実行エンジンとして使い、単一の大きい指示ではなく役割ごとの依頼に分ける
 - 既定の pipeline をそのまま踏襲せず、タスクに合わせて stage を選ぶ
@@ -27,6 +30,7 @@
 - pipeline spec
 - role assignments
 - stage results
+- checkpoint / resume state
 - review artifacts
 - verification summary
 

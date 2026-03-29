@@ -26,6 +26,20 @@ def test_pipeline_spec_schema_valid(tmp_path):
     assert loaded["stages"][0]["id"] == "draft"
 
 
+def test_pipeline_spec_schema_accepts_shipped_v2_template():
+    template_path = (
+        ROOT
+        / ".claude"
+        / "skills"
+        / "ai-agent-collaboration-exec"
+        / "references"
+        / "pipeline_spec_template.json"
+    )
+    loaded = codex_exec.load_pipeline_spec(template_path)
+    assert loaded["schema_version"] == codex_exec.PIPELINE_SPEC_VERSION
+    assert loaded["stages"][0]["role"] == "planner"
+
+
 def test_pipeline_spec_schema_rejects_unknown_key(tmp_path):
     spec = {"stages": [{"id": "draft"}], "unknown": 1}
     path = tmp_path / "spec.json"

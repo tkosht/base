@@ -23,14 +23,19 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import concurrent.futures
 import hashlib
 import json
 import os
 import random
 import re
+import shutil
 import signal
+import stat
 import subprocess
 import sys
+import tempfile
+import threading
 import time
 import uuid
 from collections import Counter
@@ -108,6 +113,7 @@ MAX_OUTPUT_SIZE = 10 * 1024  # 10KB
 MAX_CAPTURE_BYTES = 5 * 1024 * 1024  # 5MB (stdout/stderr capture cap)
 CAPSULE_STORE_AUTO_THRESHOLD = 20_000  # bytes
 SCHEMA_VERSION = "1.1"
+PIPELINE_SPEC_VERSION = "2.0"
 LLM_EVAL_SAMPLE_RATE = 0.2  # 20% sampling for LLM evaluation
 EXIT_SUCCESS = 0
 EXIT_SUBAGENT_FAILED = 2
@@ -124,11 +130,88 @@ PATCH_ALLOWED_PREFIXES = (
 )
 CAPSULE_HASH_EXCLUDE_KEYS = {"pipeline_run_id"}
 DEFAULT_PIPELINE_STAGES = ("draft", "critique", "revise")
+DEFAULT_MAX_PARALLEL_STAGES = 2
+DEFAULT_RETRY_BACKOFF_SECONDS = (2, 5, 10)
+STAGE_ROLE_VALUES = (
+    "planner",
+    "executor",
+    "reviewer",
+    "verifier",
+    "releaser",
+    "reducer",
+)
+DEFAULT_STAGE_ROLE_BY_ID = {
+    "draft": "planner",
+    "critique": "reviewer",
+    "review": "reviewer",
+    "verify": "verifier",
+    "release": "releaser",
+}
+ROLE_DEFAULT_INPUT_KEYS = {
+    "planner": [
+        "task",
+        "facts",
+        "open_questions",
+        "assumptions",
+    ],
+    "executor": [
+        "task",
+        "draft",
+        "facts",
+        "open_questions",
+        "assumptions",
+    ],
+    "reviewer": [
+        "draft",
+        "facts",
+        "revise",
+        "open_questions",
+        "assumptions",
+    ],
+    "verifier": [
+        "draft",
+        "critique",
+        "revise",
+        "facts",
+        "open_questions",
+    ],
+    "releaser": [
+        "draft",
+        "revise",
+        "facts",
+        "open_questions",
+    ],
+    "reducer": [
+        "facts",
+        "draft",
+        "critique",
+        "revise",
+        "open_questions",
+        "assumptions",
+    ],
+}
+ROLE_DEFAULT_MAX_ATTEMPTS = {
+    "planner": 1,
+    "executor": 2,
+    "reviewer": 1,
+    "verifier": 1,
+    "releaser": 1,
+    "reducer": 1,
+}
+ROLE_DEFAULT_WRITE_ROOTS = {
+    "planner": [],
+    "executor": None,
+    "reviewer": [],
+    "verifier": [],
+    "releaser": [],
+    "reducer": [],
+}
 PIPELINE_STAGE_TEMPLATES = {
     "draft": {},
     "critique": {},
     "revise": {},
 }
+WORKTREE_LOCK = threading.Lock()
 
 
 class ExecutionMode(StrEnum):
@@ -156,6 +239,11 @@ class SelectionStrategy(StrEnum):
     VOTING = "voting"
     HYBRID = "hybrid"
     CONSERVATIVE = "conservative"
+
+
+class JudgeMode(StrEnum):
+    HEURISTIC = "heuristic"
+    HYBRID = "hybrid"
 
 
 class MergeStrategy(StrEnum):
@@ -218,6 +306,7 @@ class CompetitionOutcome:
 
     best: EvaluatedResult
     results: list[CodexResult]
+    selection: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -228,6 +317,35 @@ class MergeConfig:
     min_ratio: float = 0.6
     priority_weight: float = 1.0
     confidence_weight: float = 1.0
+
+
+@dataclass
+class StageExecutionPolicy:
+    stage_id: str
+    role: str
+    sandbox: SandboxMode
+    workdir: str | None
+    write_roots: list[str]
+    input_keys: list[str]
+    max_attempts: int
+    depends_on: list[str]
+    merge_strategy: str | None
+
+
+@dataclass
+class IsolatedWorkspace:
+    path: Path
+    cleanup_root: Path
+    mode: str
+
+
+@dataclass(frozen=True)
+class RepoSnapshotEntry:
+    kind: str
+    mode: int
+    mtime_ns: int
+    content: bytes | None = None
+    link_target: str | None = None
 
 
 # ============================================================================
@@ -390,6 +508,657 @@ def load_pipeline_spec(path: str | Path) -> dict[str, Any]:
     return data
 
 
+def default_stage_role(stage_spec: dict[str, Any]) -> str:
+    if stage_spec.get("role") in STAGE_ROLE_VALUES:
+        return str(stage_spec["role"])
+    if stage_spec.get("merge_strategy"):
+        return "reducer"
+    return DEFAULT_STAGE_ROLE_BY_ID.get(str(stage_spec.get("id")), "executor")
+
+
+def normalize_repo_relative_path(path_value: str) -> str:
+    path = Path(path_value)
+    if path.is_absolute():
+        raise ValueError("path must be relative to repo root")
+    parts = [part for part in path.parts if part not in {"", "."}]
+    if any(part == ".." for part in parts):
+        raise ValueError("path must not escape repo root")
+    if not parts:
+        return "."
+    return Path(*parts).as_posix()
+
+
+def path_matches_roots(path_value: str, roots: list[str]) -> bool:
+    normalized = normalize_repo_relative_path(path_value)
+    for root in roots:
+        candidate = normalize_repo_relative_path(root)
+        if candidate == ".":
+            return True
+        if normalized == candidate or normalized.startswith(candidate + "/"):
+            return True
+    return False
+
+
+def normalize_stage_spec(
+    stage_spec: dict[str, Any],
+    previous_stage_id: str | None,
+) -> dict[str, Any]:
+    stage_id = str(stage_spec["id"])
+    role = default_stage_role(stage_spec)
+    sandbox_value = stage_spec.get("sandbox", SandboxMode.READ_ONLY.value)
+    sandbox = SandboxMode(str(sandbox_value))
+    raw_roots = stage_spec.get("write_roots")
+    write_roots_explicit = raw_roots is not None
+    if raw_roots is None:
+        default_roots = ROLE_DEFAULT_WRITE_ROOTS[role]
+        write_roots = ["."] if default_roots is None else list(default_roots)
+    else:
+        write_roots = [
+            normalize_repo_relative_path(root) for root in raw_roots
+        ]
+    input_keys = list(
+        stage_spec.get("input_keys") or ROLE_DEFAULT_INPUT_KEYS[role]
+    )
+    max_attempts = int(
+        stage_spec.get("max_attempts") or ROLE_DEFAULT_MAX_ATTEMPTS[role]
+    )
+    if max_attempts < 1:
+        raise ValueError("stage max_attempts must be >= 1")
+    if "depends_on" in stage_spec:
+        depends_on = [str(item) for item in stage_spec.get("depends_on", [])]
+    elif previous_stage_id:
+        depends_on = [previous_stage_id]
+    else:
+        depends_on = []
+    merge_strategy = stage_spec.get("merge_strategy")
+    if merge_strategy is None and role == "reducer":
+        merge_strategy = MergeStrategy.DEDUP.value
+    if merge_strategy is not None:
+        merge_strategy = MergeStrategy(str(merge_strategy)).value
+    return {
+        "id": stage_id,
+        "role": role,
+        "sandbox": sandbox.value,
+        "workdir": stage_spec.get("workdir"),
+        "write_roots": write_roots,
+        "write_roots_explicit": write_roots_explicit,
+        "input_keys": input_keys,
+        "max_attempts": max_attempts,
+        "depends_on": depends_on,
+        "merge_strategy": merge_strategy,
+        "prompt": stage_spec.get("prompt"),
+        "instructions": stage_spec.get("instructions"),
+    }
+
+
+def canonicalize_pipeline_spec(
+    pipeline_spec: dict[str, Any] | None,
+    stages_arg: str | None = None,
+) -> dict[str, Any]:
+    stage_ids = resolve_pipeline_stage_ids(stages_arg, pipeline_spec)
+    if pipeline_spec is None:
+        raw_spec = {
+            "stages": [{"id": stage_id} for stage_id in stage_ids],
+            "allow_dynamic_stages": False,
+        }
+        source_schema = "legacy"
+    else:
+        raw_spec = dict(pipeline_spec)
+        source_schema = str(pipeline_spec.get("schema_version") or "legacy")
+
+    raw_stages = raw_spec.get("stages", [])
+    explicit_dependency = any(
+        isinstance(stage, dict) and "depends_on" in stage
+        for stage in raw_stages
+    )
+    stages: list[dict[str, Any]] = []
+    previous_stage_id: str | None = None
+    for raw_stage in raw_stages:
+        if not isinstance(raw_stage, dict):
+            raise ValueError("pipeline_spec stage must be an object")
+        normalized = normalize_stage_spec(raw_stage, previous_stage_id)
+        stages.append(normalized)
+        previous_stage_id = normalized["id"]
+
+    canonical = {
+        "schema_version": PIPELINE_SPEC_VERSION,
+        "source_schema_version": source_schema,
+        "allow_dynamic_stages": bool(
+            raw_spec.get("allow_dynamic_stages", False)
+        ),
+        "allowed_stage_ids": list(raw_spec.get("allowed_stage_ids") or []),
+        "max_total_prompt_chars": raw_spec.get("max_total_prompt_chars"),
+        "stages": stages,
+        "is_legacy": source_schema != PIPELINE_SPEC_VERSION,
+        "uses_graph": explicit_dependency
+        or any(stage.get("role") == "reducer" for stage in stages),
+    }
+    if not canonical["allowed_stage_ids"]:
+        canonical["allowed_stage_ids"] = [stage["id"] for stage in stages]
+    validate_canonical_pipeline_spec(canonical)
+    return canonical
+
+
+def validate_canonical_pipeline_spec(canonical_spec: dict[str, Any]) -> None:
+    stage_ids = [stage["id"] for stage in canonical_spec["stages"]]
+    if len(stage_ids) != len(set(stage_ids)):
+        raise ValueError("pipeline_spec stage ids must be unique")
+    known_stage_ids = set(stage_ids)
+    if canonical_spec.get("allow_dynamic_stages") and canonical_spec.get(
+        "uses_graph"
+    ):
+        raise ValueError(
+            "depends_on and dynamic next_stages cannot be combined"
+        )
+    for stage in canonical_spec["stages"]:
+        for dependency in stage.get("depends_on", []):
+            if dependency not in known_stage_ids:
+                raise ValueError("pipeline_spec dependency is unknown")
+            if dependency == stage["id"]:
+                raise ValueError("pipeline_spec self dependency is invalid")
+        if (
+            canonical_spec.get("uses_graph")
+            and stage.get("write_roots")
+            and not stage.get("write_roots_explicit", False)
+        ):
+            raise ValueError(
+                "graph writer stages must declare write_roots explicitly"
+            )
+    try:
+        build_stage_layers(canonical_spec["stages"])
+    except ValueError as exc:
+        raise ValueError(f"pipeline_spec is invalid: {exc}") from exc
+
+
+def build_stage_layers(stages: list[dict[str, Any]]) -> list[list[str]]:
+    stage_map = {stage["id"]: stage for stage in stages}
+    remaining = {
+        stage_id: set(stage["depends_on"])
+        for stage_id, stage in stage_map.items()
+    }
+    completed: set[str] = set()
+    layers: list[list[str]] = []
+    while remaining:
+        ready = sorted(
+            stage_id
+            for stage_id, deps in remaining.items()
+            if deps.issubset(completed)
+        )
+        if not ready:
+            raise ValueError("pipeline graph has a cycle")
+        layers.append(ready)
+        completed.update(ready)
+        for stage_id in ready:
+            remaining.pop(stage_id, None)
+    return layers
+
+
+def build_stage_policy(stage_spec: dict[str, Any]) -> StageExecutionPolicy:
+    return StageExecutionPolicy(
+        stage_id=stage_spec["id"],
+        role=stage_spec["role"],
+        sandbox=SandboxMode(stage_spec["sandbox"]),
+        workdir=stage_spec.get("workdir"),
+        write_roots=list(stage_spec.get("write_roots") or []),
+        input_keys=list(stage_spec.get("input_keys") or []),
+        max_attempts=int(stage_spec.get("max_attempts") or 1),
+        depends_on=list(stage_spec.get("depends_on") or []),
+        merge_strategy=stage_spec.get("merge_strategy"),
+    )
+
+
+def compute_retry_backoff_seconds(attempt_index: int) -> int:
+    backoffs = DEFAULT_RETRY_BACKOFF_SECONDS
+    if attempt_index < 1:
+        return backoffs[0]
+    return backoffs[min(attempt_index - 1, len(backoffs) - 1)]
+
+
+def list_repo_state_paths(root: str | Path = ROOT_DIR) -> list[str]:
+    root_path = Path(root)
+    try:
+        result = subprocess.run(
+            [
+                "git",
+                "ls-files",
+                "--cached",
+                "--others",
+                "--exclude-standard",
+                "-z",
+            ],
+            cwd=root_path,
+            capture_output=True,
+            check=True,
+        )
+    except Exception:
+        paths: list[str] = []
+        for path in sorted(root_path.rglob("*")):
+            if ".git" in path.parts or not (
+                path.is_file() or path.is_symlink()
+            ):
+                continue
+            paths.append(path.relative_to(root_path).as_posix())
+        return paths
+    raw = result.stdout.decode("utf-8", errors="replace")
+    return [entry for entry in raw.split("\0") if entry]
+
+
+def read_repo_snapshot_entry(path: str | Path) -> RepoSnapshotEntry | None:
+    entry_path = Path(path)
+    if not entry_path.exists() and not entry_path.is_symlink():
+        return None
+    stat_result = entry_path.lstat()
+    mode = stat.S_IMODE(stat_result.st_mode)
+    mtime_ns = stat_result.st_mtime_ns
+    if entry_path.is_symlink():
+        return RepoSnapshotEntry(
+            kind="symlink",
+            mode=mode,
+            mtime_ns=mtime_ns,
+            link_target=os.readlink(entry_path),
+        )
+    if entry_path.is_file():
+        return RepoSnapshotEntry(
+            kind="file",
+            mode=mode,
+            mtime_ns=mtime_ns,
+            content=entry_path.read_bytes(),
+        )
+    return None
+
+
+def capture_repo_snapshot(
+    root: str | Path = ROOT_DIR,
+) -> dict[str, RepoSnapshotEntry]:
+    root_path = Path(root)
+    snapshot: dict[str, RepoSnapshotEntry] = {}
+    for rel_path in list_repo_state_paths(root_path):
+        entry = read_repo_snapshot_entry(root_path / rel_path)
+        if entry is not None:
+            snapshot[rel_path] = entry
+    return snapshot
+
+
+def diff_repo_snapshot(
+    before_snapshot: dict[str, RepoSnapshotEntry],
+    after_snapshot: dict[str, RepoSnapshotEntry],
+) -> list[str]:
+    changed: list[str] = []
+    for rel_path in sorted(set(before_snapshot) | set(after_snapshot)):
+        if before_snapshot.get(rel_path) != after_snapshot.get(rel_path):
+            changed.append(rel_path)
+    return changed
+
+
+def restore_repo_paths(
+    before_snapshot: dict[str, RepoSnapshotEntry],
+    after_snapshot: dict[str, RepoSnapshotEntry],
+    target_paths: list[str],
+    root: str | Path = ROOT_DIR,
+) -> None:
+    del after_snapshot
+    root_path = Path(root)
+    for rel_path in target_paths:
+        before_bytes = before_snapshot.get(rel_path)
+        abs_path = root_path / rel_path
+        if before_bytes is None:
+            remove_repo_path(abs_path, root_path)
+            continue
+        write_repo_snapshot_entry(abs_path, before_bytes)
+
+
+def remove_repo_path(path: str | Path, root: str | Path) -> None:
+    abs_path = Path(path)
+    root_path = Path(root)
+    if not abs_path.exists() and not abs_path.is_symlink():
+        return
+    if abs_path.is_symlink() or abs_path.is_file():
+        abs_path.unlink()
+    elif abs_path.is_dir():
+        shutil.rmtree(abs_path)
+    parent = abs_path.parent
+    while parent != root_path and parent.exists():
+        try:
+            parent.rmdir()
+        except OSError:
+            break
+        parent = parent.parent
+
+
+def write_repo_snapshot_entry(
+    destination: str | Path,
+    entry: RepoSnapshotEntry,
+) -> None:
+    dest_path = Path(destination)
+    dest_path.parent.mkdir(parents=True, exist_ok=True)
+    if dest_path.exists() or dest_path.is_symlink():
+        remove_repo_path(dest_path, dest_path.parent)
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+    if entry.kind == "symlink":
+        if entry.link_target is None:
+            raise ValueError("symlink snapshot entry requires link_target")
+        os.symlink(entry.link_target, dest_path)
+        try:
+            os.utime(
+                dest_path,
+                ns=(entry.mtime_ns, entry.mtime_ns),
+                follow_symlinks=False,
+            )
+        except (NotImplementedError, OSError):
+            pass
+        return
+    if entry.kind != "file":
+        raise ValueError("unsupported snapshot entry kind")
+    if entry.content is None:
+        raise ValueError("file snapshot entry requires content")
+    dest_path.write_bytes(entry.content)
+    os.chmod(dest_path, entry.mode)
+    os.utime(dest_path, ns=(entry.mtime_ns, entry.mtime_ns))
+
+
+def enforce_stage_write_policy(
+    policy: StageExecutionPolicy,
+    before_snapshot: dict[str, RepoSnapshotEntry],
+    *,
+    workspace_root: str | Path = ROOT_DIR,
+    after_snapshot: dict[str, RepoSnapshotEntry] | None = None,
+    restore_unauthorized: bool = True,
+) -> dict[str, Any]:
+    root_path = Path(workspace_root)
+    effective_after_snapshot = (
+        after_snapshot
+        if after_snapshot is not None
+        else capture_repo_snapshot(root_path)
+    )
+    changed_files = diff_repo_snapshot(
+        before_snapshot, effective_after_snapshot
+    )
+    unauthorized_files = [
+        path
+        for path in changed_files
+        if not path_matches_roots(path, policy.write_roots)
+    ]
+    if unauthorized_files and restore_unauthorized:
+        restore_repo_paths(
+            before_snapshot,
+            effective_after_snapshot,
+            unauthorized_files,
+            root=root_path,
+        )
+    return {
+        "changed_files": changed_files,
+        "unauthorized_files": unauthorized_files,
+        "authorized": not unauthorized_files,
+    }
+
+
+def build_repo_change_set(
+    after_snapshot: dict[str, RepoSnapshotEntry],
+    changed_files: list[str],
+) -> dict[str, RepoSnapshotEntry | None]:
+    return {path: after_snapshot.get(path) for path in changed_files}
+
+
+def apply_repo_changes(
+    changes: dict[str, RepoSnapshotEntry | None],
+    root: str | Path = ROOT_DIR,
+) -> None:
+    root_path = Path(root)
+    for rel_path in sorted(changes):
+        payload = changes[rel_path]
+        abs_path = root_path / rel_path
+        if payload is None:
+            remove_repo_path(abs_path, root_path)
+            continue
+        write_repo_snapshot_entry(abs_path, payload)
+
+
+def copy_path_preserving_metadata(
+    source_path: str | Path,
+    destination_path: str | Path,
+) -> None:
+    source = Path(source_path)
+    destination = Path(destination_path)
+    entry = read_repo_snapshot_entry(source)
+    if entry is None:
+        raise ValueError("source path does not exist for promotion")
+    write_repo_snapshot_entry(destination, entry)
+
+
+def sync_repo_state(
+    source_root: str | Path,
+    target_root: str | Path,
+) -> None:
+    source_path = Path(source_root)
+    target_path = Path(target_root)
+    source_paths = set(list_repo_state_paths(source_path))
+    target_paths = set(list_repo_state_paths(target_path))
+    for rel_path in sorted(target_paths - source_paths):
+        dest_path = target_path / rel_path
+        remove_repo_path(dest_path, target_path)
+    for rel_path in sorted(source_paths):
+        source_file = source_path / rel_path
+        target_file = target_path / rel_path
+        if not (source_file.is_file() or source_file.is_symlink()):
+            if target_file.exists():
+                remove_repo_path(target_file, target_path)
+            continue
+        copy_path_preserving_metadata(source_file, target_file)
+
+
+def create_isolated_workspace(
+    source_root: str | Path,
+    stage_label: str,
+) -> IsolatedWorkspace:
+    source_path = Path(source_root)
+    cleanup_root = Path(
+        tempfile.mkdtemp(
+            prefix=f"codex-stage-{re.sub(r'[^A-Za-z0-9._-]+', '-', stage_label)}-"
+        )
+    )
+    workspace_path = cleanup_root / "workspace"
+    worktree_created = False
+    try:
+        try:
+            subprocess.run(
+                ["git", "rev-parse", "--verify", "HEAD"],
+                cwd=source_path,
+                capture_output=True,
+                check=True,
+            )
+        except Exception:
+            workspace_path.mkdir(parents=True, exist_ok=True)
+            sync_repo_state(source_path, workspace_path)
+            return IsolatedWorkspace(
+                path=workspace_path,
+                cleanup_root=cleanup_root,
+                mode="copy",
+            )
+
+        with WORKTREE_LOCK:
+            subprocess.run(
+                [
+                    "git",
+                    "worktree",
+                    "add",
+                    "--detach",
+                    str(workspace_path),
+                    "HEAD",
+                ],
+                cwd=source_path,
+                capture_output=True,
+                check=True,
+            )
+            worktree_created = True
+        sync_repo_state(source_path, workspace_path)
+        return IsolatedWorkspace(
+            path=workspace_path,
+            cleanup_root=cleanup_root,
+            mode="worktree",
+        )
+    except Exception:
+        if worktree_created:
+            with WORKTREE_LOCK:
+                subprocess.run(
+                    [
+                        "git",
+                        "worktree",
+                        "remove",
+                        "--force",
+                        str(workspace_path),
+                    ],
+                    cwd=source_path,
+                    capture_output=True,
+                    check=False,
+                )
+        shutil.rmtree(cleanup_root, ignore_errors=True)
+        raise
+
+
+def cleanup_isolated_workspace(workspace: IsolatedWorkspace) -> None:
+    if workspace.mode == "worktree":
+        with WORKTREE_LOCK:
+            subprocess.run(
+                [
+                    "git",
+                    "worktree",
+                    "remove",
+                    "--force",
+                    str(workspace.path),
+                ],
+                cwd=ROOT_DIR,
+                capture_output=True,
+                check=False,
+            )
+    shutil.rmtree(workspace.cleanup_root, ignore_errors=True)
+
+
+def resolve_workspace_workdir(
+    workdir: str | None,
+    workspace_root: str | Path,
+) -> str:
+    workspace_path = Path(workspace_root)
+    if workdir is None:
+        return str(workspace_path)
+    candidate = Path(workdir)
+    if not candidate.is_absolute():
+        relative = normalize_repo_relative_path(candidate.as_posix())
+        return str(workspace_path / relative)
+    try:
+        relative = candidate.relative_to(ROOT_DIR)
+    except ValueError:
+        raise ValueError("workdir must stay within repo root") from None
+    normalized = normalize_repo_relative_path(relative.as_posix())
+    return str(workspace_path / normalized)
+
+
+def detect_conflicting_stage_changes(
+    stage_outcomes: list[dict[str, Any]],
+) -> list[str]:
+    changed_by_path: dict[str, str] = {}
+    conflicts: set[str] = set()
+    for outcome in stage_outcomes:
+        for rel_path in outcome.get("promotable_files", []):
+            previous_stage = changed_by_path.get(rel_path)
+            if previous_stage and previous_stage != outcome["policy"].stage_id:
+                conflicts.add(rel_path)
+            else:
+                changed_by_path[rel_path] = outcome["policy"].stage_id
+    return sorted(conflicts)
+
+
+def cleanup_stage_workspace(outcome: dict[str, Any]) -> None:
+    workspace = outcome.get("workspace")
+    if workspace is None or outcome.get("workspace_cleaned"):
+        return
+    cleanup_isolated_workspace(workspace)
+    outcome["workspace_cleaned"] = True
+
+
+def promote_stage_workspace(
+    outcome: dict[str, Any],
+    root: str | Path = ROOT_DIR,
+) -> None:
+    workspace = outcome.get("workspace")
+    if workspace is None:
+        return
+    snapshot = capture_repo_snapshot(workspace.path)
+    changes = build_repo_change_set(
+        snapshot,
+        list(outcome.get("promotable_files") or []),
+    )
+    apply_repo_changes(changes, root=root)
+    cleanup_stage_workspace(outcome)
+
+
+def select_capsule_inputs(
+    capsule: dict[str, Any],
+    input_keys: list[str],
+) -> dict[str, Any]:
+    selected = {
+        "schema_version": capsule.get("schema_version"),
+        "pipeline_run_id": capsule.get("pipeline_run_id"),
+    }
+    for key in input_keys:
+        if key in capsule:
+            selected[key] = json.loads(json.dumps(capsule[key]))
+    return selected
+
+
+def get_pipeline_artifact_dir(
+    log_dir: str | Path,
+    pipeline_run_id: str,
+) -> Path:
+    return Path(log_dir) / "artifacts" / pipeline_run_id
+
+
+def get_pipeline_state_path(
+    log_dir: str | Path,
+    pipeline_run_id: str,
+) -> Path:
+    return get_pipeline_artifact_dir(log_dir, pipeline_run_id) / "state.json"
+
+
+def write_pipeline_state(path: str | Path, payload: dict[str, Any]) -> None:
+    state_path = Path(path)
+    state_path.parent.mkdir(parents=True, exist_ok=True)
+    state_path.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def load_pipeline_state(path: str | Path) -> dict[str, Any]:
+    state_path = Path(path)
+    if state_path.is_dir():
+        state_path = state_path / "state.json"
+    if not state_path.exists():
+        raise ValueError("resume state not found")
+    try:
+        return json.loads(state_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ValueError("resume state is invalid") from exc
+
+
+def resolve_resume_state_path(
+    resume_run: str,
+    effective_log_dir: str | Path | None = None,
+) -> Path:
+    candidate = Path(resume_run)
+    if candidate.exists():
+        return candidate if candidate.is_file() else candidate / "state.json"
+
+    search_roots: list[Path] = []
+    if effective_log_dir is not None:
+        search_roots.append(Path(effective_log_dir))
+    search_roots.extend([DEFAULT_HUMAN_LOG_DIR, DEFAULT_AUTO_LOG_DIR])
+    for root in search_roots:
+        state_path = root / "artifacts" / resume_run / "state.json"
+        if state_path.exists():
+            return state_path
+    raise ValueError("resume state not found")
+
+
 def resolve_capsule_path(
     store_mode: str,
     capsule_path: str | None,
@@ -457,6 +1226,7 @@ def build_stage_prompt(
     capsule_path: str | Path | None,
     stage_spec: dict[str, Any] | None,
     allow_dynamic: bool,
+    stage_policy: StageExecutionPolicy | None = None,
 ) -> str:
     if capsule_store not in {"embed", "file"}:
         raise ValueError("capsule_store must be embed|file")
@@ -468,6 +1238,32 @@ def build_stage_prompt(
         hint = stage_spec.get("prompt") or stage_spec.get("instructions")
         if isinstance(hint, str) and hint:
             stage_hint = f"\nStage Instructions:\n{hint}\n"
+
+    policy_lines: list[str] = []
+    if stage_policy:
+        policy_lines.append(f"- Role: {stage_policy.role}")
+        policy_lines.append(f"- Sandbox: {stage_policy.sandbox.value}")
+        if stage_policy.workdir:
+            policy_lines.append(f"- Workdir: {stage_policy.workdir}")
+        policy_lines.append(
+            "- Allowed repo write roots: "
+            + (
+                ", ".join(stage_policy.write_roots)
+                if stage_policy.write_roots
+                else "(none)"
+            )
+        )
+        policy_lines.append(
+            "- Capsule input keys: "
+            + (
+                ", ".join(stage_policy.input_keys)
+                if stage_policy.input_keys
+                else "(none)"
+            )
+        )
+    policy_block = ""
+    if policy_lines:
+        policy_block = "Stage Policy:\n" + "\n".join(policy_lines) + "\n\n"
 
     if capsule_store == "embed":
         capsule_block = f"CAPSULE_JSON:\n{serialize_capsule(capsule)}"
@@ -500,6 +1296,7 @@ def build_stage_prompt(
         f"You are executing pipeline stage: {stage_id}.\n"
         f"Task:\n{base_prompt}\n\n"
         f"{stage_hint}"
+        f"{policy_block}"
         f"{capsule_block}\n\n"
         "Return JSON ONLY with this shape:\n"
         f"{template}\n\n"
@@ -520,6 +1317,7 @@ def prepare_stage_prompt(
     stage_spec: dict[str, Any] | None,
     max_total_prompt_chars: int | None,
     allow_dynamic: bool,
+    stage_policy: StageExecutionPolicy | None = None,
 ) -> str:
     prompt = build_stage_prompt(
         stage_id=stage_id,
@@ -528,6 +1326,7 @@ def prepare_stage_prompt(
         capsule_store=capsule_store,
         capsule_path=capsule_path,
         stage_spec=stage_spec,
+        stage_policy=stage_policy,
         allow_dynamic=allow_dynamic,
     )
     ensure_prompt_limit(prompt, max_total_prompt_chars)
@@ -614,6 +1413,7 @@ def build_pipeline_output_payload(
     final_capsule: dict[str, Any],
     capsule_store: str,
     capsule_path: str | Path | None,
+    evaluation: dict[str, Any] | None = None,
     model: str | None = None,
 ) -> dict[str, Any]:
     return {
@@ -625,6 +1425,7 @@ def build_pipeline_output_payload(
         "capsule_hash": compute_capsule_hash(final_capsule),
         "capsule_store": capsule_store,
         "capsule_path": str(capsule_path) if capsule_path else None,
+        "evaluation": evaluation,
     }
 
 
@@ -648,6 +1449,126 @@ def build_initial_capsule(
         "critique": {},
         "revise": {},
     }
+
+
+def validate_capsule_payload(capsule: dict[str, Any]) -> None:
+    validate_json_schema(capsule, "capsule")
+
+
+def evaluate_retry_policy_from_logs(
+    stage_specs: list[dict[str, Any]],
+    stage_logs: list[dict[str, Any]],
+) -> bool:
+    logs_by_stage: dict[str, list[dict[str, Any]]] = {}
+    max_attempts_by_stage = {
+        stage["id"]: int(stage.get("max_attempts") or 1)
+        for stage in stage_specs
+    }
+    for log in stage_logs:
+        stage_id = log.get("stage_id")
+        if not isinstance(stage_id, str) or not stage_id:
+            return False
+        logs_by_stage.setdefault(stage_id, []).append(log)
+
+    for stage_id, logs in logs_by_stage.items():
+        attempts: list[int] = []
+        for log in logs:
+            attempt_value = log.get("attempt")
+            if not isinstance(attempt_value, int) or attempt_value < 1:
+                return False
+            attempts.append(attempt_value)
+        if attempts != list(range(1, len(attempts) + 1)):
+            return False
+        max_attempts = max_attempts_by_stage.get(stage_id)
+        if max_attempts is None or len(attempts) > max_attempts:
+            return False
+        for index, log in enumerate(logs[:-1]):
+            stage_result = log.get("stage_result") or {}
+            status = stage_result.get("status")
+            retry_scheduled = bool(log.get("retry_scheduled"))
+            if retry_scheduled and status != "retryable_error":
+                return False
+            if status == "retryable_error" and not retry_scheduled:
+                return False
+            if retry_scheduled and attempts[index + 1] != attempts[index] + 1:
+                return False
+        last_log = logs[-1]
+        if last_log.get("retry_scheduled"):
+            return False
+        last_status = (last_log.get("stage_result") or {}).get("status")
+        if last_status == "retryable_error" and len(attempts) != max_attempts:
+            return False
+    return True
+
+
+def build_pipeline_evaluation(
+    stage_specs: list[dict[str, Any]],
+    stage_results: list[dict[str, Any]],
+    stage_logs: list[dict[str, Any]],
+    final_capsule: dict[str, Any],
+    unauthorized_write_detected: bool,
+    used_graph: bool,
+    allow_dynamic: bool = False,
+) -> dict[str, Any]:
+    stage_contract_valid = True
+    for result in stage_results:
+        try:
+            validate_stage_result(result, allow_dynamic=allow_dynamic)
+        except ValueError:
+            stage_contract_valid = False
+            break
+    try:
+        validate_capsule_payload(final_capsule)
+        capsule_schema_valid = True
+    except ValueError:
+        capsule_schema_valid = False
+    completed_stage_ids = {result.get("stage_id") for result in stage_results}
+    expected_stage_ids = {stage["id"] for stage in stage_specs}
+    declared_success_stages_complete = expected_stage_ids.issubset(
+        completed_stage_ids
+    )
+    handoff_order_valid = True
+    if used_graph:
+        completed_in_order = [
+            result.get("stage_id") for result in stage_results
+        ]
+        completed_index = {
+            stage_id: index
+            for index, stage_id in enumerate(completed_in_order)
+        }
+        for stage in stage_specs:
+            stage_index = completed_index.get(stage["id"])
+            if stage_index is None:
+                handoff_order_valid = False
+                break
+            for dependency in stage.get("depends_on", []):
+                dep_index = completed_index.get(dependency)
+                if dep_index is None or dep_index > stage_index:
+                    handoff_order_valid = False
+                    break
+            if not handoff_order_valid:
+                break
+    evaluation = {
+        "capsule_schema_valid": capsule_schema_valid,
+        "stage_contract_valid": stage_contract_valid,
+        "unauthorized_writes_detected": unauthorized_write_detected,
+        "retry_policy_followed": evaluate_retry_policy_from_logs(
+            stage_specs, stage_logs
+        ),
+        "handoff_order_valid": handoff_order_valid,
+        "declared_success_stages_complete": declared_success_stages_complete,
+    }
+    evaluation["passed"] = all(
+        [
+            evaluation["capsule_schema_valid"],
+            evaluation["stage_contract_valid"],
+            not evaluation["unauthorized_writes_detected"],
+            evaluation["retry_policy_followed"],
+            evaluation["handoff_order_valid"],
+            evaluation["declared_success_stages_complete"],
+        ]
+    )
+    return evaluation
 
 
 def write_capsule_file(path: str | Path, capsule: dict[str, Any]) -> None:
@@ -717,6 +1638,10 @@ def validate_patch_ops(ops: list[dict[str, Any]]) -> None:
             raise ValueError("capsule_patch op is not allowed")
         if not isinstance(path, str) or not _is_allowed_patch_path(path):
             raise ValueError("capsule_patch path is not allowed")
+        if op_name == "remove" and path in PATCH_ALLOWED_PREFIXES:
+            raise ValueError(
+                "capsule_patch must not remove top-level capsule keys"
+            )
 
 
 def validate_stage_result(
@@ -754,6 +1679,12 @@ def validate_stage_result(
         validate_patch_ops(capsule_patch)
     if "next_stages" in result and not allow_dynamic:
         raise ValueError("next_stages is not allowed without dynamic stages")
+    if allow_dynamic and result.get("next_stages"):
+        next_stages = result["next_stages"]
+        if not isinstance(next_stages, list):
+            raise ValueError("next_stages must be a list")
+        if len(next_stages) > 1:
+            raise ValueError("next_stages allows at most one stage per result")
 
 
 def resolve_pipeline_stage_ids(
@@ -894,6 +1825,7 @@ def apply_stage_result(
     capsule: dict[str, Any],
     stage_result: dict[str, Any],
     allow_dynamic: bool,
+    capsule_validator: Callable[[dict[str, Any]], None] | None = None,
 ) -> tuple[dict[str, Any], bool]:
     validate_stage_result(stage_result, allow_dynamic=allow_dynamic)
     if stage_result.get("status") != "ok":
@@ -906,6 +1838,11 @@ def apply_stage_result(
         )
     except ValueError:
         return capsule, False
+    if capsule_validator is not None:
+        try:
+            capsule_validator(updated)
+        except ValueError:
+            return capsule, False
     return updated, True
 
 
@@ -915,6 +1852,7 @@ def execute_pipeline(
     stage_runner,
     allow_dynamic: bool,
     max_stages: int = 10,
+    capsule_validator: Callable[[dict[str, Any]], None] | None = None,
     on_stage_complete: (
         Callable[[str, dict[str, Any], dict[str, Any], bool], None] | None
     ) = None,
@@ -936,7 +1874,10 @@ def execute_pipeline(
         validate_stage_result(stage_result, allow_dynamic=allow_dynamic)
         results.append(stage_result)
         capsule, applied = apply_stage_result(
-            capsule, stage_result, allow_dynamic=allow_dynamic
+            capsule,
+            stage_result,
+            allow_dynamic=allow_dynamic,
+            capsule_validator=capsule_validator,
         )
         if on_stage_complete:
             on_stage_complete(stage_id, capsule, stage_result, applied)
@@ -958,7 +1899,10 @@ def execute_pipeline(
                 ):
                     raise ValueError("next_stages stage id is not allowed")
                 if dynamic_stage_specs is not None:
-                    dynamic_stage_specs.setdefault(stage_id_value, dict(spec))
+                    dynamic_stage_specs.setdefault(
+                        stage_id_value,
+                        normalize_stage_spec(dict(spec), None),
+                    )
                 inserted.append(stage_id_value)
             for offset, stage_id_value in enumerate(inserted, start=1):
                 queue.insert(index + offset, stage_id_value)
@@ -972,6 +1916,7 @@ def run_pipeline_with_runner(
     stage_runner,
     allow_dynamic: bool,
     max_stages: int,
+    capsule_validator: Callable[[dict[str, Any]], None] | None = None,
     on_stage_complete: (
         Callable[[str, dict[str, Any], dict[str, Any], bool], None] | None
     ) = None,
@@ -987,6 +1932,7 @@ def run_pipeline_with_runner(
             stage_runner=stage_runner,
             allow_dynamic=allow_dynamic,
             max_stages=max_stages,
+            capsule_validator=capsule_validator,
             on_stage_complete=on_stage_complete,
             allowed_stage_ids=allowed_stage_ids,
             dynamic_stage_specs=dynamic_stage_specs,
@@ -1140,6 +2086,52 @@ Respond in JSON format ONLY (no explanation):
     except Exception as e:
         print(f"Warning: LLM evaluation failed: {e}", file=sys.stderr)
 
+    return None
+
+
+async def compare_with_llm_judge(
+    prompt: str,
+    task_type: TaskType,
+    left: CodexResult,
+    right: CodexResult,
+    timeout: int = 90,
+    profile: str | None = None,
+    model: str | None = None,
+) -> dict[str, Any] | None:
+    judge_prompt = f"""You are a strict pairwise evaluator for agent outputs.
+
+Task Type: {task_type.value}
+Original Prompt: {prompt[:500]}
+
+Candidate A:
+{truncate_output(left.output, 2000)}
+
+Candidate B:
+{truncate_output(right.output, 2000)}
+
+Return JSON only:
+{{
+  "winner": "A|B|tie",
+  "rationale": "brief reason",
+  "criteria": ["correctness", "completeness", "quality"]
+}}"""
+    try:
+        result = await run_codex_exec_async(
+            prompt=judge_prompt,
+            sandbox=SandboxMode.READ_ONLY,
+            timeout=timeout,
+            agent_id="pairwise_judge",
+            profile=profile,
+            model=model,
+        )
+        if result.success and result.output:
+            match = re.search(r"\{.*\}", result.output, re.DOTALL)
+            if match:
+                payload = json.loads(match.group())
+                if payload.get("winner") in {"A", "B", "tie"}:
+                    return payload
+    except Exception as exc:
+        print(f"Warning: pairwise judge failed: {exc}", file=sys.stderr)
     return None
 
 
@@ -1394,6 +2386,7 @@ async def execute_competition(
     timeout: int = 360,
     task_type: TaskType = TaskType.CODE_GEN,
     strategy: SelectionStrategy = SelectionStrategy.BEST_SINGLE,
+    judge_mode: JudgeMode = JudgeMode.HYBRID,
     workdir: str | None = None,
     profile: str | None = None,
     model: str | None = None,
@@ -1434,7 +2427,43 @@ async def execute_competition(
 
     # 選択戦略に基づいて最良を選択
     best = select_best(evaluated, strategy)
-    return CompetitionOutcome(best=best, results=results)
+    selection: dict[str, Any] = {
+        "judge_mode": judge_mode.value,
+        "heuristic_winner": best.result.agent_id,
+        "selected_by": "heuristic",
+    }
+    if judge_mode == JudgeMode.HYBRID and len(evaluated) >= 2:
+        ranked = sorted(
+            evaluated, key=lambda item: item.combined_score, reverse=True
+        )
+        left = ranked[0]
+        right = ranked[1]
+        pairwise = await compare_with_llm_judge(
+            prompt=prompt,
+            task_type=task_type,
+            left=left.result,
+            right=right.result,
+            timeout=min(timeout, 90),
+            profile=profile,
+            model=model,
+        )
+        if pairwise:
+            selection["pairwise_judge"] = pairwise
+            selection["pairwise_candidates"] = [
+                left.result.agent_id,
+                right.result.agent_id,
+            ]
+            winner = pairwise.get("winner")
+            if winner == "A":
+                best = left
+                selection["selected_by"] = "pairwise_judge"
+            elif winner == "B":
+                best = right
+                selection["selected_by"] = "pairwise_judge"
+            else:
+                selection["selected_by"] = "heuristic_tiebreak"
+    selection["winner"] = best.result.agent_id
+    return CompetitionOutcome(best=best, results=results, selection=selection)
 
 
 def evaluate_result(
@@ -1687,6 +2716,698 @@ def format_output(
     return "\n".join(lines)
 
 
+def build_stage_prompt_capsule_path(
+    pipeline_run_id: str,
+    stage_id: str,
+    attempt: int,
+    log_dir: str | Path,
+) -> Path:
+    artifact_dir = get_pipeline_artifact_dir(log_dir, pipeline_run_id)
+    return artifact_dir / "stage-inputs" / f"{stage_id}-attempt-{attempt}.json"
+
+
+def build_pipeline_state_payload(
+    pipeline_run_id: str,
+    log_dir: str | Path,
+    prompt: str,
+    canonical_spec: dict[str, Any],
+    raw_pipeline_spec: dict[str, Any] | None,
+    capsule: dict[str, Any],
+    stage_results: list[dict[str, Any]],
+    stage_logs: list[dict[str, Any]],
+    attempts_by_stage: dict[str, int],
+    completed_stage_ids: list[str],
+    unauthorized_write_detected: bool,
+    args: argparse.Namespace,
+    success: bool | None = None,
+    error_message: str = "",
+) -> dict[str, Any]:
+    return {
+        "schema_version": PIPELINE_SPEC_VERSION,
+        "pipeline_run_id": pipeline_run_id,
+        "log_dir": str(log_dir),
+        "prompt": prompt,
+        "pipeline_spec_raw": raw_pipeline_spec,
+        "canonical_spec": canonical_spec,
+        "capsule": capsule,
+        "stage_results": stage_results,
+        "stage_logs": stage_logs,
+        "attempts_by_stage": attempts_by_stage,
+        "completed_stage_ids": completed_stage_ids,
+        "unauthorized_write_detected": unauthorized_write_detected,
+        "success": success,
+        "error_message": error_message,
+        "args": {
+            "sandbox": args.sandbox,
+            "timeout": args.timeout,
+            "profile": args.profile,
+            "model": args.model,
+            "workdir": args.workdir,
+            "capsule_store": args.capsule_store,
+            "capsule_path": args.capsule_path,
+            "max_stages": args.max_stages,
+            "max_parallel_stages": args.max_parallel_stages,
+            "judge_mode": args.judge_mode,
+        },
+    }
+
+
+def execute_stage_with_retry(
+    *,
+    stage_spec: dict[str, Any],
+    capsule_state: dict[str, Any],
+    base_prompt: str,
+    pipeline_run_id: str,
+    log_dir: str | Path,
+    timeout: int,
+    profile: str | None,
+    model: str | None,
+    default_workdir: str | None,
+    capsule_store_arg: str,
+    capsule_path_arg: str | None,
+    max_total_prompt_chars: int | None,
+    allow_dynamic: bool,
+    previous_attempts: int,
+    source_root: str | Path = ROOT_DIR,
+) -> dict[str, Any]:
+    policy = build_stage_policy(stage_spec)
+    attempt_logs: list[dict[str, Any]] = []
+    attempt_count = previous_attempts
+    while attempt_count < policy.max_attempts:
+        attempt_count += 1
+        keep_workspace = False
+        workspace = create_isolated_workspace(
+            source_root,
+            f"{pipeline_run_id}-{policy.stage_id}-attempt-{attempt_count}",
+        )
+        try:
+            prompt_capsule = select_capsule_inputs(
+                capsule_state, policy.input_keys
+            )
+            prompt_capsule_path_arg = capsule_path_arg
+            if (
+                capsule_store_arg in {"auto", "file"}
+                and prompt_capsule_path_arg is None
+            ):
+                prompt_capsule_path_arg = str(
+                    build_stage_prompt_capsule_path(
+                        pipeline_run_id,
+                        policy.stage_id,
+                        attempt_count,
+                        log_dir,
+                    )
+                )
+            store_mode, prompt_capsule_path, size_bytes = (
+                resolve_capsule_delivery(
+                    capsule_store_arg,
+                    prompt_capsule,
+                    prompt_capsule_path_arg,
+                    log_dir,
+                    pipeline_run_id,
+                )
+            )
+            if store_mode == "file" and prompt_capsule_path:
+                write_capsule_file(prompt_capsule_path, prompt_capsule)
+            stage_prompt = prepare_stage_prompt(
+                stage_id=policy.stage_id,
+                base_prompt=base_prompt,
+                capsule=prompt_capsule,
+                capsule_store=store_mode,
+                capsule_path=prompt_capsule_path,
+                stage_spec=stage_spec,
+                stage_policy=policy,
+                max_total_prompt_chars=max_total_prompt_chars,
+                allow_dynamic=allow_dynamic,
+            )
+            before_snapshot = capture_repo_snapshot(workspace.path)
+            effective_workdir = resolve_workspace_workdir(
+                policy.workdir or default_workdir,
+                workspace.path,
+            )
+            result = run_codex_exec(
+                prompt=stage_prompt,
+                sandbox=policy.sandbox,
+                timeout=timeout,
+                workdir=effective_workdir,
+                profile=profile,
+                model=model,
+            )
+            if not result.success:
+                stage_result = stage_result_from_exec_failure(
+                    policy.stage_id, result
+                )
+            else:
+                try:
+                    stage_result = parse_stage_result_output(
+                        result.output,
+                        allow_dynamic=allow_dynamic,
+                    )
+                except ValueError as exc:
+                    stage_result = {
+                        "schema_version": SCHEMA_VERSION,
+                        "stage_id": policy.stage_id,
+                        "status": "fatal_error",
+                        "output_is_partial": True,
+                        "capsule_patch": [],
+                        "summary": f"stage_result parse failed: {exc}",
+                    }
+            after_snapshot = capture_repo_snapshot(workspace.path)
+            write_policy = enforce_stage_write_policy(
+                policy,
+                before_snapshot,
+                workspace_root=workspace.path,
+                after_snapshot=after_snapshot,
+                restore_unauthorized=False,
+            )
+            if write_policy["unauthorized_files"]:
+                stage_result = {
+                    "schema_version": SCHEMA_VERSION,
+                    "stage_id": policy.stage_id,
+                    "status": "fatal_error",
+                    "output_is_partial": False,
+                    "capsule_patch": [],
+                    "summary": "unauthorized writes detected",
+                }
+            promotable_changes: dict[str, bytes | None] = {}
+            if write_policy["authorized"]:
+                promotable_changes = build_repo_change_set(
+                    after_snapshot,
+                    write_policy["changed_files"],
+                )
+            stage_log = build_stage_log(
+                stage_id=policy.stage_id,
+                pipeline_run_id=pipeline_run_id,
+                capsule_state=capsule_state,
+                store_mode=store_mode,
+                capsule_path=prompt_capsule_path,
+                size_bytes=size_bytes,
+                exec_result=result,
+                stage_result=stage_result,
+            )
+            stage_log["attempt"] = attempt_count
+            stage_log["role"] = policy.role
+            stage_log["sandbox"] = policy.sandbox.value
+            stage_log["workdir"] = policy.workdir or default_workdir
+            stage_log["effective_workdir"] = effective_workdir
+            stage_log["workspace_mode"] = workspace.mode
+            stage_log["write_roots"] = policy.write_roots
+            stage_log["input_keys"] = policy.input_keys
+            stage_log["depends_on"] = policy.depends_on
+            stage_log["merge_strategy"] = policy.merge_strategy
+            stage_log["changed_files"] = write_policy["changed_files"]
+            stage_log["unauthorized_files"] = write_policy[
+                "unauthorized_files"
+            ]
+            stage_log["authorized"] = write_policy["authorized"]
+            attempt_logs.append(stage_log)
+            if (
+                stage_result.get("status") != "retryable_error"
+                or attempt_count >= policy.max_attempts
+            ):
+                keep_workspace = True
+                return {
+                    "stage_result": stage_result,
+                    "attempt_logs": attempt_logs,
+                    "attempt_count": attempt_count,
+                    "policy": policy,
+                    "unauthorized_write": bool(
+                        write_policy["unauthorized_files"]
+                    ),
+                    "workspace": workspace,
+                    "workspace_cleaned": False,
+                    "promotable_files": sorted(promotable_changes),
+                }
+            backoff_seconds = compute_retry_backoff_seconds(attempt_count)
+            stage_log["retry_scheduled"] = True
+            stage_log["retry_backoff_seconds"] = backoff_seconds
+        finally:
+            if not keep_workspace:
+                cleanup_isolated_workspace(workspace)
+        time.sleep(backoff_seconds)
+    raise AssertionError("retry loop exited unexpectedly")
+
+
+def run_pipeline_mode(
+    args: argparse.Namespace,
+    task_type: TaskType,
+    enable_logging: bool,
+) -> int:
+    del task_type  # pipeline currently uses deterministic grading
+    raw_pipeline_spec = (
+        load_pipeline_spec(args.pipeline_spec) if args.pipeline_spec else None
+    )
+    if args.resume_run:
+        state_path = resolve_resume_state_path(
+            args.resume_run,
+            effective_log_dir=LOG_DIR,
+        )
+        resume_state = load_pipeline_state(state_path)
+        pipeline_run_id = str(resume_state["pipeline_run_id"])
+        pipeline_log_dir = Path(
+            resume_state.get("log_dir") or state_path.parents[2]
+        )
+        prompt = str(resume_state.get("prompt") or args.prompt)
+        if raw_pipeline_spec is None:
+            raw_pipeline_spec = resume_state.get("pipeline_spec_raw")
+        canonical_spec = resume_state.get("canonical_spec")
+        if not isinstance(canonical_spec, dict):
+            canonical_spec = canonicalize_pipeline_spec(
+                raw_pipeline_spec,
+                args.pipeline_stages,
+            )
+        capsule = dict(resume_state.get("capsule") or {})
+        stage_logs = list(resume_state.get("stage_logs") or [])
+        attempts_by_stage = {
+            str(key): int(value)
+            for key, value in (
+                resume_state.get("attempts_by_stage") or {}
+            ).items()
+        }
+        completed_stage_ids = set(
+            resume_state.get("completed_stage_ids") or []
+        )
+        pipeline_stage_results = [
+            result
+            for result in (resume_state.get("stage_results") or [])
+            if result.get("stage_id") in completed_stage_ids
+        ]
+        unauthorized_write_detected = bool(
+            resume_state.get("unauthorized_write_detected", False)
+        )
+    else:
+        pipeline_log_dir = Path(LOG_DIR)
+        canonical_spec = canonicalize_pipeline_spec(
+            raw_pipeline_spec,
+            args.pipeline_stages,
+        )
+        if raw_pipeline_spec is None and args.allow_dynamic_stages:
+            canonical_spec["allow_dynamic_stages"] = True
+            validate_canonical_pipeline_spec(canonical_spec)
+        pipeline_run_id = str(uuid.uuid4())
+        prompt = args.prompt
+        capsule = build_initial_capsule(
+            prompt,
+            pipeline_run_id,
+            SandboxMode(args.sandbox),
+        )
+        stage_logs = []
+        attempts_by_stage: dict[str, int] = {}
+        completed_stage_ids: set[str] = set()
+        pipeline_stage_results: list[dict[str, Any]] = []
+        unauthorized_write_detected = False
+
+    state_path = get_pipeline_state_path(pipeline_log_dir, pipeline_run_id)
+    write_pipeline_state(
+        state_path,
+        build_pipeline_state_payload(
+            pipeline_run_id=pipeline_run_id,
+            log_dir=pipeline_log_dir,
+            prompt=prompt,
+            canonical_spec=canonical_spec,
+            raw_pipeline_spec=raw_pipeline_spec,
+            capsule=capsule,
+            stage_results=pipeline_stage_results,
+            stage_logs=stage_logs,
+            attempts_by_stage=attempts_by_stage,
+            completed_stage_ids=sorted(completed_stage_ids),
+            unauthorized_write_detected=unauthorized_write_detected,
+            args=args,
+        ),
+    )
+
+    stage_specs = list(canonical_spec["stages"])
+    stage_spec_map = {stage["id"]: stage for stage in stage_specs}
+    allow_dynamic = bool(canonical_spec.get("allow_dynamic_stages", False))
+    max_total_prompt_chars = canonical_spec.get("max_total_prompt_chars")
+    allowed_stage_ids = set(canonical_spec.get("allowed_stage_ids") or [])
+
+    def persist_state(
+        *,
+        success: bool | None = None,
+        error_message: str = "",
+    ) -> None:
+        write_pipeline_state(
+            state_path,
+            build_pipeline_state_payload(
+                pipeline_run_id=pipeline_run_id,
+                log_dir=pipeline_log_dir,
+                prompt=prompt,
+                canonical_spec=canonical_spec,
+                raw_pipeline_spec=raw_pipeline_spec,
+                capsule=capsule,
+                stage_results=pipeline_stage_results,
+                stage_logs=stage_logs,
+                attempts_by_stage=attempts_by_stage,
+                completed_stage_ids=sorted(completed_stage_ids),
+                unauthorized_write_detected=unauthorized_write_detected,
+                args=args,
+                success=success,
+                error_message=error_message,
+            ),
+        )
+
+    def apply_stage_results_atomically(
+        base_capsule: dict[str, Any],
+        results_to_apply: list[dict[str, Any]],
+    ) -> tuple[dict[str, Any], bool]:
+        candidate = json.loads(json.dumps(base_capsule))
+        for stage_result in results_to_apply:
+            candidate, applied = apply_stage_result(
+                candidate,
+                stage_result,
+                allow_dynamic=allow_dynamic,
+                capsule_validator=validate_capsule_payload,
+            )
+            if not applied:
+                return base_capsule, False
+        return candidate, True
+
+    def record_stage_outcome(outcome: dict[str, Any]) -> None:
+        nonlocal unauthorized_write_detected
+        policy: StageExecutionPolicy = outcome["policy"]
+        attempts_by_stage[policy.stage_id] = outcome["attempt_count"]
+        stage_logs.extend(outcome["attempt_logs"])
+        if outcome["unauthorized_write"]:
+            unauthorized_write_detected = True
+        persist_state()
+
+    def run_stage_once(
+        stage_spec: dict[str, Any], current_capsule: dict[str, Any]
+    ) -> dict[str, Any]:
+        previous_attempts = (
+            attempts_by_stage.get(stage_spec["id"], 0)
+            if stage_spec["id"] in completed_stage_ids
+            else 0
+        )
+        return execute_stage_with_retry(
+            stage_spec=stage_spec,
+            capsule_state=current_capsule,
+            base_prompt=prompt,
+            pipeline_run_id=pipeline_run_id,
+            log_dir=pipeline_log_dir,
+            timeout=args.timeout,
+            profile=args.profile,
+            model=args.model,
+            default_workdir=args.workdir,
+            capsule_store_arg=args.capsule_store,
+            capsule_path_arg=args.capsule_path,
+            max_total_prompt_chars=max_total_prompt_chars,
+            allow_dynamic=allow_dynamic,
+            previous_attempts=previous_attempts,
+            source_root=ROOT_DIR,
+        )
+
+    def register_dynamic_stages(
+        queue: list[str],
+        index: int,
+        stage_result: dict[str, Any],
+        dynamic_stage_specs: dict[str, dict[str, Any]],
+    ) -> None:
+        if not allow_dynamic or not stage_result.get("next_stages"):
+            return
+        next_specs = stage_result["next_stages"]
+        if not isinstance(next_specs, list):
+            raise ValueError("next_stages must be a list")
+        inserted: list[str] = []
+        for spec in next_specs:
+            validate_json_schema(spec, "stage_spec")
+            stage_id_value = spec.get("id")
+            if not isinstance(stage_id_value, str) or not stage_id_value:
+                raise ValueError("next_stages stage id is invalid")
+            if (
+                allowed_stage_ids is not None
+                and stage_id_value not in allowed_stage_ids
+            ):
+                raise ValueError("next_stages stage id is not allowed")
+            dynamic_stage_specs.setdefault(
+                stage_id_value,
+                normalize_stage_spec(dict(spec), None),
+            )
+            inserted.append(stage_id_value)
+        for offset, stage_id_value in enumerate(inserted, start=1):
+            queue.insert(index + offset, stage_id_value)
+
+    wrapper_error = False
+    success = False
+    error_message = ""
+    if canonical_spec.get("uses_graph"):
+        ordered_outcomes: list[dict[str, Any]] = []
+        try:
+            layers = build_stage_layers(stage_specs)
+            for layer in layers:
+                pending_stage_ids = [
+                    stage_id
+                    for stage_id in layer
+                    if stage_id not in completed_stage_ids
+                ]
+                if not pending_stage_ids:
+                    continue
+                layer_snapshot = json.loads(json.dumps(capsule))
+                layer_outcomes: dict[str, dict[str, Any]] = {}
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=max(1, args.max_parallel_stages)
+                ) as executor:
+                    future_map = {
+                        executor.submit(
+                            run_stage_once,
+                            stage_spec_map[stage_id],
+                            layer_snapshot,
+                        ): stage_id
+                        for stage_id in pending_stage_ids
+                    }
+                    for future in concurrent.futures.as_completed(future_map):
+                        stage_id = future_map[future]
+                        layer_outcomes[stage_id] = future.result()
+                ordered_outcomes = [
+                    layer_outcomes[stage_id] for stage_id in pending_stage_ids
+                ]
+                ordered_stage_results = [
+                    outcome["stage_result"] for outcome in ordered_outcomes
+                ]
+                pipeline_stage_results.extend(ordered_stage_results)
+                for outcome in ordered_outcomes:
+                    record_stage_outcome(outcome)
+                candidate_capsule, applied = apply_stage_results_atomically(
+                    layer_snapshot,
+                    ordered_stage_results,
+                )
+                if not applied:
+                    for outcome in ordered_outcomes:
+                        cleanup_stage_workspace(outcome)
+                    error_message = "pipeline execution failed"
+                    break
+                conflicting_files = detect_conflicting_stage_changes(
+                    ordered_outcomes
+                )
+                if conflicting_files:
+                    error_message = (
+                        "parallel stage file conflicts detected: "
+                        + ", ".join(conflicting_files)
+                    )
+                    for outcome in ordered_outcomes:
+                        cleanup_stage_workspace(outcome)
+                    break
+                for outcome in ordered_outcomes:
+                    promote_stage_workspace(outcome, root=ROOT_DIR)
+                capsule = candidate_capsule
+                completed_stage_ids.update(pending_stage_ids)
+                persist_state()
+                ordered_outcomes = []
+            success = len(completed_stage_ids) == len(stage_specs)
+            if success:
+                error_message = ""
+            elif not error_message:
+                error_message = "pipeline execution failed"
+        except ValueError as exc:
+            for outcome in ordered_outcomes:
+                cleanup_stage_workspace(outcome)
+            wrapper_error = True
+            error_message = str(exc)
+    else:
+        dynamic_stage_specs: dict[str, dict[str, Any]] = {}
+        queue = [
+            stage["id"]
+            for stage in stage_specs
+            if stage["id"] not in completed_stage_ids
+        ]
+        index = 0
+        outcome: dict[str, Any] | None = None
+        try:
+            while index < len(queue):
+                if len(queue) > args.max_stages:
+                    raise ValueError("pipeline stages exceed max_stages")
+                stage_id = queue[index]
+                stage_spec = find_stage_spec(
+                    canonical_spec,
+                    stage_id,
+                    dynamic_stage_specs,
+                )
+                if not isinstance(stage_spec, dict):
+                    raise ValueError("stage spec not found")
+                outcome = run_stage_once(stage_spec, capsule)
+                stage_result = outcome["stage_result"]
+                pipeline_stage_results.append(stage_result)
+                record_stage_outcome(outcome)
+                candidate_capsule, applied = apply_stage_result(
+                    capsule,
+                    stage_result,
+                    allow_dynamic=allow_dynamic,
+                    capsule_validator=validate_capsule_payload,
+                )
+                if not applied:
+                    error_message = "pipeline execution failed"
+                    cleanup_stage_workspace(outcome)
+                    break
+                promote_stage_workspace(outcome, root=ROOT_DIR)
+                capsule = candidate_capsule
+                completed_stage_ids.add(stage_id)
+                register_dynamic_stages(
+                    queue,
+                    index,
+                    stage_result,
+                    dynamic_stage_specs,
+                )
+                persist_state()
+                outcome = None
+                index += 1
+            success = index == len(queue)
+            if success:
+                error_message = ""
+            elif not error_message:
+                error_message = "pipeline execution failed"
+        except ValueError as exc:
+            if outcome is not None:
+                cleanup_stage_workspace(outcome)
+            wrapper_error = True
+            error_message = str(exc)
+
+    persist_state(success=success, error_message=error_message)
+    exit_code = determine_pipeline_exit_code(success, wrapper_error)
+    if not success:
+        final_store_mode, final_capsule_path, _ = resolve_capsule_delivery(
+            args.capsule_store,
+            capsule,
+            args.capsule_path,
+            pipeline_log_dir,
+            pipeline_run_id,
+        )
+        if final_store_mode == "file" and final_capsule_path:
+            write_capsule_file(final_capsule_path, capsule)
+        if enable_logging:
+            log = ExecutionLog(
+                execution={
+                    "mode": ExecutionMode.PIPELINE.value,
+                    "prompt": truncate_output(prompt, 1000),
+                    "sandbox": args.sandbox,
+                    "task_type": TaskType.CODE_GEN.value,
+                    "pipeline_run_id": pipeline_run_id,
+                    "pipeline_stages": [stage["id"] for stage in stage_specs],
+                    "allow_dynamic_stages": allow_dynamic,
+                    "capsule_store": args.capsule_store,
+                    "capsule_path": args.capsule_path,
+                    "max_stages": args.max_stages,
+                    "max_parallel_stages": args.max_parallel_stages,
+                    "timeout_seconds": args.timeout,
+                    "profile": args.profile,
+                    "model": args.model,
+                },
+                results=stage_logs,
+                evaluation={"heuristic": None, "human": None, "llm": None},
+                metadata=get_git_info(),
+            )
+            write_log(log)
+        if args.json:
+            evaluation = build_pipeline_evaluation(
+                stage_specs=stage_specs,
+                stage_results=pipeline_stage_results,
+                stage_logs=stage_logs,
+                final_capsule=capsule,
+                unauthorized_write_detected=unauthorized_write_detected,
+                used_graph=canonical_spec.get("uses_graph", False),
+                allow_dynamic=allow_dynamic,
+            )
+            payload = build_pipeline_output_payload(
+                pipeline_run_id=pipeline_run_id,
+                success=False,
+                stage_results=pipeline_stage_results,
+                final_capsule=capsule,
+                capsule_store=final_store_mode,
+                capsule_path=final_capsule_path,
+                evaluation=evaluation,
+                model=args.model,
+            )
+            print(json.dumps(payload, ensure_ascii=False, indent=2))
+        else:
+            print("[error] pipeline execution failed", file=sys.stderr)
+            print(serialize_capsule(capsule))
+        return exit_code
+
+    final_store_mode, final_capsule_path, _ = resolve_capsule_delivery(
+        args.capsule_store,
+        capsule,
+        args.capsule_path,
+        pipeline_log_dir,
+        pipeline_run_id,
+    )
+    if final_store_mode == "file" and final_capsule_path:
+        write_capsule_file(final_capsule_path, capsule)
+
+    evaluation = build_pipeline_evaluation(
+        stage_specs=stage_specs,
+        stage_results=pipeline_stage_results,
+        stage_logs=stage_logs,
+        final_capsule=capsule,
+        unauthorized_write_detected=unauthorized_write_detected,
+        used_graph=canonical_spec.get("uses_graph", False),
+        allow_dynamic=allow_dynamic,
+    )
+    persist_state(success=success, error_message=error_message)
+
+    if enable_logging:
+        log = ExecutionLog(
+            execution={
+                "mode": ExecutionMode.PIPELINE.value,
+                "prompt": truncate_output(prompt, 1000),
+                "sandbox": args.sandbox,
+                "task_type": TaskType.CODE_GEN.value,
+                "pipeline_run_id": pipeline_run_id,
+                "pipeline_stages": [stage["id"] for stage in stage_specs],
+                "allow_dynamic_stages": allow_dynamic,
+                "capsule_store": args.capsule_store,
+                "capsule_path": args.capsule_path,
+                "max_stages": args.max_stages,
+                "max_parallel_stages": args.max_parallel_stages,
+                "timeout_seconds": args.timeout,
+                "profile": args.profile,
+                "model": args.model,
+            },
+            results=stage_logs,
+            evaluation={"heuristic": evaluation, "human": None, "llm": None},
+            metadata=get_git_info(),
+        )
+        log_path = write_log(log)
+        if args.verbose and log_path:
+            print(f"Log saved: {log_path}", file=sys.stderr)
+
+    if args.json:
+        payload = build_pipeline_output_payload(
+            pipeline_run_id=pipeline_run_id,
+            success=success,
+            stage_results=pipeline_stage_results,
+            final_capsule=capsule,
+            capsule_store=final_store_mode,
+            capsule_path=final_capsule_path,
+            evaluation=evaluation,
+            model=args.model,
+        )
+        print(json.dumps(payload, ensure_ascii=False, indent=2))
+    else:
+        if not success:
+            print("[error] pipeline execution failed", file=sys.stderr)
+        print(serialize_capsule(capsule))
+    return EXIT_SUCCESS if success else EXIT_SUBAGENT_FAILED
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="codex exec サブエージェント実行ラッパー"
@@ -1802,6 +3523,13 @@ def main() -> int:
         help="LLM評価を強制実行",
     )
     parser.add_argument(
+        "--judge-mode",
+        type=str,
+        choices=[mode.value for mode in JudgeMode],
+        default=JudgeMode.HYBRID.value,
+        help="competition の最終選定方式",
+    )
+    parser.add_argument(
         "--pipeline-stages",
         type=str,
         default=None,
@@ -1837,8 +3565,24 @@ def main() -> int:
         default=10,
         help="pipeline の最大 stage 数",
     )
+    parser.add_argument(
+        "--max-parallel-stages",
+        type=int,
+        default=DEFAULT_MAX_PARALLEL_STAGES,
+        help="pipeline graph の最大並列 stage 数",
+    )
+    parser.add_argument(
+        "--resume-run",
+        type=str,
+        default=None,
+        help="pipeline の checkpoint state から再開する",
+    )
 
     args = parser.parse_args()
+
+    if args.max_parallel_stages <= 0:
+        print("[error] max_parallel_stages must be positive", file=sys.stderr)
+        return EXIT_WRAPPER_ERROR
 
     # --no-log が指定されていたらログを無効化
     enable_logging = args.log and not args.no_log
@@ -1870,6 +3614,7 @@ def main() -> int:
     sandbox = SandboxMode(args.sandbox)
     task_type = TaskType(args.task_type)
     strategy = SelectionStrategy(args.strategy)
+    judge_mode = JudgeMode(args.judge_mode)
     merge_strat = MergeStrategy(args.merge)
     exit_code = EXIT_SUCCESS
 
@@ -2113,6 +3858,7 @@ def main() -> int:
                 timeout=args.timeout,
                 task_type=task_type,
                 strategy=strategy,
+                judge_mode=judge_mode,
                 workdir=args.workdir,
                 profile=args.profile,
                 model=args.model,
@@ -2158,6 +3904,7 @@ def main() -> int:
                     "task_type": task_type.value,
                     "count": args.count,
                     "strategy": strategy.value,
+                    "judge_mode": judge_mode.value,
                     "timeout_seconds": args.timeout,
                     "profile": args.profile,
                     "model": args.model,
@@ -2186,6 +3933,7 @@ def main() -> int:
                     "heuristic": heuristic_eval,
                     "human": None,
                     "llm": llm_eval,
+                    "selection": outcome.selection,
                 },
                 metadata=get_git_info(),
             )
@@ -2217,6 +3965,7 @@ def main() -> int:
                         "output_is_partial": best.result.output_is_partial,
                         "error_message": best.result.error_message,
                         "llm_evaluation": llm_eval,
+                        "selection": outcome.selection,
                     },
                     ensure_ascii=False,
                     indent=2,
@@ -2231,232 +3980,15 @@ def main() -> int:
         )
 
     elif mode == ExecutionMode.PIPELINE:
-        pipeline_run_id = str(uuid.uuid4())
         try:
-            pipeline_spec = (
-                load_pipeline_spec(args.pipeline_spec)
-                if args.pipeline_spec
-                else None
-            )
-            stage_ids = resolve_pipeline_stage_ids(
-                args.pipeline_stages, pipeline_spec
-            )
-            if pipeline_spec is None:
-                allow_dynamic = args.allow_dynamic_stages
-            else:
-                allow_dynamic = bool(
-                    pipeline_spec.get("allow_dynamic_stages", False)
-                )
-            allowed_stage_ids = (
-                pipeline_spec.get("allowed_stage_ids")
-                if pipeline_spec
-                else None
-            )
-            if allowed_stage_ids is not None:
-                allowed_stage_ids_set = set(allowed_stage_ids)
-            else:
-                allowed_stage_ids_set = None
-            max_total_prompt_chars = (
-                pipeline_spec.get("max_total_prompt_chars")
-                if pipeline_spec
-                else None
+            exit_code = run_pipeline_mode(
+                args=args,
+                task_type=task_type,
+                enable_logging=enable_logging,
             )
         except ValueError as exc:
             print(f"[error] {exc}", file=sys.stderr)
             return EXIT_WRAPPER_ERROR
-
-        capsule = build_initial_capsule(args.prompt, pipeline_run_id, sandbox)
-        stage_logs: list[dict[str, Any]] = []
-        dynamic_stage_specs: dict[str, dict[str, Any]] = {}
-
-        def stage_runner(
-            stage_id: str,
-            capsule_state: dict[str, Any],
-        ) -> dict[str, Any]:
-            validate_json_schema(capsule_state, "capsule")
-            store_mode, capsule_path, size_bytes = resolve_capsule_delivery(
-                args.capsule_store,
-                capsule_state,
-                args.capsule_path,
-                LOG_DIR,
-                pipeline_run_id,
-            )
-            if store_mode == "file" and capsule_path:
-                write_capsule_file(capsule_path, capsule_state)
-
-            stage_spec = find_stage_spec(
-                pipeline_spec, stage_id, dynamic_stage_specs
-            )
-            stage_prompt = prepare_stage_prompt(
-                stage_id=stage_id,
-                base_prompt=args.prompt,
-                capsule=capsule_state,
-                capsule_store=store_mode,
-                capsule_path=capsule_path,
-                stage_spec=stage_spec,
-                max_total_prompt_chars=max_total_prompt_chars,
-                allow_dynamic=allow_dynamic,
-            )
-            result = run_codex_exec(
-                prompt=stage_prompt,
-                sandbox=sandbox,
-                timeout=args.timeout,
-                workdir=args.workdir,
-                profile=args.profile,
-                model=args.model,
-            )
-
-            if not result.success:
-                stage_result = stage_result_from_exec_failure(stage_id, result)
-                stage_log = build_stage_log(
-                    stage_id=stage_id,
-                    pipeline_run_id=pipeline_run_id,
-                    capsule_state=capsule_state,
-                    store_mode=store_mode,
-                    capsule_path=capsule_path,
-                    size_bytes=size_bytes,
-                    exec_result=result,
-                    stage_result=stage_result,
-                )
-                stage_logs.append(stage_log)
-                return stage_result
-
-            try:
-                stage_result = parse_stage_result_output(
-                    result.output, allow_dynamic=allow_dynamic
-                )
-            except ValueError as exc:
-                stage_result = {
-                    "schema_version": SCHEMA_VERSION,
-                    "stage_id": stage_id,
-                    "status": "fatal_error",
-                    "output_is_partial": True,
-                    "capsule_patch": [],
-                    "summary": f"stage_result parse failed: {exc}",
-                }
-            stage_log = build_stage_log(
-                stage_id=stage_id,
-                pipeline_run_id=pipeline_run_id,
-                capsule_state=capsule_state,
-                store_mode=store_mode,
-                capsule_path=capsule_path,
-                size_bytes=size_bytes,
-                exec_result=result,
-                stage_result=stage_result,
-            )
-            stage_logs.append(stage_log)
-            return stage_result
-
-        def on_stage_complete(
-            stage_id: str,
-            capsule_state: dict[str, Any],
-            stage_result: dict[str, Any],
-            applied: bool,
-        ) -> None:
-            if not stage_logs:
-                return
-            store_mode, capsule_path, size_bytes = resolve_capsule_delivery(
-                args.capsule_store,
-                capsule_state,
-                args.capsule_path,
-                LOG_DIR,
-                pipeline_run_id,
-            )
-            if store_mode == "file" and capsule_path and applied:
-                write_capsule_file(capsule_path, capsule_state)
-
-            stage_logs[-1]["capsule_hash_after"] = compute_capsule_hash(
-                capsule_state
-            )
-            stage_logs[-1]["capsule_size_bytes_after"] = size_bytes
-            stage_logs[-1]["capsule_store_after"] = store_mode
-            stage_logs[-1]["capsule_path_after"] = (
-                str(capsule_path) if capsule_path else None
-            )
-            stage_logs[-1]["applied"] = applied
-
-        (
-            exit_code,
-            final_capsule,
-            stage_results,
-            success,
-            error_message,
-        ) = run_pipeline_with_runner(
-            stage_ids=stage_ids,
-            capsule=capsule,
-            stage_runner=stage_runner,
-            allow_dynamic=allow_dynamic,
-            max_stages=args.max_stages,
-            on_stage_complete=on_stage_complete,
-            allowed_stage_ids=allowed_stage_ids_set,
-            dynamic_stage_specs=dynamic_stage_specs,
-        )
-        if exit_code == EXIT_WRAPPER_ERROR and error_message:
-            print(f"[error] {error_message}", file=sys.stderr)
-
-        final_store_mode, final_capsule_path, _ = resolve_capsule_delivery(
-            args.capsule_store,
-            final_capsule,
-            args.capsule_path,
-            LOG_DIR,
-            pipeline_run_id,
-        )
-        if final_store_mode == "file" and final_capsule_path:
-            write_capsule_file(final_capsule_path, final_capsule)
-
-        if enable_logging:
-            log = ExecutionLog(
-                execution={
-                    "mode": mode.value,
-                    "prompt": truncate_output(args.prompt, 1000),
-                    "sandbox": sandbox.value,
-                    "task_type": task_type.value,
-                    "pipeline_run_id": pipeline_run_id,
-                    "pipeline_stages": stage_ids,
-                    "allow_dynamic_stages": allow_dynamic,
-                    "capsule_store": args.capsule_store,
-                    "capsule_path": args.capsule_path,
-                    "max_stages": args.max_stages,
-                    "timeout_seconds": args.timeout,
-                    "profile": args.profile,
-                    "model": args.model,
-                },
-                results=stage_logs,
-                evaluation={
-                    "heuristic": None,
-                    "human": None,
-                    "llm": None,
-                },
-                metadata=get_git_info(),
-            )
-            log_path = write_log(log)
-            if args.verbose and log_path:
-                print(f"Log saved: {log_path}", file=sys.stderr)
-
-        if args.json:
-            payload = build_pipeline_output_payload(
-                pipeline_run_id=pipeline_run_id,
-                success=success,
-                stage_results=stage_results,
-                final_capsule=final_capsule,
-                capsule_store=final_store_mode,
-                capsule_path=final_capsule_path,
-                model=args.model,
-            )
-            print(
-                json.dumps(
-                    payload,
-                    ensure_ascii=False,
-                    indent=2,
-                )
-            )
-        else:
-            if not success:
-                print(
-                    "[error] pipeline execution failed",
-                    file=sys.stderr,
-                )
-            print(serialize_capsule(final_capsule))
 
     return exit_code
 
