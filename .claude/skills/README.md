@@ -1,5 +1,11 @@
 # Skills Notes
 
+Project-local skills now have three layers:
+
+- canonical reference: `docs/ai/skills/*.md`
+- Claude entrypoint: `.claude/skills/<skill-name>/`
+- Codex entrypoint: `.agents/skills/<skill-name>` with `.codex/skills/<skill-name>` kept as a compatibility shim
+
 ## ai-agent-collaboration-exec
 
 ### Dependency Checks (examples)

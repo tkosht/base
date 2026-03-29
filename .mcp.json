@@ -8,18 +8,6 @@
         "@modelcontextprotocol/server-sequential-thinking"
       ],
       "env": {}
-    },
-    "serena": {
-      "type": "sse",
-      "url": "http://localhost:9121/sse"
-    },
-    "cognee": {
-      "type": "stdio",
-      "command": "sh",
-      "args": [
-        "bin/run_cognee.sh"
-      ],
-      "env": {}
     }
   }
 }

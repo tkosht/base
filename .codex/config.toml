@@ -1,22 +1,15 @@
 projects = { "/home/devuser/workspace" = { trust_level = "trusted" } }
 model = "gpt-5.4"
 model_provider = "openai"
-approval_policy = "never"           # 完全自動
-sandbox_mode    = "danger-full-access"
-# sandbox_mode    = "workspace-write" # 読み書き可（ワークスペース内）
-# sandbox_mode    = "read-only"
+approval_policy = "on-request"
+sandbox_mode = "workspace-write"
 model_reasoning_effort = "xhigh"
-plan_mode_reasoning_effort = "high"
+plan_mode_reasoning_effort = "xhigh"
 personality = "pragmatic"
-
-# experimental_use_rmcp_client = true     # for codex cli mcp
 
 
 [sandbox_workspace_write]
-network_access = true               # ★ネット許可
-
-[sandbox_danger_full_access]
-network_access = true               # ★ネット許可
+network_access = false
 
 [profiles.very-fast]
 model_reasoning_effort = "minimal"
@@ -29,40 +22,6 @@ model_reasoning_effort = "medium"
 
 [profiles.deep]
 model_reasoning_effort = "high"
-web_search_request = true       # ツール利用時のweb search 設定
 
-[mcp_servers.codex_mcp]
-command = "codex"
-args = ["mcp-server"]
-enabled_tools = ["codex", "codex-reply"]
-# tool_timeout_sec = 600000          # 高推論でも落ちにくく
-tool_timeout_sec = 10000
-# 重要: サーバ側の HOME を隔離して同じ config を読ませない（再帰防止）
-env = { "HOME" = "/tmp/codex-mcp-home" }
-
-
-[mcp_servers.context7]
-command = "npx"
-args = ["-y", "@upstash/context7-mcp"]
-
-[mcp_servers.sequential-thinking]
-command = "npx"
-args = ["-y", "@modelcontextprotocol/server-sequential-thinking"]
-
-[mcp_servers.serena]
-command = "npx"
-args = ["-y", "mcp-remote@latest", "http://serena:9121/sse", "--allow-http", "--transport", "sse-only", "--context", "codex"]
-
-[notice]
-hide_gpt5_1_migration_prompt = true
-"hide_gpt-5.1-codex-max_migration_prompt" = true
-
-[notice.model_migrations]
-"gpt-5.1-codex-max" = "gpt-5.4"
-
-[plugins."gmail@openai-curated"]
-enabled = true
-
-[plugins."box@openai-curated"]
-enabled = true
-
+[sandbox_read_only]
+network_access = false

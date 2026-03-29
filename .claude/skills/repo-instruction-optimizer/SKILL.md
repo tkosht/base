@@ -1,6 +1,6 @@
 ---
 name: repo-instruction-optimizer
-description: "このリポジトリの repo-local instruction surface を整理・最適化・評価するときに使う。Use when requests involve AGENTS.md / CLAUDE.md / GEMINI.md / Cursor rules の canonical 化、thin adapter 化、Always-On context の削減、OnDemand / Deprecated への整理、instruction 変更のレビュー、または before/after の軽量評価設計。"
+description: "このリポジトリの repo-local instruction surface を整理・最適化・評価するときに使う。Use when requests involve AGENTS.md / CLAUDE.md / docs/ai / docs/standards / compatibility adapters の canonical 化、thin adapter 化、Always-On context の削減、OnDemand / Deprecated への整理、instruction 変更のレビュー、または before/after の軽量評価設計。"
 ---
 
 # Repo Instruction Optimizer

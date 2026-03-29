@@ -1,13 +1,12 @@
 [project]
-name = "base"
+name = "ai-agent-repository-template"
 version = "0.1.0"
-description = "ベース開発環境"
+description = "AI agent repository template control plane"
 authors = [{ name = "AI Developer", email = "dev@example.com" }]
 requires-python = ">=3.12,<=3.14"
 dependencies = [
     "jsonschema",
-    "numpy",
-    "pandas",
+    "pyyaml",
 ]
 
 [dependency-groups]
@@ -93,7 +92,7 @@ combine-as-imports = true
 "bin/claude_slash_runner.py" = ["E501"]
 
 [tool.pytest.ini_options]
-testpaths = ["tests/codex_subagent", "tests/test_base_harness_set.py"]
+testpaths = ["tests"]
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

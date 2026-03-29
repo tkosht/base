@@ -1,0 +1,88 @@
+name: Template Health
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - ".agents/**"
+      - ".claude/**"
+      - ".codex/config.toml"
+      - ".devcontainer/**"
+      - ".github/**"
+      - ".mcp.json"
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "CODE_OF_CONDUCT.md"
+      - "Makefile"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/**"
+      - "scripts/**"
+      - "templates/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  pull_request:
+    branches: [main]
+    paths:
+      - ".agents/**"
+      - ".claude/**"
+      - ".codex/config.toml"
+      - ".devcontainer/**"
+      - ".github/**"
+      - ".mcp.json"
+      - "AGENTS.md"
+      - "CLAUDE.md"
+      - "README.md"
+      - "CONTRIBUTING.md"
+      - "SECURITY.md"
+      - "CODE_OF_CONDUCT.md"
+      - "Makefile"
+      - "package.json"
+      - "package-lock.json"
+      - "docs/**"
+      - "scripts/**"
+      - "templates/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+
+jobs:
+  template-health:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-groups --all-extras
+          npm ci
+
+      - name: Validate template structure
+        run: |
+          uv run python scripts/ci/validate_template.py
+
+      - name: Run linters
+        run: |
+          uv run ruff check .
+          uv run black --check .
+
+      - name: Run tests
+        run: |
+          uv run pytest -q tests/test_base_harness_set.py tests/test_template_contract.py tests/template_smoke tests/codex_subagent
