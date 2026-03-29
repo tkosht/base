@@ -498,6 +498,14 @@ function calculate_effectiveness_metrics() {
 ## 🔧 Integration with Existing Frameworks
 
 ### TDD Integration
+この repo では、新機能の開発で TDD を既定動作として扱い、詳細運用はこの節で補う。
+
+#### Repo Default for New Feature Work
+- 適用対象: 新機能、新規エンドポイント、新規コマンド、新規ワークフロー、新規主要コンポーネント
+- 基本サイクル: 失敗テストまたは受け入れテストを先に追加し、最小実装で通し、必要最小限のリファクタで整える
+- 例外条件: 外部依存のためハーネスが未整備、探索スパイク、設定や配線のみで振る舞いを孤立させにくい変更
+- 例外時の報告: TDD を採らない理由、代替検証、未実行 gate を最終報告に残す
+
 ```bash
 TDD_CDTE_INTEGRATION=(
     "TEST_CHECKLIST_SYNC: Synchronize test requirements with task checklists"
