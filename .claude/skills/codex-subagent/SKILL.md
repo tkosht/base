@@ -9,7 +9,7 @@ allowed-tools:
   - Write
   - Glob
 metadata:
-  version: 0.3.0
+  version: 0.4.0
   owner: codex
   maturity: draft
   tags: [skill, codex, subagent, codex-exec, orchestrator]
@@ -21,6 +21,7 @@ codex-subagent は `codex exec` を「サブエージェント」として複数
 - 実体: `.claude/skills/codex-subagent/scripts/codex_exec.py`（実行）、`codex_query.py`（ログ検索）、`codex_feedback.py`（人間評価）
 - 既定サンドボックス: `read-only`（安全・再現性優先）
 - ログ: `.codex/sessions/codex_exec/{human|auto}/YYYY/MM/DD/run-*.jsonl`（TTY で自動分類）
+- v2 pipeline: `schema_version: "2.0"` の spec、checkpoint state、`--resume-run`、`depends_on` DAG、stage ごとの `role` / `write_roots` / `max_attempts` に対応
 
 ## Quick Start
 ```bash
@@ -37,25 +38,34 @@ uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
 # COMPETITION: N回実行→評価→最良選択（品質重視）
 uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
   --mode competition --count 3 --task-type code_review --strategy best_single \
+  --judge-mode hybrid \
   --sandbox read-only --json --prompt "$PROMPT"
 
-# PIPELINE: Draft→Critique→Revise の協調実行
+# PIPELINE v2: spec 駆動 / checkpoint / branch-join
 uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
-  --mode pipeline --pipeline-stages draft,critique,revise \
+  --mode pipeline --pipeline-spec "$SPEC" --max-parallel-stages 2 \
   --capsule-store auto --sandbox read-only --json --prompt "$PROMPT"
+
+# Resume from checkpoint
+uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
+  --mode pipeline --resume-run .codex/sessions/codex_exec/human/artifacts/<run-id>/state.json \
+  --json --prompt "$PROMPT"
 ```
 
 ## Execution Modes
 - `single`: 1回だけ `codex exec` を実行し、そのまま出力。
 - `parallel`: 同一プロンプトを `--count N` 回並列実行し、`--merge` で統合。
-- `competition`: 同一プロンプトを `--count N` 回実行し、`--task-type` と `--strategy` で最良案を選択（必要に応じて LLM 評価も実行）。
-- `pipeline`: 複数 stage を順次実行し、Context Capsule を介して協調させる。
+- `competition`: 同一プロンプトを `--count N` 回実行し、`--task-type` と `--strategy` で候補を絞り、`--judge-mode hybrid` なら pairwise judge で最終選定する。
+- `pipeline`: `schema_version: "2.0"` の spec を受け取り、checkpoint/resume、stage ごとの権限、`depends_on` DAG、legacy linear pipeline を扱う。
 
 代表的なパラメータ:
 - `--task-type`: `code_gen|code_review|analysis|documentation`
 - `--model`: `codex exec --model` に渡すモデル名（例: `gpt-5.3-codex-spark`）
 - `--merge`: `concat|dedup|priority|consensus`（parallel）
 - `--strategy`: `best_single|voting|hybrid|conservative`（competition）
+- `--judge-mode`: `heuristic|hybrid`（competition）
+- `--resume-run`: `state.json` または `run_id`
+- `--max-parallel-stages`: graph pipeline の同時実行上限
 
 ## Context Engineering
 - プロンプトは「1タスク=1プロンプト」を原則とし、出力形式（箇条書き/JSON/ファイル一覧など）を明示。
@@ -168,9 +178,16 @@ Return JSON ONLY. capsule_patch で /draft を object で更新すること。
 - draft→critique→revise で品質向上（critique で行番号修正、根拠追加など）
 - 構造化された出力形式を指定すると効果的
 - 複雑なタスクは 600 秒タイムアウト推奨
+- 新規 spec は `schema_version: "2.0"` を明示し、必要なら `depends_on` で branch/join を表現する
+- `role`, `write_roots`, `max_attempts`, `input_keys` を stage ごとに明示すると、review / verify / reducer の逸脱を抑えやすい
+- graph で writer stage を使う場合は `write_roots` を明示する。parallel branch は isolated workspace 上で走り、同じファイルを変更した branch は conflict failure になる
+- pipeline mode の `workdir` は repo 内だけを許可し、absolute path でも isolated workspace 配下へ remap される。repo 外 path は拒否される
+- 失敗後は checkpoint state から `--resume-run` で再開できる
+- `--resume-run <run_id>` は現在の `--log-dir` / `--log-scope` 配下を優先し、見つからない場合だけ default log root を探索する
 - **注意**: pipeline は各ステージが **JSON の stage_result** を返し、**capsule の `draft/critique/revise` は object 型**でなければならない。文字列で上書きするとスキーマ違反で失敗する。
 - 例（patch で object を更新）:
   - `{"op":"replace","path":"/critique","value":{"summary":"...","issues":["..."]}}`
+- `--pipeline-stages` は legacy shorthand として維持するが、新規 pipeline は `--pipeline-spec` を優先する
 
 ### プロファイル・タイムアウト
 - `--profile very-fast` は gpt-5.2-codex で reasoning effort `minimal` が未対応となり 400 エラーが発生した（2026-01-10 の実行ログで確認）。このモデルでは避けるか、必要なら `--profile fast` を小タスクで事前検証する。
@@ -181,7 +198,10 @@ Return JSON ONLY. capsule_patch で /draft を object で更新すること。
 - タイムアウト時は `success=false` / `timed_out=true` / `error_message="Timeout after <N>s"` となる。`output`/`stderr` は取得できた範囲で保持され、`output_is_partial=true` として扱う（`.claude/skills/codex-subagent/scripts/codex_exec.py` はプロセスグループを終了して残留を回避）。
 - `codex exec` が非0終了した場合は stdout は保持され、stderr は `stderr` に入り、`error_message` にも反映される（`--json` で確認）。
 - `competition` のログは候補全件を保存し、`selected=true` の1件が最終採用案（デバッグ/再現性のため）。
-- `pipeline` の JSON 出力は `{pipeline_run_id, success, stage_results, capsule, capsule_hash, capsule_store, capsule_path}` を返す。
+- `competition` は `selection` に heuristic winner と pairwise judge の根拠を残す。
+- `pipeline` の JSON 出力は `{pipeline_run_id, success, stage_results, capsule, capsule_hash, capsule_store, capsule_path, evaluation}` を返す。
+- `evaluation.retry_policy_followed` は stage log の attempt 記録から導出され、証拠が足りない場合は `false` になる。
+- pipeline stage log には `role`, `attempt`, `write_roots`, `changed_files`, `unauthorized_files`, `checkpoint state` に必要な情報が残る。
 - **終了コードの区別**:
   - **ラッパー終了コード**（`codex_exec.py` の `sys.exit()` 値）: `0=全成功`, `2=サブエージェント失敗`, `3=ラッパー内部エラー`
   - **returncode**（`results[].returncode`）: サブプロセス（codex exec）の終了コード。タイムアウト時は `0` になることがある
