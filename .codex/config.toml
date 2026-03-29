@@ -6,8 +6,8 @@ sandbox_mode    = "danger-full-access"
 # sandbox_mode    = "workspace-write" # 読み書き可（ワークスペース内）
 # sandbox_mode    = "read-only"
 model_reasoning_effort = "xhigh"
+plan_mode_reasoning_effort = "high"
 personality = "pragmatic"
-# model_reasoning_effort = "medium"
 
 # experimental_use_rmcp_client = true     # for codex cli mcp
 
