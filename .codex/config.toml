@@ -2,14 +2,19 @@ projects = { "/home/devuser/workspace" = { trust_level = "trusted" } }
 model = "gpt-5.4"
 model_provider = "openai"
 approval_policy = "never"
-sandbox_mode = "workspace-write"
+# sandbox_mode = "workspace-write"
 # この template の shipped default は、承認待ちを挟まない代わりに
 # workspace-write と network_access=false に留める reviewed default。
 # generated repo は bootstrap 時に .codex/config.toml を見直し、
 # threat model に応じて on-request / danger-full-access へ明示的に調整する。
 # full access は既定にしない。必要時だけ明示的に緩和する。
+# この repo では、現行の Ubuntu Docker + devuser 環境で
+# workspace-write が bwrap の権限制約により失敗するため、
+# 当面は devuser のまま danger-full-access を採用する。
+# 見直し条件は docs/architecture/decision-records/
+# 2026-03-30-codex-workspace-write-bwrap-sandbox.md を参照。
 # approval_policy = "on-request"
-# sandbox_mode = "danger-full-access"
+sandbox_mode = "danger-full-access"
 
 model_reasoning_effort = "xhigh"
 plan_mode_reasoning_effort = "xhigh"

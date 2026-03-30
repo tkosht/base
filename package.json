@@ -5,5 +5,8 @@
   "devDependencies": {
     "@anthropic-ai/claude-code": "^2.1.87",
     "@openai/codex": "^0.117.0"
+  },
+  "dependencies": {
+    "@google/gemini-cli": "^0.35.3"
   }
 }
