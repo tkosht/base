@@ -44,6 +44,7 @@ Until a host-level or Codex-runtime-level fix is available:
 
 - keep Codex running as non-root `devuser`
 - use `danger-full-access` as the practical operating mode for this container
+- use this observation as rationale for shipping `danger-full-access` as the template default, while still allowing generated repos to tighten to `workspace-write` when their environment supports it
 - do not assume repository permission changes are the cause of this failure
 - do not spend further time tuning `compose.yml` for this specific `RTM_NEWADDR` failure unless the Docker or host security model changes
 - do not switch the default operating mode to `root` plus `workspace-write` unless the risk trade-off is explicitly re-evaluated
@@ -54,6 +55,7 @@ Until a host-level or Codex-runtime-level fix is available:
 - `workspace-write` is currently not a usable sandbox mode in this environment.
 - Normal repository work can continue as `devuser` in `danger-full-access`.
 - If `workspace-write` becomes a hard requirement, investigate the Docker host / nested sandbox interaction rather than repo-local permissions.
+- This memo records environment evidence. It does not claim that `workspace-write` is universally unusable across all generated repos.
 
 ## Assumptions
 
