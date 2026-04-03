@@ -9,9 +9,10 @@ services:
     image: $pj_name.app
     container_name: $pj_name.app
     privileged: true
+    userns_mode: host
     tty: true
     volumes:
       - .:/home/$user_name/workspace
-      - .ssh/:/home/$user_name/.ssh/
+      - .ssh/:/home/$user_name/.ssh/:ro
     working_dir: /home/$user_name/workspace
 

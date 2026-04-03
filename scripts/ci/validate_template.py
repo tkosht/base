@@ -103,6 +103,41 @@ TERM_EXPANSIONS = {
     ),
     "OAuth": ("OAuth 認証",),
 }
+SUPPORTED_CODEX_SANDBOX_MODES = {
+    "danger-full-access",
+    "workspace-write",
+}
+CODEX_SHARED_DEFAULT_EXPECTATIONS = {
+    "docs/standards/security.md": (
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        "workspace-write",
+        "generated repo",
+        "mount 範囲",
+        "秘密情報",
+        "外向き通信",
+        "sandbox_workspace_write.network_access = false",
+    ),
+    "docs/ai/repo-contract.md": (
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        "workspace-write",
+        "generated repo",
+        "threat model",
+        "mount 範囲",
+        "秘密情報",
+        "外向き通信",
+        "sandbox_workspace_write.network_access = false",
+    ),
+    "docs/architecture/decision-records/codex-shared-defaults.md": (
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        "workspace-write",
+        "generated repo",
+        "threat model",
+        "sandbox_workspace_write.network_access = false",
+    ),
+}
 
 
 def _check_primary_terminology(root: Path, errors: list[str]) -> None:
@@ -124,42 +159,25 @@ def _check_codex_shared_defaults(root: Path, errors: list[str]) -> None:
     config = tomllib.loads(config_text)
     if config.get("approval_policy") != "never":
         return
-    if config.get("sandbox_mode") != "workspace-write":
+    sandbox_mode = config.get("sandbox_mode")
+    if sandbox_mode not in SUPPORTED_CODEX_SANDBOX_MODES:
         errors.append(
-            '.codex/config.toml must keep sandbox_mode = "workspace-write" '
+            ".codex/config.toml must keep sandbox_mode in "
+            '{"danger-full-access", "workspace-write"} '
             'when approval_policy = "never" is shipped'
         )
-    workspace_write = config.get("sandbox_workspace_write")
-    if not isinstance(workspace_write, dict) or (
-        workspace_write.get("network_access") is not False
-    ):
-        errors.append(
-            ".codex/config.toml must keep "
-            "sandbox_workspace_write.network_access = false "
-            'when approval_policy = "never" is shipped'
-        )
+    if sandbox_mode == "workspace-write":
+        workspace_write = config.get("sandbox_workspace_write")
+        if not isinstance(workspace_write, dict) or (
+            workspace_write.get("network_access") is not False
+        ):
+            errors.append(
+                ".codex/config.toml must keep "
+                "sandbox_workspace_write.network_access = false "
+                'when approval_policy = "never" is shipped'
+            )
 
-    expectations = {
-        "docs/standards/security.md": (
-            'approval_policy = "never"',
-            'sandbox_mode = "workspace-write"',
-            "network_access = false",
-            "generated repo",
-        ),
-        "docs/ai/repo-contract.md": (
-            'approval_policy = "never"',
-            'sandbox_mode = "workspace-write"',
-            "network_access = false",
-            "threat model",
-        ),
-        "docs/architecture/decision-records/codex-shared-defaults.md": (
-            'approval_policy = "never"',
-            'sandbox_mode = "workspace-write"',
-            "network_access = false",
-            "generated repo",
-        ),
-    }
-    for rel, needles in expectations.items():
+    for rel, needles in CODEX_SHARED_DEFAULT_EXPECTATIONS.items():
         text = (root / rel).read_text(encoding="utf-8")
         for needle in needles:
             if needle not in text:

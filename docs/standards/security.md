@@ -4,5 +4,6 @@
 - shared Model Context Protocol（MCP）設定 / agent settings の追加はレビュー済みのものだけにする
 - 公開 repo の runner は GitHub-hosted を基本とし、self-hosted は理由を明示する
 - テンプレートの default は原則として安全側に倒し、緩和は generated repo 側で判断する
-- 例外として、この template の `.codex/config.toml` は `approval_policy = "never"`、`sandbox_mode = "workspace-write"`、`network_access = false` を shipped default にする。これは maintainer-local の取りこぼしではなく、repo-local coding workflow 向けにレビュー済みの既定値である
-- 上の例外でも `danger-full-access` は既定にしない。generated repo が `danger-full-access` を選ぶ場合は、少なくとも mount 範囲、秘密情報、network egress、container の破棄容易性を見直してから明示的に変更する
+- 例外として、この template の `.codex/config.toml` は `approval_policy = "never"` と `sandbox_mode = "danger-full-access"` を shipped default にする。これは maintainer-local の取りこぼしではなく、Ubuntu Docker + `devuser` のように `workspace-write` が高確率で成立しない環境でも初期状態から動くようにするための reviewed default である
+- generated repo は bootstrap 後に `.codex/config.toml` を threat model に合わせて見直す。`danger-full-access` を維持する場合は、少なくとも mount 範囲、秘密情報、外向き通信、container の破棄容易性を確認する
+- generated repo が `workspace-write` に tighten する場合は、`sandbox_workspace_write.network_access = false` を維持し、関連 docs の説明と設定の整合を保つ
