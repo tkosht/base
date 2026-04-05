@@ -3,7 +3,7 @@
   "private": true,
   "description": "Control-plane tooling for the AI agent repository template",
   "devDependencies": {
-    "@anthropic-ai/claude-code": "^2.1.87",
+    "@anthropic-ai/claude-code": "^2.1.92",
     "@google/gemini-cli": "^0.36.0",
     "@openai/codex": "^0.118.0"
   }
