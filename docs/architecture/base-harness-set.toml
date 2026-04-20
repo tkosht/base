@@ -24,6 +24,7 @@ workflows = [
 
 included_paths = [
   ".gitignore",
+  "DESIGN.md",
   "AGENTS.md",
   "CLAUDE.md",
   "GEMINI.md",
@@ -53,6 +54,9 @@ included_paths = [
   "docs/ai/checklists/codex-mcp-collaboration-template.md",
   "docs/ai/skills/README.md",
   "docs/ai/skills/ai-agent-collaboration-exec.md",
+  "docs/design/README.md",
+  "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
+  "docs/design/samples/starter-b2b-corporate/preview.html",
   "docs/architecture/base-harness-set.md",
   "docs/architecture/base-harness-set.toml",
   "docs/architecture/knowledge-architecture.md",

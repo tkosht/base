@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Starter B2B Corporate Preview</title>
+    <style>
+      :root {
+        --bg: #f6f5f1;
+        --surface: #ffffff;
+        --surface-strong: #eef0e7;
+        --text: #1f2322;
+        --text-muted: #616867;
+        --border: #d8ddd7;
+        --accent: #1f6a5c;
+        --accent-strong: #174f45;
+        --accent-soft: #dceee8;
+        --shadow: 0 20px 48px rgba(17, 27, 24, 0.08);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at top left, #fbfaf7 0, transparent 32%),
+          linear-gradient(180deg, #f9f7f3 0%, var(--bg) 36%, #f0f2ec 100%);
+      }
+
+      .page {
+        width: min(1180px, calc(100vw - 32px));
+        margin: 0 auto;
+        padding: 24px 0 80px;
+      }
+
+      .note {
+        display: grid;
+        gap: 12px;
+        margin-bottom: 24px;
+        padding: 18px 20px;
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.82);
+        box-shadow: var(--shadow);
+      }
+
+      .note strong {
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: 1.15fr 0.85fr;
+        gap: 24px;
+        align-items: stretch;
+        margin-bottom: 24px;
+      }
+
+      .panel {
+        border: 1px solid var(--border);
+        border-radius: 28px;
+        background: rgba(255, 255, 255, 0.92);
+        box-shadow: var(--shadow);
+      }
+
+      .hero-copy {
+        padding: 40px;
+      }
+
+      .eyebrow {
+        margin: 0 0 12px;
+        font-size: 13px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(34px, 4.8vw, 48px);
+        line-height: 1.12;
+      }
+
+      .lede {
+        margin: 18px 0 0;
+        max-width: 36rem;
+        font-size: 16px;
+        line-height: 1.85;
+        color: var(--text-muted);
+      }
+
+      .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-top: 28px;
+      }
+
+      .button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 48px;
+        padding: 0 20px;
+        border-radius: 999px;
+        font-weight: 700;
+        text-decoration: none;
+      }
+
+      .button-primary {
+        color: #fff;
+        background: var(--accent);
+      }
+
+      .button-secondary {
+        color: var(--accent-strong);
+        background: #fff;
+        border: 1px solid var(--border);
+      }
+
+      .hero-visual {
+        padding: 24px;
+        display: grid;
+        gap: 16px;
+        background:
+          linear-gradient(180deg, rgba(220, 238, 232, 0.8), rgba(255, 255, 255, 0.96)),
+          var(--surface);
+      }
+
+      .visual-card {
+        padding: 18px;
+        border: 1px solid rgba(31, 106, 92, 0.16);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.9);
+      }
+
+      .visual-card strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 13px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent-strong);
+      }
+
+      .metrics,
+      .features {
+        display: grid;
+        gap: 24px;
+        margin-top: 24px;
+      }
+
+      .metrics {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      .metric,
+      .feature {
+        padding: 24px;
+      }
+
+      .metric-number {
+        font-family: "Inter", "Helvetica Neue", Arial, sans-serif;
+        font-size: 38px;
+        font-weight: 700;
+        line-height: 1;
+      }
+
+      .metric-label {
+        margin-top: 10px;
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      .features {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+
+      h2 {
+        margin: 0 0 12px;
+        font-size: 28px;
+        line-height: 1.3;
+      }
+
+      p {
+        margin: 0;
+        font-size: 15px;
+        line-height: 1.8;
+        color: var(--text-muted);
+      }
+
+      .feature ul {
+        margin: 16px 0 0;
+        padding-left: 18px;
+        color: var(--text-muted);
+      }
+
+      .cta-band {
+        margin-top: 24px;
+        padding: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        background: linear-gradient(135deg, var(--accent-soft), #f7fbfa);
+      }
+
+      .cta-band p {
+        max-width: 34rem;
+      }
+
+      @media (max-width: 900px) {
+        .hero,
+        .metrics,
+        .features,
+        .cta-band {
+          grid-template-columns: 1fr;
+          display: grid;
+        }
+
+        .hero-copy,
+        .hero-visual,
+        .cta-band {
+          padding: 28px;
+        }
+
+        .cta-band {
+          justify-content: start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="page">
+      <section class="note">
+        <strong>Reference-only</strong>
+        <div>Source note: generic corporate starter for this template. No specific public brand was copied.</div>
+        <div>Reviewed date: 2026-04-19</div>
+        <div>Sync note: root <code>DESIGN.md</code> remains canonical. Keep this preview aligned manually when the sample changes.</div>
+      </section>
+
+      <section class="hero">
+        <div class="panel hero-copy">
+          <p class="eyebrow">Starter B2B Corporate</p>
+          <h1>導入判断に必要な情報を、静かに強く届ける。</h1>
+          <p class="lede">
+            日本語の企業向け AI サービスを想定した generic preview です。価値訴求、導入体制、信頼情報、問い合わせ導線を一つの流れで見せる構成を sample としてまとめています。
+          </p>
+          <div class="actions">
+            <a class="button button-primary" href="#">相談する</a>
+            <a class="button button-secondary" href="#">資料を受け取る</a>
+          </div>
+        </div>
+        <div class="panel hero-visual">
+          <div class="visual-card">
+            <strong>Flow</strong>
+            課題整理、PoC、定着支援を 3 段で見せる。図解は実装イメージよりも意思決定の流れを優先する。
+          </div>
+          <div class="visual-card">
+            <strong>Proof</strong>
+            実績数値、導入部門、サポート体制を同じ視覚階層に置き、誇張よりも確かさを出す。
+          </div>
+          <div class="visual-card">
+            <strong>CTA</strong>
+            hero、中腹、footer の 3 箇所で主導線を繰り返し、比較検討中の離脱を減らす。
+          </div>
+        </div>
+      </section>
+
+      <section class="metrics">
+        <article class="panel metric">
+          <div class="metric-number">12日</div>
+          <div class="metric-label">初回相談から PoC 開始までの標準日数</div>
+        </article>
+        <article class="panel metric">
+          <div class="metric-number">3段</div>
+          <div class="metric-label">導入説明を hero から追える基本構成</div>
+        </article>
+        <article class="panel metric">
+          <div class="metric-number">1頁</div>
+          <div class="metric-label">比較検討に必要な判断材料をまとめる想定</div>
+        </article>
+      </section>
+
+      <section class="features">
+        <article class="panel feature">
+          <h2>課題から入る</h2>
+          <p>抽象的なビジョンより先に、導入前のボトルネックと改善後の状態を並べて見せます。</p>
+          <ul>
+            <li>業務フローの整理</li>
+            <li>導入対象の切り分け</li>
+            <li>初期成功条件の明示</li>
+          </ul>
+        </article>
+        <article class="panel feature">
+          <h2>信頼情報を早く出す</h2>
+          <p>セキュリティ、運用体制、サポート窓口を早めに見せ、問い合わせ前の不安を減らします。</p>
+          <ul>
+            <li>支援範囲の明示</li>
+            <li>対応チャネルの整理</li>
+            <li>継続運用の説明</li>
+          </ul>
+        </article>
+        <article class="panel feature">
+          <h2>導線は迷わせない</h2>
+          <p>CTA を page 全体で一貫させ、相談か資料請求かの二択を保ちます。</p>
+          <ul>
+            <li>primary CTA は 1 色</li>
+            <li>secondary CTA は border</li>
+            <li>footer でも同じ文言を再利用</li>
+          </ul>
+        </article>
+      </section>
+
+      <section class="panel cta-band">
+        <div>
+          <h2>問い合わせ前に、導入イメージまで届く構成。</h2>
+          <p>
+            この preview は reference-only です。実プロジェクトでは root の <code>DESIGN.md</code> を更新し、情報量と brand tone を合わせて再構成します。
+          </p>
+        </div>
+        <div class="actions">
+          <a class="button button-primary" href="#">導入相談</a>
+          <a class="button button-secondary" href="#">サンプルを見る</a>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

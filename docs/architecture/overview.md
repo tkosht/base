@@ -6,7 +6,7 @@
 
 ## Layering
 
-- root: 人間と agent の入口、shared settings、GitHub governance
+- root: 人間と agent の入口、visual contract、shared settings、GitHub governance
 - `docs/`: 長文の正本
 - `.claude/`, `.codex/`, `.agents/`: tool-specific settings / entrypoints
 - `scripts/ci/`: template 健全性検証
@@ -23,7 +23,7 @@
 
 ## Knowledge Surface
 
-- 運用中の正本は `docs/ai/`, `docs/architecture/`, `docs/standards/` に置く
+- 運用中の正本は root の `DESIGN.md`、`docs/ai/`、`docs/design/`、`docs/architecture/`、`docs/standards/` に置く
 - `docs/repository-template-design.md` は入力設計書として残すが、更新の中心にはしない
 - `.cursor/`, `GEMINI.md`, `.codex/skills/` は互換面として残ることがある
 - どこに何を書くか迷う場合は `docs/architecture/knowledge-architecture.md` を参照する
@@ -32,5 +32,6 @@
 
 1. owner placeholder を更新する
 2. `docs/architecture/overview.md` を実プロジェクト向けに書き換える
-3. `docs/standards/` を stack と組織ルールに合わせて更新する
-4. 必要な overlay を適用する
+3. root の `DESIGN.md` を実プロジェクト向けの visual contract に更新する
+4. `docs/standards/` を stack と組織ルールに合わせて更新する
+5. 必要な overlay を適用する
