@@ -21,6 +21,7 @@ RETAINED_SKILLS = [
 ]
 REQUIRED_PATHS = [
     "README.md",
+    "DESIGN.md",
     "AGENTS.md",
     "CLAUDE.md",
     "CONTRIBUTING.md",
@@ -48,6 +49,10 @@ REQUIRED_PATHS = [
     "docs/ai/checklists/codex-mcp-collaboration-template.md",
     "docs/ai/skills/README.md",
     "docs/ai/skills/ai-agent-collaboration-exec.md",
+    "docs/design/README.md",
+    "docs/design/samples/starter-b2b-corporate",
+    "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
+    "docs/design/samples/starter-b2b-corporate/preview.html",
     "docs/architecture/overview.md",
     "docs/architecture/knowledge-architecture.md",
     "docs/architecture/base-harness-set.md",
@@ -74,6 +79,7 @@ FORBIDDEN_PATHS = [
 ]
 PRIMARY_DOCS = [
     "README.md",
+    "DESIGN.md",
     "AGENTS.md",
     "CLAUDE.md",
     "docs/ai/repo-contract.md",
@@ -81,6 +87,7 @@ PRIMARY_DOCS = [
     "docs/ai/operator-checklist.md",
     "docs/ai/execution-playbooks.md",
     "docs/ai/checklists/codex-mcp-collaboration-template.md",
+    "docs/design/README.md",
     "docs/architecture/overview.md",
     "docs/architecture/knowledge-architecture.md",
     "docs/architecture/base-harness-set.md",
@@ -102,6 +109,56 @@ TERM_EXPANSIONS = {
         "コマンドラインツール（Codex CLI）",
     ),
     "OAuth": ("OAuth 認証",),
+}
+DESIGN_DOCS = [
+    "DESIGN.md",
+    "docs/design/README.md",
+    "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
+]
+DESIGN_TERM_EXPANSIONS = {
+    "B2B": ("企業間取引（B2B）",),
+    "LP": ("ランディングページ（LP）",),
+    "CTA": (
+        "行動喚起（CTA）",
+        "コールトゥアクション（CTA）",
+    ),
+    "UI": ("ユーザーインターフェース（UI）",),
+}
+DESIGN_READ_FIRST_CONTRACT = (
+    "design 系作業では、root の `DESIGN.md` を先に読み、"
+    "必要に応じて `docs/design/README.md` を補助面として読む。"
+)
+DESIGN_ROLE_CONTRACT = "`DESIGN.md`: generated repo の visual contract の正本"
+DESIGN_README_ROLE_CONTRACT = (
+    "`docs/design/README.md`: root `DESIGN.md` を支える design guidance "
+    "の canonical な補助面"
+)
+DESIGN_README_MIN_ROLE = (
+    "この文書は root の `DESIGN.md` を支える design guidance "
+    "の canonical な補助面です。"
+)
+DESIGN_README_SYNC_REF = (
+    "同期ポリシーの正本は `docs/ai/repo-contract.md` です。"
+)
+DESIGN_SYNC_POLICY_CONTRACT = (
+    "`docs/design/README.md` は template-maintained な補助面であり、"
+    "自動同期はしない"
+)
+DESIGN_SYNC_INTAKE_CONTRACT = "maintainer が手動で取り込む"
+DESIGN_CHECKLIST_UPDATE_CONTRACT = (
+    "generated repo の visual contract の通常更新対象として、"
+    "実プロジェクト向けに更新する"
+)
+DESIGN_CHECKLIST_SUPPLEMENT_CONTRACT = (
+    "template-maintained な補助面なので、generated repo では通常更新しない。"
+)
+DESIGN_PREVIEW_NOTES = {
+    "docs/design/samples/starter-b2b-corporate/preview.html": (
+        "Reference-only",
+        "Source note:",
+        "Reviewed date:",
+        "Sync note:",
+    )
 }
 SUPPORTED_CODEX_SANDBOX_MODES = {
     "danger-full-access",
@@ -183,6 +240,126 @@ def _check_codex_shared_defaults(root: Path, errors: list[str]) -> None:
             if needle not in text:
                 errors.append(
                     f"{rel} missing Codex shared default contract: {needle}"
+                )
+
+
+def _check_design_doc_terminology(root: Path, errors: list[str]) -> None:
+    for rel in DESIGN_DOCS:
+        text = (root / rel).read_text(encoding="utf-8")
+        for term, expansions in DESIGN_TERM_EXPANSIONS.items():
+            count = len(re.findall(rf"\b{term}\b", text))
+            if count == 0:
+                continue
+            if not any(expansion in text for expansion in expansions):
+                errors.append(
+                    f"{rel} uses {term} without an approved expansion"
+                )
+            if count == 1:
+                errors.append(
+                    f"{rel} uses {term} only once; spell it out instead of abbreviating"
+                )
+
+
+def _check_design_contract(root: Path, errors: list[str]) -> None:
+    repo_contract = (root / "docs/ai/repo-contract.md").read_text(
+        encoding="utf-8"
+    )
+    for needle in (
+        DESIGN_READ_FIRST_CONTRACT,
+        DESIGN_ROLE_CONTRACT,
+        DESIGN_README_ROLE_CONTRACT,
+        DESIGN_SYNC_POLICY_CONTRACT,
+        DESIGN_SYNC_INTAKE_CONTRACT,
+        "## Generated Repo Checklist",
+        "3. `DESIGN.md`",
+        DESIGN_CHECKLIST_UPDATE_CONTRACT,
+        "8. `docs/design/README.md`",
+        DESIGN_CHECKLIST_SUPPLEMENT_CONTRACT,
+    ):
+        if needle not in repo_contract:
+            errors.append(
+                "docs/ai/repo-contract.md missing design contract: " + needle
+            )
+
+    design_readme = (root / "docs/design/README.md").read_text(
+        encoding="utf-8"
+    )
+    for needle in (DESIGN_README_MIN_ROLE, DESIGN_README_SYNC_REF):
+        if needle not in design_readme:
+            errors.append(
+                "docs/design/README.md missing design guidance contract: "
+                + needle
+            )
+
+    for rel, needles in DESIGN_PREVIEW_NOTES.items():
+        text = (root / rel).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                errors.append(f"{rel} missing preview note: {needle}")
+
+
+def _check_non_root_design_md(root: Path, errors: list[str]) -> None:
+    unexpected = sorted(
+        str(path.relative_to(root))
+        for path in root.rglob("DESIGN.md")
+        if path.relative_to(root).as_posix() != "DESIGN.md"
+    )
+    if unexpected:
+        errors.append(
+            "non-root DESIGN.md is forbidden: " + ", ".join(unexpected)
+        )
+
+
+def _extract_workflow_paths(text: str) -> list[list[str]]:
+    sections: list[list[str]] = []
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        match = re.match(r"^(\s*)paths:\s*$", lines[index])
+        if not match:
+            index += 1
+            continue
+        indent = len(match.group(1))
+        index += 1
+        entries: list[str] = []
+        while index < len(lines):
+            line = lines[index]
+            stripped = line.strip()
+            current_indent = len(line) - len(line.lstrip(" "))
+            if stripped and current_indent <= indent:
+                break
+            item = re.match(r'^\s*-\s*[\'"]?([^\'"]+)[\'"]?\s*$', line)
+            if item:
+                entries.append(item.group(1))
+            index += 1
+        sections.append(entries)
+    return sections
+
+
+def _paths_cover_design_docs(paths: list[str]) -> bool:
+    return any(path in {"docs/design/**", "docs/**", "**"} for path in paths)
+
+
+def _check_workflow_path_filters(root: Path, errors: list[str]) -> None:
+    for rel in (
+        ".github/workflows/template-health.yml",
+        ".github/workflows/ci.yml",
+        ".github/workflows/test-all-subsystems.yml",
+    ):
+        text = (root / rel).read_text(encoding="utf-8")
+        sections = _extract_workflow_paths(text)
+        if not sections:
+            continue
+        for index, paths in enumerate(sections, start=1):
+            if "DESIGN.md" not in paths:
+                errors.append(
+                    f"{rel} missing workflow path coverage for DESIGN.md "
+                    f"in paths section {index}"
+                )
+            if not _paths_cover_design_docs(paths):
+                errors.append(
+                    f"{rel} missing workflow path coverage for docs/design/** "
+                    f"in paths section {index}"
                 )
 
 
@@ -306,6 +483,9 @@ def run_checks(root: Path = ROOT) -> list[str]:
 
     _check_primary_terminology(root, errors)
     _check_codex_shared_defaults(root, errors)
+    _check_non_root_design_md(root, errors)
+    _check_design_contract(root, errors)
+    _check_design_doc_terminology(root, errors)
 
     workflow_expectations = {
         ".github/workflows/template-health.yml": (
@@ -333,6 +513,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
         for forbidden in ("memory-bank/", "docs/04.knowledge/"):
             if forbidden in text:
                 errors.append(f"{rel} must not reference {forbidden}")
+    _check_workflow_path_filters(root, errors)
 
     live_marker_files = sorted(
         str(path.relative_to(root))

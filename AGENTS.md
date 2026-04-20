@@ -9,7 +9,9 @@
 
 詳細な運用契約、Model Context Protocol（MCP）方針、skill 仕様、知識配置、実装標準は `docs/` に置きます。
 
+- visual contract: `DESIGN.md`
 - AI 共通運用契約: `docs/ai/repo-contract.md`
+- design guidance: `docs/design/README.md`
 - Model Context Protocol（MCP）方針: `docs/ai/mcp.md`
 - skill reference: `docs/ai/skills/`
 - 知識配置: `docs/architecture/knowledge-architecture.md`

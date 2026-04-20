@@ -14,12 +14,14 @@
 ## 残すハーネス
 
 - instruction surface
+  - `DESIGN.md`
   - `AGENTS.md`
   - `CLAUDE.md`
   - `GEMINI.md`
   - `.cursor/rules/*`
 - 知識の正本
   - `docs/ai/`
+  - `docs/design/`
   - `docs/architecture/`
   - `docs/standards/`
 - skills
