@@ -125,6 +125,93 @@ def test_template_contract_checks_fail_when_full_access_guidance_is_missing(
     ) in errors
 
 
+def test_template_contract_checks_fail_when_grill_me_doc_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill_doc = repo / "docs" / "ai" / "skills" / "grill-me.md"
+    skill_doc.unlink()
+
+    errors = run_checks(repo)
+
+    assert "missing required path: docs/ai/skills/grill-me.md" in errors
+
+
+def test_template_contract_checks_fail_when_grill_me_skill_dir_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    shutil.rmtree(repo / ".claude" / "skills" / "grill-me")
+
+    errors = run_checks(repo)
+
+    assert (
+        "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
+        "codex-subagent, git-commit-pr, git-mainbranch, "
+        "grill-me-essential-first, "
+        "repo-instruction-optimizer, skill-authoring"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_grill_me_essential_first_doc_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill_doc = repo / "docs" / "ai" / "skills" / "grill-me-essential-first.md"
+    skill_doc.unlink()
+
+    errors = run_checks(repo)
+
+    assert (
+        "missing required path: docs/ai/skills/grill-me-essential-first.md"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_grill_me_essential_first_skill_dir_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    shutil.rmtree(repo / ".claude" / "skills" / "grill-me-essential-first")
+
+    errors = run_checks(repo)
+
+    assert (
+        "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
+        "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
+        "repo-instruction-optimizer, skill-authoring"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_grill_me_essential_first_agent_entrypoint_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    (repo / ".agents" / "skills" / "grill-me-essential-first").unlink()
+
+    errors = run_checks(repo)
+
+    assert (
+        "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
+        "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
+        "repo-instruction-optimizer, skill-authoring"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_grill_me_essential_first_codex_entrypoint_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    (repo / ".codex" / "skills" / "grill-me-essential-first").unlink()
+
+    errors = run_checks(repo)
+
+    assert (
+        "unexpected .codex/skills layout: ai-agent-collaboration-exec, "
+        "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
+        "repo-instruction-optimizer, skill-authoring"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_non_root_design_md_is_added(
     tmp_path: Path,
 ) -> None:

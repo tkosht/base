@@ -16,6 +16,8 @@ RETAINED_SKILLS = [
     "codex-subagent",
     "git-commit-pr",
     "git-mainbranch",
+    "grill-me",
+    "grill-me-essential-first",
     "repo-instruction-optimizer",
     "skill-authoring",
 ]
@@ -49,6 +51,8 @@ REQUIRED_PATHS = [
     "docs/ai/checklists/codex-mcp-collaboration-template.md",
     "docs/ai/skills/README.md",
     "docs/ai/skills/ai-agent-collaboration-exec.md",
+    "docs/ai/skills/grill-me.md",
+    "docs/ai/skills/grill-me-essential-first.md",
     "docs/design/README.md",
     "docs/design/samples/starter-b2b-corporate",
     "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
@@ -68,6 +72,8 @@ REQUIRED_PATHS = [
     "docs/repository-template-design.md",
     "scripts/ci/validate_template.py",
     "scripts/template/apply_overlay.py",
+    "scripts/template/sync_upstream_skill.py",
+    "scripts/template/upstream_skills.toml",
     "templates/manifest.yaml",
     "secrets/README.md",
 ]

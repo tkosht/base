@@ -62,6 +62,18 @@ def test_manifest_skills_match_repo_layout() -> None:
     assert actual_symlinks == expected
 
 
+def test_manifest_skills_have_canonical_docs() -> None:
+    manifest = load_manifest()
+    skills = manifest["skills"]
+    assert isinstance(skills, list)
+
+    for skill in skills:
+        assert isinstance(skill, str)
+        assert (
+            ROOT / "docs" / "ai" / "skills" / f"{skill}.md"
+        ).exists(), skill
+
+
 def test_manifest_command_docs_and_workflows_exist() -> None:
     manifest = load_manifest()
 
