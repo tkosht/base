@@ -29,6 +29,8 @@
   - `codex-subagent`
   - `git-commit-pr`
   - `git-mainbranch`
+  - `grill-me`
+  - `grill-me-essential-first`
   - `repo-instruction-optimizer`
   - `skill-authoring`
 - command docs

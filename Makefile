@@ -1,4 +1,4 @@
-.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter
+.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter sync-skill
 
 default: all
 
@@ -29,6 +29,10 @@ use-python-starter:
 
 use-nextjs-starter:
 	uv run python scripts/template/apply_overlay.py --template nextjs-app
+
+sync-skill:
+	@test -n "$(SKILL)" || { echo "SKILL=<registered-skill> を指定してください。"; exit 1; }
+	uv run python scripts/template/sync_upstream_skill.py --skill "$(SKILL)" $(if $(REF),--ref "$(REF)",)
 
 # ==================================================
 # controlling container tasks
@@ -118,4 +122,3 @@ clean-external-network:
 
 clean-repository: clean-venv clean-logs
 	rm -rf app/* tests/* data/*
-
