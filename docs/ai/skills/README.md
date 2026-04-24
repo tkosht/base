@@ -14,5 +14,6 @@
 - `git-mainbranch`
 - `grill-me`
 - `grill-me-essential-first`
+- `harness-autoptimizer`
 - `repo-instruction-optimizer`
 - `skill-authoring`

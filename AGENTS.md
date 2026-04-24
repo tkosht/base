@@ -17,6 +17,7 @@
 - 知識配置: `docs/architecture/knowledge-architecture.md`
 - 構造説明: `docs/architecture/overview.md`
 - 実装標準: `docs/standards/`
+- ハーネス資源 registry: `docs/architecture/harness-resources.toml`
 
 `CLAUDE.md` は Claude Code 向けの薄いアダプタです。`GEMINI.md` と `.cursor/` は互換面として残ることがありますが、新しい repo-wide ルールを増やす場所にはしません。
 

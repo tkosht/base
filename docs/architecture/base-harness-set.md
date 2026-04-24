@@ -31,8 +31,11 @@
   - `git-mainbranch`
   - `grill-me`
   - `grill-me-essential-first`
+  - `harness-autoptimizer`
   - `repo-instruction-optimizer`
   - `skill-authoring`
+- ハーネス資源 registry
+  - `docs/architecture/harness-resources.toml`
 - command docs
   - `codex-subagent.md`
   - `commit.md`

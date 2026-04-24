@@ -1,4 +1,4 @@
-.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter sync-skill
+.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter sync-skill harness-autopt
 
 default: all
 
@@ -15,7 +15,7 @@ lint:
 	uv run black --check .
 
 test:
-	uv run pytest -q -m "not codex_live" tests/test_base_harness_set.py tests/test_template_contract.py tests/template_smoke tests/codex_subagent
+	uv run pytest -q -m "not codex_live" tests/test_base_harness_set.py tests/test_template_contract.py tests/template_smoke tests/codex_subagent tests/harness_autoptimizer
 
 test-codex-live:
 	@command -v codex >/dev/null 2>&1 || { echo "codex CLI が見つかりません。まず make bootstrap を実行してください。"; exit 1; }
@@ -33,6 +33,15 @@ use-nextjs-starter:
 sync-skill:
 	@test -n "$(SKILL)" || { echo "SKILL=<registered-skill> を指定してください。"; exit 1; }
 	uv run python scripts/template/sync_upstream_skill.py --skill "$(SKILL)" $(if $(REF),--ref "$(REF)",)
+
+harness-autopt:
+	uv run python .claude/skills/harness-autoptimizer/scripts/harness_autopt.py \
+		--target "$(or $(TARGET),codex-subagent)" \
+		--goal "$(or $(GOAL),stability)" \
+		--candidate-count "$(or $(CANDIDATES),1)" \
+		--base "$(or $(BASE),origin/main)" \
+		--worktree-root "$(or $(WORKTREE_ROOT),worker/harness-autopt)" \
+		--create-pr
 
 # ==================================================
 # controlling container tasks

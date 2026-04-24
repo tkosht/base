@@ -12,7 +12,7 @@
 - `DESIGN.md`: generated repo の visual contract の正本
 - `docs/ai/`: AI エージェント運用の詳細
 - `docs/design/README.md`: root `DESIGN.md` を支える design guidance の補助面
-- `docs/architecture/`: 構造、知識配置、ハーネス一覧、設計判断メモ
+- `docs/architecture/`: 構造、知識配置、ハーネス一覧、ハーネス資源 registry、設計判断メモ
 - `docs/standards/`: 実装、テスト、セキュリティ、レビュー、コミュニケーションの標準
 
 ## Placement Rules
@@ -20,7 +20,7 @@
 - 人間と AI の共通運用契約は `docs/ai/` に置く。
 - 見た目の正本は root の `DESIGN.md` に置き、sample では canonical 名の `DESIGN.md` を増やさない。
 - design guidance の補助面と reference-only sample は `docs/design/` に置く。
-- 構造上の判断、長く残す設計理由、ハーネス一覧は `docs/architecture/` に置く。
+- 構造上の判断、長く残す設計理由、ハーネス一覧、自己最適化対象の harness resource registry は `docs/architecture/` に置く。
 - 実装時の共通ルールは `docs/standards/` に置く。
 - 既存の正本へ追記できる内容なら、新しい文書を増やさない。
 - 一時的な作業メモ、長いログ、試行錯誤の途中経過は正本に昇格させない。

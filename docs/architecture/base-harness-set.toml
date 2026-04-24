@@ -8,6 +8,7 @@ skills = [
   "git-mainbranch",
   "grill-me",
   "grill-me-essential-first",
+  "harness-autoptimizer",
   "repo-instruction-optimizer",
   "skill-authoring",
 ]
@@ -56,6 +57,7 @@ included_paths = [
   "docs/ai/checklists/codex-mcp-collaboration-template.md",
   "docs/ai/skills/README.md",
   "docs/ai/skills/ai-agent-collaboration-exec.md",
+  "docs/ai/skills/harness-autoptimizer.md",
   "docs/ai/skills/grill-me.md",
   "docs/ai/skills/grill-me-essential-first.md",
   "docs/design/README.md",
@@ -63,6 +65,7 @@ included_paths = [
   "docs/design/samples/starter-b2b-corporate/preview.html",
   "docs/architecture/base-harness-set.md",
   "docs/architecture/base-harness-set.toml",
+  "docs/architecture/harness-resources.toml",
   "docs/architecture/knowledge-architecture.md",
   "docs/architecture/overview.md",
   "docs/architecture/decision-records/README.md",

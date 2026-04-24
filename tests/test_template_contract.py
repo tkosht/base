@@ -148,7 +148,7 @@ def test_template_contract_checks_fail_when_grill_me_skill_dir_is_missing(
     assert (
         "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, "
-        "grill-me-essential-first, "
+        "grill-me-essential-first, harness-autoptimizer, "
         "repo-instruction-optimizer, skill-authoring"
     ) in errors
 
@@ -178,7 +178,7 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_skill_dir_i
     assert (
         "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "repo-instruction-optimizer, skill-authoring"
+        "harness-autoptimizer, repo-instruction-optimizer, skill-authoring"
     ) in errors
 
 
@@ -193,7 +193,7 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_agent_entry
     assert (
         "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "repo-instruction-optimizer, skill-authoring"
+        "harness-autoptimizer, repo-instruction-optimizer, skill-authoring"
     ) in errors
 
 
@@ -208,7 +208,7 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_codex_entry
     assert (
         "unexpected .codex/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "repo-instruction-optimizer, skill-authoring"
+        "harness-autoptimizer, repo-instruction-optimizer, skill-authoring"
     ) in errors
 
 

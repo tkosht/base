@@ -6,6 +6,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs" / "architecture" / "base-harness-set.toml"
+RESOURCE_REGISTRY_PATH = (
+    ROOT / "docs" / "architecture" / "harness-resources.toml"
+)
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 
 
@@ -16,6 +19,23 @@ def load_manifest() -> dict[str, object]:
 
 def test_manifest_exists() -> None:
     assert MANIFEST_PATH.exists()
+
+
+def test_harness_resource_registry_exists() -> None:
+    assert RESOURCE_REGISTRY_PATH.exists()
+
+
+def test_harness_resource_registry_covers_retained_autoptimizer() -> None:
+    registry = tomllib.loads(
+        RESOURCE_REGISTRY_PATH.read_text(encoding="utf-8")
+    )
+    resource_ids = {
+        item["id"]
+        for item in registry["resources"]
+        if isinstance(item, dict) and "id" in item
+    }
+    assert "codex-subagent" in resource_ids
+    assert "harness-autoptimizer" in resource_ids
 
 
 def test_manifest_paths_match_filesystem() -> None:
