@@ -17,5 +17,7 @@
     ],
     "python.testing.unittestEnabled": false,
     "python.testing.pytestEnabled": true,
-    "makefile.configureOnOpen": false
+    "makefile.configureOnOpen": false,
+    "terminal.integrated.ignoreBracketedPasteMode": true
+
 }
