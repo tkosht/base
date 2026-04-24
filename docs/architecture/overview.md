@@ -13,6 +13,7 @@
 - `scripts/template/`: starter overlay 適用ロジック
 - `templates/`: Python / Next.js の overlay catalog
 - `src/`, `tests/`, `secrets/`: generated repo 側で使う protected or product-facing paths
+- `docs/architecture/harness-resources.toml`: 自己最適化対象にできる harness resource registry
 
 ## Starter Strategy
 
@@ -25,6 +26,7 @@
 
 - 運用中の正本は root の `DESIGN.md`、`docs/ai/`、`docs/design/`、`docs/architecture/`、`docs/standards/` に置く
 - `docs/repository-template-design.md` は入力設計書として残すが、更新の中心にはしない
+- 自己最適化対象の harness resource は `docs/architecture/harness-resources.toml` に登録する
 - `.cursor/`, `GEMINI.md`, `.codex/skills/` は互換面として残ることがある
 - どこに何を書くか迷う場合は `docs/architecture/knowledge-architecture.md` を参照する
 

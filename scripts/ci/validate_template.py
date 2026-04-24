@@ -18,6 +18,7 @@ RETAINED_SKILLS = [
     "git-mainbranch",
     "grill-me",
     "grill-me-essential-first",
+    "harness-autoptimizer",
     "repo-instruction-optimizer",
     "skill-authoring",
 ]
@@ -53,6 +54,7 @@ REQUIRED_PATHS = [
     "docs/ai/skills/ai-agent-collaboration-exec.md",
     "docs/ai/skills/grill-me.md",
     "docs/ai/skills/grill-me-essential-first.md",
+    "docs/ai/skills/harness-autoptimizer.md",
     "docs/design/README.md",
     "docs/design/samples/starter-b2b-corporate",
     "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
@@ -61,6 +63,7 @@ REQUIRED_PATHS = [
     "docs/architecture/knowledge-architecture.md",
     "docs/architecture/base-harness-set.md",
     "docs/architecture/base-harness-set.toml",
+    "docs/architecture/harness-resources.toml",
     "docs/architecture/decision-records/README.md",
     "docs/architecture/decision-records/codex-shared-defaults.md",
     "docs/architecture/decision-records/knowledge-surface-consolidation.md",
