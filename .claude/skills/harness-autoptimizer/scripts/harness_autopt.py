@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Autonomous harness optimization runner.
+"""Helpers for Codex-controlled harness optimization.
 
-The runner keeps the current checkout untouched. It creates a fresh worktree
-from a base ref, asks codex-subagent to make one scoped improvement, validates
-the result, and only then opens a pull request.
+Codex agents own classification, repair, and reflection. This module only
+provides deterministic support functions: prompt assembly, registry parsing,
+request serialization, sanitized state recording, diff guards, validation
+helpers, and draft pull request helpers.
 """
 
 from __future__ import annotations
@@ -11,12 +12,11 @@ from __future__ import annotations
 import argparse
 import json
 import re
-import shutil
 import subprocess
-import sys
+import time
 import tomllib
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -26,6 +26,9 @@ DEFAULT_REGISTRY_PATH = (
     ROOT_DIR / "docs" / "architecture" / "harness-resources.toml"
 )
 DEFAULT_LOG_ROOT = ROOT_DIR / ".codex" / "sessions" / "harness_autopt"
+PROMPT_DIR = (
+    ROOT_DIR / ".claude" / "skills" / "harness-autoptimizer" / "prompts"
+)
 DEFAULT_GATES = ("make doctor", "make lint", "make test")
 PROTECTED_PREFIXES = (
     ".env",
@@ -37,6 +40,30 @@ PROTECTED_PREFIXES = (
     ".claude/.claude/",
 )
 RESOURCE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]*$")
+RETENTION_DECISIONS = {
+    "discard",
+    "state-only",
+    "code-simplification",
+    "test",
+    "validator",
+    "canonical-rule",
+    "skill-prompt",
+    "decision-record",
+}
+HIGH_SIGNAL_TERMS = {
+    "authority",
+    "candidate_generation",
+    "complexity",
+    "conflict",
+    "contradiction",
+    "controller",
+    "manual",
+    "overcomplicated",
+    "self-audit",
+    "target/goal",
+    "--target",
+    "--goal",
+}
 
 
 @dataclass(frozen=True)
@@ -82,6 +109,9 @@ class HarnessResource:
     mutation_policy: str = "proposal"
     risk_level: str = "medium"
     goals: tuple[str, ...] = ()
+    excluded_paths: tuple[str, ...] = ()
+    max_changed_files: int | None = None
+    max_changed_lines: int | None = None
 
 
 @dataclass(frozen=True)
@@ -92,21 +122,63 @@ class DiffGuardResult:
     violations: tuple[str, ...] = ()
 
 
-@dataclass
-class AutoptConfig:
-    target: str
+@dataclass(frozen=True)
+class AutoptSignal:
+    command: str
+    returncode: int
+    duration_seconds: float
+    stdout_tail: str = ""
+    stderr_tail: str = ""
+
+
+@dataclass(frozen=True)
+class AutoptClassification:
+    resource_id: str
     goal: str
-    candidate_count: int
-    base: str
-    worktree_root: Path
-    create_pr: bool
-    registry_path: Path = DEFAULT_REGISTRY_PATH
-    log_root: Path = DEFAULT_LOG_ROOT
-    max_changed_files: int = 8
-    max_changed_lines: int = 800
-    timeout_seconds: int = 900
-    keep_worktree: bool = False
-    dry_run: bool = False
+    confidence: float
+    reason: str
+
+
+@dataclass(frozen=True)
+class AutoptConstraints:
+    editable_paths: tuple[str, ...]
+    excluded_paths: tuple[str, ...]
+    protected_prefixes: tuple[str, ...]
+    max_changed_files: int
+    max_changed_lines: int
+    validators: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class AutoptRequest:
+    trigger_source: str
+    classification: AutoptClassification
+    constraints: AutoptConstraints
+    evidence: tuple[str, ...]
+    signals: tuple[AutoptSignal, ...]
+    success_criteria: tuple[str, ...]
+    candidate_resource_ids: tuple[str, ...]
+    pr_policy: str = "draft"
+
+
+@dataclass(frozen=True)
+class ExperienceCandidate:
+    trigger_source: str
+    observation: str
+    evidence: tuple[str, ...]
+    impact: str = "medium"
+    recurrence: str = "unknown"
+    generality: str = "unknown"
+    verification: str = "unknown"
+    context_cost: str = "unknown"
+
+
+@dataclass(frozen=True)
+class ExperienceAssessment:
+    decision: str
+    placement: str
+    confidence: float
+    reason: str
 
 
 @dataclass
@@ -114,7 +186,7 @@ class AutoptState:
     run_id: str
     branch: str
     worktree: Path
-    target: str
+    resource_id: str
     goal: str
     events: list[dict[str, Any]] = field(default_factory=list)
     pr_url: str | None = None
@@ -124,9 +196,181 @@ class AutoptState:
             {
                 "event": event,
                 "timestamp": datetime.now(UTC).isoformat(),
-                **payload,
+                **sanitize_state_payload(payload),
             }
         )
+
+
+def sanitize_state_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Drop raw model/prompt/log payloads before writing helper state."""
+
+    blocked_keys = {
+        "prompt",
+        "raw_prompt",
+        "raw_output",
+        "model_output",
+        "stdout",
+        "stderr",
+        "stdout_tail",
+        "stderr_tail",
+    }
+    clean: dict[str, Any] = {}
+    for key, value in payload.items():
+        if key in blocked_keys or key.endswith("_tail"):
+            clean[f"{key}_omitted"] = True
+            continue
+        clean[key] = value
+    return clean
+
+
+def _experience_text(candidate: ExperienceCandidate) -> str:
+    return " ".join((candidate.observation, *candidate.evidence)).casefold()
+
+
+def assess_experience_candidate(
+    candidate: ExperienceCandidate,
+) -> ExperienceAssessment:
+    """Classify whether a task experience should be retained."""
+
+    text = _experience_text(candidate)
+    if "one-off" in text or "一回限り" in text:
+        return ExperienceAssessment(
+            decision="discard",
+            placement="none",
+            confidence=0.76,
+            reason=(
+                "The evidence is task-specific and does not justify a durable "
+                "harness change."
+            ),
+        )
+
+    if any(
+        marker in text
+        for marker in (
+            "candidate_generation",
+            "python runner",
+            "controller responsibility",
+            "責務混入",
+        )
+    ):
+        return ExperienceAssessment(
+            decision="code-simplification",
+            placement=".claude/skills/harness-autoptimizer/scripts/harness_autopt.py",
+            confidence=0.92,
+            reason=(
+                "The experience shows implementation ownership leaking from "
+                "the Codex controller into the helper."
+            ),
+        )
+
+    if any(
+        marker in text
+        for marker in (
+            "target/goal",
+            "--target",
+            "--goal",
+            "target=project",
+            "human had to set",
+            "人間が",
+            "manual orchestration",
+        )
+    ):
+        return ExperienceAssessment(
+            decision="canonical-rule",
+            placement="docs/ai/repo-contract.md",
+            confidence=0.88,
+            reason=(
+                "The experience shows a manual orchestration dependency that "
+                "should be prohibited repo-wide."
+            ),
+        )
+
+    if any(
+        marker in text
+        for marker in (
+            "contradiction",
+            "conflict",
+            "authority",
+            "adapter leakage",
+            "矛盾",
+            "正本",
+        )
+    ):
+        return ExperienceAssessment(
+            decision="canonical-rule",
+            placement="docs/ai/experience-capture.md",
+            confidence=0.84,
+            reason=(
+                "The experience concerns instruction authority and should be "
+                "resolved in the canonical instruction surface."
+            ),
+        )
+
+    if any(
+        marker in text
+        for marker in (
+            "complexity",
+            "overcomplicated",
+            "too many branches",
+            "複雑",
+            "分岐",
+        )
+    ):
+        return ExperienceAssessment(
+            decision="code-simplification",
+            placement="nearest implementation and tests",
+            confidence=0.8,
+            reason=(
+                "The experience points to simpler implementation structure "
+                "rather than a new durable rule."
+            ),
+        )
+
+    if any(
+        marker in text
+        for marker in ("test", "validator", "gate", "regression")
+    ):
+        return ExperienceAssessment(
+            decision="test",
+            placement="nearest regression test or validator",
+            confidence=0.78,
+            reason="The experience is best retained as executable verification.",
+        )
+
+    if any(term in text for term in HIGH_SIGNAL_TERMS):
+        return ExperienceAssessment(
+            decision="state-only",
+            placement="sanitized non-tracked state",
+            confidence=0.62,
+            reason=(
+                "The signal is relevant but not specific enough to promote "
+                "without more evidence."
+            ),
+        )
+
+    return ExperienceAssessment(
+        decision="state-only",
+        placement="sanitized non-tracked state",
+        confidence=0.55,
+        reason=(
+            "The experience may be useful later but does not yet justify a "
+            "durable repo change."
+        ),
+    )
+
+
+def experience_candidate_to_dict(
+    candidate: ExperienceCandidate,
+) -> dict[str, Any]:
+    return asdict(candidate)
+
+
+def experience_assessment_to_dict(
+    assessment: ExperienceAssessment,
+) -> dict[str, Any]:
+    if assessment.decision not in RETENTION_DECISIONS:
+        raise ValueError(f"unknown retention decision: {assessment.decision}")
+    return asdict(assessment)
 
 
 def load_resource_registry(path: Path) -> dict[str, HarnessResource]:
@@ -152,6 +396,15 @@ def load_resource_registry(path: Path) -> dict[str, HarnessResource]:
             mutation_policy=str(item.get("mutation_policy", "proposal")),
             risk_level=str(item.get("risk_level", "medium")),
             goals=tuple(str(goal) for goal in item.get("goals", [])),
+            excluded_paths=tuple(
+                str(path) for path in item.get("excluded_paths", [])
+            ),
+            max_changed_files=optional_positive_int(
+                item.get("max_changed_files"), "max_changed_files"
+            ),
+            max_changed_lines=optional_positive_int(
+                item.get("max_changed_lines"), "max_changed_lines"
+            ),
         )
         if not RESOURCE_ID_RE.fullmatch(resource.id):
             raise ValueError(f"invalid resource id: {resource.id}")
@@ -159,6 +412,14 @@ def load_resource_registry(path: Path) -> dict[str, HarnessResource]:
             raise ValueError(f"duplicate resource id: {resource.id}")
         resources[resource.id] = resource
     return resources
+
+
+def optional_positive_int(value: object, name: str) -> int | None:
+    if value is None:
+        return None
+    if not isinstance(value, int) or value < 1:
+        raise ValueError(f"{name} must be a positive integer")
+    return value
 
 
 def normalize_rel_path(path: str) -> str:
@@ -191,6 +452,12 @@ def is_path_allowed(path: str, allowed_prefixes: tuple[str, ...]) -> bool:
         return False
     return any(
         path_matches_prefix(path, prefix) for prefix in allowed_prefixes
+    )
+
+
+def is_path_excluded(path: str, excluded_prefixes: tuple[str, ...]) -> bool:
+    return any(
+        path_matches_prefix(path, prefix) for prefix in excluded_prefixes
     )
 
 
@@ -240,6 +507,7 @@ def evaluate_diff_guard(
     allowed_prefixes: tuple[str, ...],
     max_changed_files: int,
     max_changed_lines: int,
+    excluded_prefixes: tuple[str, ...] = (),
 ) -> DiffGuardResult:
     violations: list[str] = []
     if len(changed_files) > max_changed_files:
@@ -251,7 +519,9 @@ def evaluate_diff_guard(
             f"changed line count {changed_lines} exceeds {max_changed_lines}"
         )
     for path in changed_files:
-        if not is_path_allowed(path, allowed_prefixes):
+        if is_path_excluded(path, excluded_prefixes):
+            violations.append(f"path is excluded: {path}")
+        elif not is_path_allowed(path, allowed_prefixes):
             violations.append(f"path is not allowed: {path}")
     return DiffGuardResult(
         ok=not violations,
@@ -277,34 +547,197 @@ def build_branch_name(target: str, run_id: str) -> str:
     return f"autopt/{target}-{date}-{suffix}"
 
 
-def build_candidate_prompt(resource: HarnessResource, goal: str) -> str:
-    paths = "\n".join(f"- {path}" for path in resource.mutable_paths)
-    validators = "\n".join(
-        f"- {validator}" for validator in resource.validators
+def resource_catalog_item(resource: HarnessResource) -> dict[str, Any]:
+    return {
+        "id": resource.id,
+        "kind": resource.kind,
+        "risk_level": resource.risk_level,
+        "mutation_policy": resource.mutation_policy,
+        "goals": list(resource.goals),
+        "paths": list(resource.paths),
+        "mutable_paths": list(resource.mutable_paths),
+        "excluded_paths": list(resource.excluded_paths),
+        "validators": list(resource.validators),
+        "max_changed_files": resource.max_changed_files,
+        "max_changed_lines": resource.max_changed_lines,
+    }
+
+
+def build_resource_catalog(
+    resources: dict[str, HarnessResource],
+) -> tuple[dict[str, Any], ...]:
+    return tuple(
+        resource_catalog_item(resources[resource_id])
+        for resource_id in sorted(resources)
     )
-    return f"""You are running autonomous harness optimization for this repository.
 
-Target resource: {resource.id}
-Resource kind: {resource.kind}
-Goal: {goal}
 
-Make exactly one small stability improvement. Prefer deterministic validation,
-schema guardrails, timeout reduction, retry safety, or documentation that makes
-the existing harness more reliable. Do not broaden scope.
+def build_constraints(
+    resource: HarnessResource,
+    *,
+    default_max_changed_files: int = 8,
+    default_max_changed_lines: int = 800,
+) -> AutoptConstraints:
+    return AutoptConstraints(
+        editable_paths=resource.mutable_paths,
+        excluded_paths=resource.excluded_paths,
+        protected_prefixes=PROTECTED_PREFIXES,
+        max_changed_files=resource.max_changed_files
+        or default_max_changed_files,
+        max_changed_lines=resource.max_changed_lines
+        or default_max_changed_lines,
+        validators=resource.validators,
+    )
 
-Editable paths:
-{paths}
 
-Required validation commands:
-{validators}
+def build_success_criteria(resource: HarnessResource) -> tuple[str, ...]:
+    validators = ", ".join(resource.validators)
+    return (
+        "The Codex agent keeps the change inside editable_paths.",
+        "The change does not touch excluded_paths or protected prefixes.",
+        "The diff stays within max_changed_files and max_changed_lines.",
+        f"Validators pass: {validators}.",
+        "The pull request is draft and omits raw prompts, raw outputs, "
+        "secrets, and runtime logs.",
+    )
 
-Rules:
-- Do not read or modify .env*, secrets/**, local auth files, or runtime state.
-- Do not create commits, branches, pushes, or pull requests.
-- Do not edit files outside the editable paths.
-- Keep the diff small enough for a single pull request.
-- If no safe improvement is available, leave the repository unchanged and say why.
-"""
+
+def build_autopt_request(
+    *,
+    resources: dict[str, HarnessResource],
+    resource_id: str,
+    goal: str,
+    trigger_source: str,
+    confidence: float,
+    reason: str,
+    evidence: tuple[str, ...],
+    signals: tuple[AutoptSignal, ...] = (),
+) -> AutoptRequest:
+    if resource_id not in resources:
+        raise ValueError(f"unknown target resource: {resource_id}")
+    resource = resources[resource_id]
+    if resource.goals and goal not in resource.goals:
+        raise ValueError(f"goal {goal!r} is not registered for {resource_id}")
+    return AutoptRequest(
+        trigger_source=trigger_source,
+        classification=AutoptClassification(
+            resource_id=resource_id,
+            goal=goal,
+            confidence=confidence,
+            reason=reason,
+        ),
+        constraints=build_constraints(resource),
+        evidence=evidence,
+        signals=signals,
+        success_criteria=build_success_criteria(resource),
+        candidate_resource_ids=tuple(sorted(resources)),
+    )
+
+
+def is_request_actionable(
+    request: AutoptRequest, *, min_confidence: float = 0.7
+) -> bool:
+    return request.classification.confidence >= min_confidence
+
+
+def autopt_request_to_dict(request: AutoptRequest) -> dict[str, Any]:
+    return asdict(request)
+
+
+def load_prompt_template(name: str) -> str:
+    path = PROMPT_DIR / name
+    return path.read_text(encoding="utf-8")
+
+
+def build_controller_prompt(resources: dict[str, HarnessResource]) -> str:
+    template = load_prompt_template("auto-controller.md")
+    self_audit = load_prompt_template("self-audit.md")
+    experience_to_rule = load_prompt_template("experience-to-rule.md")
+    catalog = json.dumps(
+        build_resource_catalog(resources),
+        ensure_ascii=False,
+        indent=2,
+    )
+    return (
+        f"{template}\n\n"
+        f"## Self-Audit Contract\n\n{self_audit}\n\n"
+        f"## Experience-to-Rule Contract\n\n{experience_to_rule}\n\n"
+        f"## Harness Resource Registry\n\n```json\n{catalog}\n```\n"
+    )
+
+
+def build_repair_prompt(request: AutoptRequest) -> str:
+    template = load_prompt_template("repair-request.md")
+    payload = json.dumps(
+        autopt_request_to_dict(request),
+        ensure_ascii=False,
+        indent=2,
+    )
+    return f"{template}\n\n## AutoptRequest\n\n```json\n{payload}\n```\n"
+
+
+def build_self_audit_prompt(
+    candidate: ExperienceCandidate | None = None,
+) -> str:
+    template = load_prompt_template("self-audit.md")
+    if candidate is None:
+        return template
+    payload = json.dumps(
+        experience_candidate_to_dict(candidate),
+        ensure_ascii=False,
+        indent=2,
+    )
+    return f"{template}\n\n## ExperienceCandidate\n\n```json\n{payload}\n```\n"
+
+
+def build_experience_to_rule_prompt(
+    candidate: ExperienceCandidate | None = None,
+    assessment: ExperienceAssessment | None = None,
+) -> str:
+    template = load_prompt_template("experience-to-rule.md")
+    sections = [template]
+    if candidate is not None:
+        sections.append(
+            "## ExperienceCandidate\n\n```json\n"
+            + json.dumps(
+                experience_candidate_to_dict(candidate),
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n```"
+        )
+    if assessment is not None:
+        sections.append(
+            "## ExperienceAssessment\n\n```json\n"
+            + json.dumps(
+                experience_assessment_to_dict(assessment),
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n```"
+        )
+    return "\n\n".join(sections) + "\n"
+
+
+def write_autopt_request(
+    log_root: Path, run_id: str, request: AutoptRequest
+) -> Path:
+    path = log_root / datetime.now(UTC).strftime("%Y/%m/%d") / run_id
+    path.mkdir(parents=True, exist_ok=True)
+    request_path = path / "request.json"
+    request_path.write_text(
+        json.dumps(
+            autopt_request_to_dict(request),
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    return request_path
+
+
+def build_pr_title(resource: HarnessResource, goal: str) -> str:
+    return f"[harness-autopt] improve {resource.id} {goal}"
 
 
 def build_pr_body(
@@ -320,12 +753,18 @@ def build_pr_body(
     )
     gates = "\n".join(f"- `{command}`: pass" for command in gate_commands)
     summary = (
-        f"Autonomous harness optimization run `{state.run_id}` improved "
+        f"Codex-controlled harness optimization run `{state.run_id}` improved "
         f"`{resource.id}` for `{state.goal}`."
     )
     return f"""## Summary
 
 {summary}
+
+## Resource
+
+- target: `{resource.id}`
+- kind: `{resource.kind}`
+- goal: `{state.goal}`
 
 ## Changed Files
 
@@ -352,7 +791,7 @@ def write_state(log_root: Path, state: AutoptState) -> Path:
         "run_id": state.run_id,
         "branch": state.branch,
         "worktree": str(state.worktree),
-        "target": state.target,
+        "resource_id": state.resource_id,
         "goal": state.goal,
         "pr_url": state.pr_url,
         "events": state.events,
@@ -378,14 +817,15 @@ def run_gate_commands(
     phase: str,
 ) -> bool:
     for command in commands:
+        started = time.monotonic()
         result = run_shell_command(runner, command, cwd)
+        duration_seconds = round(time.monotonic() - started, 3)
         state.record(
             "gate",
             phase=phase,
             command=command,
             returncode=result.returncode,
-            stdout_tail=result.stdout[-2000:],
-            stderr_tail=result.stderr[-2000:],
+            duration_seconds=duration_seconds,
         )
         if result.returncode != 0:
             return False
@@ -396,7 +836,9 @@ def collect_diff_guard(
     runner: CommandRunner,
     worktree: Path,
     resource: HarnessResource,
-    config: AutoptConfig,
+    *,
+    default_max_changed_files: int = 8,
+    default_max_changed_lines: int = 800,
 ) -> DiffGuardResult:
     status = runner.run(["git", "status", "--porcelain"], worktree, check=True)
     changed_files = parse_status_paths(status.stdout)
@@ -419,115 +861,20 @@ def collect_diff_guard(
         changed_files=changed_files,
         changed_lines=changed_lines,
         allowed_prefixes=resource.mutable_paths,
-        max_changed_files=config.max_changed_files,
-        max_changed_lines=config.max_changed_lines,
+        max_changed_files=resource.max_changed_files
+        or default_max_changed_files,
+        max_changed_lines=resource.max_changed_lines
+        or default_max_changed_lines,
+        excluded_prefixes=resource.excluded_paths,
     )
 
 
-def run_candidate_generation(
-    runner: CommandRunner,
-    worktree: Path,
-    resource: HarnessResource,
-    config: AutoptConfig,
-    state: AutoptState,
+def is_pr_creation_allowed(
+    resource: HarnessResource, allow_guarded_pr: bool
 ) -> bool:
-    prompt = build_candidate_prompt(resource, config.goal)
-    if config.dry_run:
-        state.record("candidate_generation", dry_run=True)
+    if resource.mutation_policy == "autonomous_pr":
         return True
-
-    cmd = [
-        "uv",
-        "run",
-        "python",
-        ".claude/skills/codex-subagent/scripts/codex_exec.py",
-        "--mode",
-        "single",
-        "--task-type",
-        "code_gen",
-        "--sandbox",
-        "workspace-write",
-        "--timeout",
-        str(config.timeout_seconds),
-        "--json",
-        "--prompt",
-        prompt,
-    ]
-    result = runner.run(cmd, worktree)
-    state.record(
-        "candidate_generation",
-        returncode=result.returncode,
-        stdout_tail=result.stdout[-2000:],
-        stderr_tail=result.stderr[-2000:],
-    )
-    if result.returncode != 0:
-        return False
-    try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError:
-        return False
-    return bool(payload.get("success", False))
-
-
-def preflight(
-    runner: CommandRunner,
-    config: AutoptConfig,
-    resources: dict[str, HarnessResource],
-) -> HarnessResource:
-    if config.candidate_count != 1:
-        raise ValueError("v1 supports --candidate-count 1 only")
-    if config.target not in resources:
-        raise ValueError(f"unknown target resource: {config.target}")
-    resource = resources[config.target]
-    if resource.goals and config.goal not in resource.goals:
-        raise ValueError(
-            f"goal {config.goal!r} is not registered for {config.target}"
-        )
-
-    required = ["git", "uv", "codex"]
-    if config.create_pr:
-        required.append("gh")
-    missing = [
-        command for command in required if shutil.which(command) is None
-    ]
-    if missing:
-        raise RuntimeError(
-            "missing required command(s): " + ", ".join(missing)
-        )
-
-    runner.run(["git", "rev-parse", "--show-toplevel"], ROOT_DIR, check=True)
-    runner.run(
-        ["git", "rev-parse", "--verify", f"{config.base}^{{commit}}"],
-        ROOT_DIR,
-        check=True,
-    )
-    if config.create_pr:
-        runner.run(["gh", "auth", "status"], ROOT_DIR, check=True)
-    return resource
-
-
-def create_worktree(
-    runner: CommandRunner,
-    config: AutoptConfig,
-    state: AutoptState,
-) -> None:
-    state.worktree.parent.mkdir(parents=True, exist_ok=True)
-    runner.run(
-        [
-            "git",
-            "worktree",
-            "add",
-            "-b",
-            state.branch,
-            str(state.worktree),
-            config.base,
-        ],
-        ROOT_DIR,
-        check=True,
-    )
-    state.record(
-        "worktree_created", path=str(state.worktree), branch=state.branch
-    )
+    return resource.mutation_policy == "guarded_pr" and allow_guarded_pr
 
 
 def create_pull_request(
@@ -537,8 +884,10 @@ def create_pull_request(
     resource: HarnessResource,
     diff_guard: DiffGuardResult,
     base: str,
+    *,
+    draft: bool = False,
 ) -> str:
-    title = f"[harness-autopt] improve {resource.id} stability"
+    title = build_pr_title(resource, state.goal)
     body = build_pr_body(
         state=state,
         resource=resource,
@@ -562,96 +911,43 @@ def create_pull_request(
         ["git", "push", "-u", "origin", state.branch], worktree, check=True
     )
     result = runner.run(
-        [
-            "gh",
-            "pr",
-            "create",
-            "--title",
-            title,
-            "--body",
-            body,
-            "--base",
-            base_branch_name(base),
-            "--head",
-            state.branch,
-        ],
+        build_pr_create_command(
+            title=title,
+            body=body,
+            base=base_branch_name(base),
+            head=state.branch,
+            draft=draft,
+        ),
         worktree,
         check=True,
     )
     return result.stdout.strip()
 
 
-def cleanup_worktree(runner: CommandRunner, state: AutoptState) -> None:
-    if state.worktree.exists():
-        runner.run(
-            ["git", "worktree", "remove", "--force", str(state.worktree)],
-            ROOT_DIR,
-        )
-
-
-def run_autoptimization(
-    config: AutoptConfig,
+def build_pr_create_command(
     *,
-    runner: CommandRunner | None = None,
-) -> int:
-    runner = runner or CommandRunner()
-    resources = load_resource_registry(config.registry_path)
-    resource = preflight(runner, config, resources)
-    run_id = build_run_id()
-    branch = build_branch_name(config.target, run_id)
-    worktree = config.worktree_root
-    if not worktree.is_absolute():
-        worktree = ROOT_DIR / worktree
-    worktree = worktree / run_id
-    state = AutoptState(run_id, branch, worktree, config.target, config.goal)
-
-    try:
-        create_worktree(runner, config, state)
-        if not run_gate_commands(
-            runner, resource.validators, worktree, state, "baseline"
-        ):
-            state.record("abort", reason="baseline gate failed")
-            return 2
-        if not run_candidate_generation(
-            runner, worktree, resource, config, state
-        ):
-            state.record("abort", reason="candidate generation failed")
-            return 2
-
-        diff_guard = collect_diff_guard(runner, worktree, resource, config)
-        state.record(
-            "diff_guard",
-            ok=diff_guard.ok,
-            changed_files=list(diff_guard.changed_files),
-            changed_lines=diff_guard.changed_lines,
-            violations=list(diff_guard.violations),
-        )
-        if not diff_guard.changed_files:
-            state.record("abort", reason="candidate produced no changes")
-            return 2
-        if not diff_guard.ok:
-            state.record("abort", reason="diff guard failed")
-            return 2
-
-        if not run_gate_commands(
-            runner, resource.validators, worktree, state, "candidate"
-        ):
-            state.record("abort", reason="candidate gate failed")
-            return 2
-
-        if config.create_pr and not config.dry_run:
-            state.pr_url = create_pull_request(
-                runner, worktree, state, resource, diff_guard, config.base
-            )
-            state.record("pull_request_created", url=state.pr_url)
-        else:
-            state.record("pull_request_skipped", dry_run=config.dry_run)
-        return 0
-    finally:
-        state_path = write_state(config.log_root, state)
-        print(f"harness autopt state: {state_path}")
-        if not config.keep_worktree:
-            cleanup_worktree(runner, state)
+    title: str,
+    body: str,
+    base: str,
+    head: str,
+    draft: bool,
+) -> list[str]:
+    command = [
+        "gh",
+        "pr",
+        "create",
+        "--title",
+        title,
+        "--body",
+        body,
+        "--base",
+        base,
+        "--head",
+        head,
+    ]
+    if draft:
+        command.append("--draft")
+    return command
 
 
 def print_resources(registry_path: Path) -> None:
@@ -662,25 +958,16 @@ def print_resources(registry_path: Path) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        description="Autonomously optimize registered harness resources."
-    )
-    parser.add_argument("--target", default="codex-subagent")
-    parser.add_argument("--goal", default="stability")
-    parser.add_argument("--candidate-count", type=int, default=1)
-    parser.add_argument("--base", default="origin/main")
-    parser.add_argument(
-        "--worktree-root", type=Path, default=Path("worker/harness-autopt")
+        description="Build Codex-controller harness optimization artifacts."
     )
     parser.add_argument(
         "--registry-path", type=Path, default=DEFAULT_REGISTRY_PATH
     )
-    parser.add_argument("--log-root", type=Path, default=DEFAULT_LOG_ROOT)
-    parser.add_argument("--max-changed-files", type=int, default=8)
-    parser.add_argument("--max-changed-lines", type=int, default=800)
-    parser.add_argument("--timeout", type=int, default=900)
-    parser.add_argument("--create-pr", action="store_true")
-    parser.add_argument("--keep-worktree", action="store_true")
-    parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--print-controller-prompt", action="store_true")
+    parser.add_argument("--print-self-audit-prompt", action="store_true")
+    parser.add_argument(
+        "--print-experience-to-rule-prompt", action="store_true"
+    )
     parser.add_argument("--list-resources", action="store_true")
     return parser
 
@@ -691,26 +978,18 @@ def main(argv: list[str] | None = None) -> int:
     if args.list_resources:
         print_resources(args.registry_path)
         return 0
-    config = AutoptConfig(
-        target=args.target,
-        goal=args.goal,
-        candidate_count=args.candidate_count,
-        base=args.base,
-        worktree_root=args.worktree_root,
-        create_pr=args.create_pr,
-        registry_path=args.registry_path,
-        log_root=args.log_root,
-        max_changed_files=args.max_changed_files,
-        max_changed_lines=args.max_changed_lines,
-        timeout_seconds=args.timeout,
-        keep_worktree=args.keep_worktree,
-        dry_run=args.dry_run,
-    )
-    try:
-        return run_autoptimization(config)
-    except Exception as exc:
-        print(f"[error] {exc}", file=sys.stderr)
-        return 3
+    if args.print_controller_prompt:
+        resources = load_resource_registry(args.registry_path)
+        print(build_controller_prompt(resources))
+        return 0
+    if args.print_self_audit_prompt:
+        print(build_self_audit_prompt())
+        return 0
+    if args.print_experience_to_rule_prompt:
+        print(build_experience_to_rule_prompt())
+        return 0
+    parser.print_help()
+    return 0
 
 
 if __name__ == "__main__":

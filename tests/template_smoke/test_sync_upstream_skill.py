@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-import shutil
 from pathlib import Path
 
 import pytest
 
+from scripts.ci.repo_copy import copy_repo_for_test
 from scripts.template.sync_upstream_skill import UnknownSkillError, sync_skill
 
 ROOT = Path(__file__).resolve().parents[2]
 
 
 def _copy_repo(tmp_path: Path) -> Path:
-    repo = tmp_path / "repo"
-    shutil.copytree(ROOT, repo, symlinks=True)
-    return repo
+    return copy_repo_for_test(ROOT, tmp_path)
 
 
 def test_sync_upstream_skill_updates_target_and_recreates_symlinks(

@@ -36,6 +36,38 @@ def test_harness_resource_registry_covers_retained_autoptimizer() -> None:
     }
     assert "codex-subagent" in resource_ids
     assert "harness-autoptimizer" in resource_ids
+    assert "instruction-surface" in resource_ids
+    assert "knowledge-docs" in resource_ids
+    assert "project-docs" in resource_ids
+    assert "test-performance" in resource_ids
+
+
+def test_markdown_harness_resources_keep_guardrails() -> None:
+    registry = tomllib.loads(
+        RESOURCE_REGISTRY_PATH.read_text(encoding="utf-8")
+    )
+    resources = {
+        item["id"]: item
+        for item in registry["resources"]
+        if isinstance(item, dict) and "id" in item
+    }
+
+    project_docs = resources["project-docs"]
+    assert project_docs["kind"] == "documentation"
+    assert project_docs["mutation_policy"] == "guarded_pr"
+    assert "README.md" in project_docs["mutable_paths"]
+    assert project_docs["max_changed_files"] == 2
+    assert project_docs["max_changed_lines"] == 200
+
+    knowledge_docs = resources["knowledge-docs"]
+    assert "docs/architecture/decision-records" in (
+        knowledge_docs["excluded_paths"]
+    )
+
+    test_performance = resources["test-performance"]
+    assert test_performance["kind"] == "test_performance"
+    assert test_performance["goals"] == ["efficiency"]
+    assert "scripts/ci/repo_copy.py" in test_performance["mutable_paths"]
 
 
 def test_manifest_paths_match_filesystem() -> None:

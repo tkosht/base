@@ -21,6 +21,7 @@
   - `.cursor/rules/*`
 - 知識の正本
   - `docs/ai/`
+  - `docs/ai/experience-capture.md`
   - `docs/design/`
   - `docs/architecture/`
   - `docs/standards/`
@@ -44,7 +45,10 @@
   - `ci.yml`
   - `test-all-subsystems.yml`
   - `claude.yml`
+  - `harness-autopt.yml`
 - validation
+  - `.claude/skills/harness-autoptimizer/prompts/*`
+  - `scripts/ci/repo_copy.py`
   - `tests/codex_subagent/*`
   - `tests/test_base_harness_set.py`
   - `tests/test_template_contract.py`

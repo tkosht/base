@@ -11,6 +11,7 @@
 - `CLAUDE.md`: Claude Code 向けの薄いアダプタ
 - `DESIGN.md`: generated repo の visual contract の正本
 - `docs/ai/`: AI エージェント運用の詳細
+- `docs/ai/experience-capture.md`: Codex agent の経験捕捉と保持判断
 - `docs/design/README.md`: root `DESIGN.md` を支える design guidance の補助面
 - `docs/architecture/`: 構造、知識配置、ハーネス一覧、ハーネス資源 registry、設計判断メモ
 - `docs/standards/`: 実装、テスト、セキュリティ、レビュー、コミュニケーションの標準

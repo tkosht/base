@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from scripts.ci.repo_copy import copy_repo_for_test
 from scripts.ci.validate_template import (
     DESIGN_CHECKLIST_SUPPLEMENT_CONTRACT,
     DESIGN_CHECKLIST_UPDATE_CONTRACT,
@@ -18,9 +19,25 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def _copy_repo(tmp_path: Path) -> Path:
-    repo = tmp_path / "repo"
-    shutil.copytree(ROOT, repo, symlinks=True)
-    return repo
+    return copy_repo_for_test(ROOT, tmp_path)
+
+
+def test_copy_repo_prunes_runtime_and_dependency_dirs(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+
+    for rel in (
+        ".git",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".venv",
+        "node_modules",
+    ):
+        assert not (repo / rel).exists(), rel
+    assert (repo / ".codex" / "config.toml").exists()
+    assert (repo / ".codex" / "skills").exists()
+    assert not (repo / ".codex" / "sessions").exists()
 
 
 def _replace_once(path: Path, old: str, new: str) -> None:
@@ -123,6 +140,182 @@ def test_template_contract_checks_fail_when_full_access_guidance_is_missing(
         "docs/standards/security.md missing Codex shared default contract: "
         'sandbox_mode = "danger-full-access"'
     ) in errors
+
+
+def test_template_contract_checks_fail_when_project_docs_resource_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    registry = repo / "docs" / "architecture" / "harness-resources.toml"
+    _replace_once(registry, 'id = "project-docs"', 'id = "project-docs-old"')
+
+    errors = run_checks(repo)
+
+    assert "missing harness resource: project-docs" in errors
+
+
+def test_template_contract_checks_fail_when_project_docs_path_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    registry = repo / "docs" / "architecture" / "harness-resources.toml"
+    marker = 'id = "project-docs"'
+    text = registry.read_text(encoding="utf-8")
+    head, tail = text.split(marker, 1)
+    tail = tail.replace('  "README.md",\n', "", 2)
+    registry.write_text(head + marker + tail, encoding="utf-8")
+
+    errors = run_checks(repo)
+
+    assert "project-docs missing path: README.md" in errors
+    assert "project-docs missing mutable path: README.md" in errors
+
+
+def test_template_contract_checks_fail_when_knowledge_docs_exclusion_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    registry = repo / "docs" / "architecture" / "harness-resources.toml"
+    _replace_once(
+        registry,
+        '  "docs/architecture/decision-records",',
+        '  "docs/architecture/decision-records-old",',
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "knowledge-docs must exclude docs/architecture/decision-records"
+    ) in errors
+
+
+def test_template_contract_checks_fail_for_unbounded_repo_copy(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    contract_test = repo / "tests" / "test_template_contract.py"
+    _replace_once(
+        contract_test,
+        "return copy_repo_for_test(ROOT, tmp_path)",
+        "return shutil.copytree(ROOT, tmp_path / 'repo', symlinks=True)",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "tests/test_template_contract.py copies ROOT with "
+        "shutil.copytree without ignore"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_autopt_prompt_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    prompt = (
+        repo
+        / ".claude"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "auto-controller.md"
+    )
+    prompt.unlink()
+
+    errors = run_checks(repo)
+
+    assert (
+        "missing required path: "
+        ".claude/skills/harness-autoptimizer/prompts/auto-controller.md"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_self_audit_prompt_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    prompt = (
+        repo
+        / ".claude"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "self-audit.md"
+    )
+    prompt.unlink()
+
+    errors = run_checks(repo)
+
+    assert (
+        "missing required path: "
+        ".claude/skills/harness-autoptimizer/prompts/self-audit.md"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_experience_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    experience = repo / "docs" / "ai" / "experience-capture.md"
+    experience.unlink()
+
+    errors = run_checks(repo)
+
+    assert "missing required path: docs/ai/experience-capture.md" in errors
+
+
+def test_template_contract_checks_fail_when_autopt_helper_keeps_candidate_runner(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    helper = (
+        repo
+        / ".claude"
+        / "skills"
+        / "harness-autoptimizer"
+        / "scripts"
+        / "harness_autopt.py"
+    )
+    _append_text(helper, "\ndef run_candidate_generation():\n    pass\n")
+
+    errors = run_checks(repo)
+
+    assert (
+        "harness_autopt.py must not keep Python-runner control path: "
+        "def run_candidate_generation"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_makefile_keeps_autopt_target(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    makefile = repo / "Makefile"
+    _append_text(
+        makefile,
+        "\nharness-autopt:\n\tTARGET=project-docs GOAL=consistency echo bad\n",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "Makefile must not expose TARGET/GOAL harness-autopt entrypoint"
+        in errors
+    )
+
+
+def test_template_contract_checks_fail_when_autopt_workflow_missing_codex_agent(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "harness-autopt.yml"
+    _replace_once(workflow, "codex_exec.py", "python_runner_only.py")
+
+    errors = run_checks(repo)
+
+    assert (
+        "harness-autopt workflow must start a Codex agent controller" in errors
+    )
 
 
 def test_template_contract_checks_fail_when_grill_me_doc_is_missing(
