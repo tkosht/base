@@ -14,6 +14,8 @@ Codex agent は、タスク終了時、ユーザー訂正時、gate 異常時、
 
 見るべきものは固定リストではありません。実装で不要な分岐・状態・引数・責務混入が増えていないか、ハーネスとしてより効果的な rule や validator にできないか、矛盾した rule は authority と scope で解消できるか、不要な rule を消せないか、不足する rule を最小の形で足せないかを判断します。
 
+ユーザー訂正により保持価値のある経験候補を見つけたが、Plan Mode などで repo-tracked state を変更できない場合は、会話中で pending ExperienceCandidate として明示します。書き込み可能になってから docs、skill prompt、test、validator、設計判断メモ、または非追跡 state へ昇格・棄却を行います。「保持対象」とだけ述べて終わらせず、保留理由、候補の要約、想定 placement を通知します。
+
 ## Retention
 
 経験はすべて残しません。残す条件は、再発可能性がある、影響が大きい、一般化できる、検証できる、常時 context cost を上回る価値があることです。

@@ -29,3 +29,8 @@ Before promoting a rule, check:
 
 Prefer deleting or simplifying an existing rule over adding a new one when the
 same behavior can be preserved with less always-loaded context.
+
+When a durable candidate is found while repo mutation is blocked, keep it as a
+pending ExperienceCandidate in the conversation until mutation is allowed. The
+pending note must identify why it was not written yet and which retention form
+will be evaluated next.
