@@ -252,6 +252,8 @@ def test_self_audit_prompt_defines_intensional_retention_question() -> None:
     assert "Self-Audit is not a checklist" in prompt
     assert "Can this experience be compressed" in prompt
     assert "Do not promote raw traces" in prompt
+    assert "pending ExperienceCandidate" in prompt
+    assert "Plan Mode" in prompt
 
 
 def test_experience_assessment_detects_controller_responsibility_mix() -> None:
@@ -299,6 +301,7 @@ def test_experience_to_rule_prompt_includes_candidate_and_assessment() -> None:
     assert "ExperienceCandidate" in prompt
     assert "ExperienceAssessment" in prompt
     assert "canonical-rule" in prompt
+    assert "pending ExperienceCandidate" in prompt
 
 
 def test_build_pr_title_uses_resource_and_goal() -> None:

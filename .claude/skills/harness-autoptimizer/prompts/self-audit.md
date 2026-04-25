@@ -25,4 +25,9 @@ Evaluate these dimensions:
 Do not promote raw traces. Raw prompts, raw model output, secrets, runtime logs,
 and one-off task details must not become tracked knowledge.
 
+If mutation is unavailable, such as in Plan Mode, and a user correction exposes
+a retention-worthy lesson, explicitly report a pending ExperienceCandidate in
+the conversation. Include the sanitized observation, evidence summary, reason
+mutation is blocked, and likely placement. Do not merely say it should be kept.
+
 If the evidence is weak, keep only a sanitized state summary or discard it.
