@@ -31,9 +31,10 @@ metadata:
 3. Constrain: `AutoptRequest` に editable paths、excluded paths、diff limits、validators、success criteria、draft pull request policy を固定する。
 4. Repair: Codex agent 自身が `AutoptRequest` の範囲内で最小変更する。
 5. Verify: `make doctor`、`make lint`、`make test` と diff guard を通す。
-6. Self-Audit: 実行経験を ExperienceCandidate として扱い、code simplification、test、validator、skill prompt、canonical rule、設計判断メモ、非追跡 state、discard のどれに値するか判断する。
-7. Reflect: low confidence、unsupported evidence、gate failure、保持価値不足の場合は修復や昇格をせず sanitized state に理由を残す。
-8. Propose: 成功時だけ draft pull request を作る。
+6. Review: Codex agent 自身が、要件・実装・prompt・test の整合性を code review と同じ厳しさで確認する。material finding があれば同じ `AutoptRequest` 制約内で Repair -> Verify -> Review を繰り返す。
+7. Self-Audit: 実行経験を ExperienceCandidate として扱い、code simplification、test、validator、skill prompt、canonical rule、設計判断メモ、非追跡 state、discard のどれに値するか判断する。
+8. Reflect: low confidence、unsupported evidence、gate failure、保持価値不足、または unresolved material finding がある場合は修復や昇格をせず sanitized state に理由を残す。
+9. Propose: 成功時だけ draft pull request を作る。
 
 ## Controller Prompts
 
@@ -57,3 +58,4 @@ uv run python .claude/skills/harness-autoptimizer/scripts/harness_autopt.py \
 - Markdown / settings / template / validation / test performance / skill resource は、それぞれの `mutable_paths`、`excluded_paths`、diff limit を守る。
 - raw prompt、raw model output、秘密情報、runtime logs、一回限りの作業メモは tracked knowledge に昇格しない。
 - 永続化する経験は、再発可能性、影響度、一般性、検証可能性、context cost を満たす蒸留済み artifact だけにする。
+- 自己レビューの反復は scope creep の許可ではない。同じ resource / goal / constraints 内で解消できない finding は停止理由として記録する。

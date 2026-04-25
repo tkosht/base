@@ -209,7 +209,12 @@ def test_agent_controller_prompt_lists_all_resources() -> None:
     )
 
     assert "Codex agent is the controller" in prompt
-    assert "Sense -> Classify -> Constrain -> Repair -> Verify" in prompt
+    assert (
+        "Sense -> Classify -> Constrain -> Repair -> Verify -> Review"
+        in prompt
+    )
+    assert "requirements, implementation, prompts, tests" in prompt
+    assert "unresolved findings are stop reasons" in prompt
     assert "Self-Audit Contract" in prompt
     assert "Experience-to-Rule Contract" in prompt
     assert '"project-docs"' in prompt
@@ -234,6 +239,8 @@ def test_repair_prompt_includes_request_constraints_and_evidence() -> None:
     assert "README.md" in prompt
     assert "make doctor" in prompt
     assert "Do not edit outside editable_paths" in prompt
+    assert "self-review pass" in prompt
+    assert "helper boundaries" in prompt
 
 
 def test_parser_does_not_accept_manual_target_goal_controls() -> None:
