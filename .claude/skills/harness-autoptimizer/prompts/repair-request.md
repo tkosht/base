@@ -12,6 +12,7 @@ Required behavior:
 - Stop if the evidence does not justify the selected resource and goal.
 - Stop if the change would require touching protected prefixes.
 - Create only a draft pull request after all validation passes.
+- After validation, run a self-review pass against the AutoptRequest, requirements, implementation, prompts, tests, helper boundaries, and resource registry. If material findings can be fixed inside the same constraints, repair them and rerun validation.
 - After verification, run the Self-Audit retention decision. Promote only distilled experience, never raw traces.
 
 The repair is successful only when every success criterion in the AutoptRequest is satisfied.
