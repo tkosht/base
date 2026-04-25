@@ -39,11 +39,13 @@ paths = [
   ".agents/skills/harness-autoptimizer",
   ".codex/skills/harness-autoptimizer",
   "docs/ai/skills/harness-autoptimizer.md",
+  ".github/workflows/harness-autopt.yml",
   "tests/harness_autoptimizer",
 ]
 mutable_paths = [
   ".claude/skills/harness-autoptimizer",
   "docs/ai/skills/harness-autoptimizer.md",
+  ".github/workflows/harness-autopt.yml",
   "tests/harness_autoptimizer",
 ]
 depends_on = [
@@ -57,7 +59,7 @@ validators = [
 ]
 mutation_policy = "autonomous_pr"
 risk_level = "high"
-goals = ["stability"]
+goals = ["stability", "self-audit"]
 
 [[resources]]
 id = "instruction-surface"
@@ -69,6 +71,7 @@ paths = [
   "GEMINI.md",
   ".cursor/rules",
   "docs/ai/repo-contract.md",
+  "docs/ai/experience-capture.md",
 ]
 mutable_paths = [
   "AGENTS.md",
@@ -76,6 +79,7 @@ mutable_paths = [
   "GEMINI.md",
   ".cursor/rules",
   "docs/ai/repo-contract.md",
+  "docs/ai/experience-capture.md",
 ]
 depends_on = ["knowledge-docs", "validation-surface"]
 validators = [
@@ -85,7 +89,9 @@ validators = [
 ]
 mutation_policy = "guarded_pr"
 risk_level = "high"
-goals = ["compression", "consistency"]
+goals = ["compression", "consistency", "experience-capture"]
+max_changed_files = 3
+max_changed_lines = 300
 
 [[resources]]
 id = "knowledge-docs"
@@ -110,6 +116,47 @@ validators = [
 mutation_policy = "guarded_pr"
 risk_level = "medium"
 goals = ["consistency", "freshness"]
+excluded_paths = [
+  "docs/architecture/decision-records",
+]
+max_changed_files = 3
+max_changed_lines = 300
+
+[[resources]]
+id = "project-docs"
+kind = "documentation"
+authority = "canonical"
+paths = [
+  "README.md",
+  "DESIGN.md",
+  "CONTRIBUTING.md",
+  "SECURITY.md",
+  "CODE_OF_CONDUCT.md",
+  "docs/design/README.md",
+  "src/README.md",
+  "tests/README.md",
+]
+mutable_paths = [
+  "README.md",
+  "DESIGN.md",
+  "CONTRIBUTING.md",
+  "SECURITY.md",
+  "CODE_OF_CONDUCT.md",
+  "docs/design/README.md",
+  "src/README.md",
+  "tests/README.md",
+]
+depends_on = ["instruction-surface", "knowledge-docs", "validation-surface"]
+validators = [
+  "make doctor",
+  "make lint",
+  "make test",
+]
+mutation_policy = "guarded_pr"
+risk_level = "medium"
+goals = ["compression", "consistency", "freshness"]
+max_changed_files = 2
+max_changed_lines = 200
 
 [[resources]]
 id = "settings-config"
@@ -188,3 +235,31 @@ validators = [
 mutation_policy = "guarded_pr"
 risk_level = "high"
 goals = ["consistency", "coverage"]
+
+[[resources]]
+id = "test-performance"
+kind = "test_performance"
+authority = "canonical"
+paths = [
+  "scripts/ci/validate_template.py",
+  "scripts/ci/repo_copy.py",
+  "tests/test_template_contract.py",
+  "tests/template_smoke/test_sync_upstream_skill.py",
+]
+mutable_paths = [
+  "scripts/ci/validate_template.py",
+  "scripts/ci/repo_copy.py",
+  "tests/test_template_contract.py",
+  "tests/template_smoke/test_sync_upstream_skill.py",
+]
+depends_on = ["validation-surface"]
+validators = [
+  "make doctor",
+  "make lint",
+  "make test",
+]
+mutation_policy = "guarded_pr"
+risk_level = "medium"
+goals = ["efficiency"]
+max_changed_files = 5
+max_changed_lines = 500

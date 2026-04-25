@@ -1,0 +1,65 @@
+name: Harness Autoptimizer
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  codex-agent-controller:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          python-version: "3.12"
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: |
+          uv sync --all-groups --all-extras
+          npm ci
+
+      - name: Preflight Codex auth
+        env:
+          CODEX_AUTH_JSON: ${{ secrets.CODEX_AUTH_JSON }}
+        run: |
+          test -n "$CODEX_AUTH_JSON" || {
+            echo "CODEX_AUTH_JSON secret is required for autonomous repair."
+            exit 1
+          }
+          mkdir -p "$RUNNER_TEMP/codex-home"
+          printf '%s' "$CODEX_AUTH_JSON" > "$RUNNER_TEMP/codex-home/auth.json"
+          cp .codex/config.toml "$RUNNER_TEMP/codex-home/config.toml"
+
+      - name: Build Codex agent controller prompt
+        run: |
+          uv run python .claude/skills/harness-autoptimizer/scripts/harness_autopt.py \
+            --print-controller-prompt > "$RUNNER_TEMP/harness-autopt-controller.md"
+
+      - name: Run Codex agent controller
+        env:
+          CODEX_HOME: ${{ runner.temp }}/codex-home
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          export PATH="$GITHUB_WORKSPACE/node_modules/.bin:$PATH"
+          uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
+            --mode single \
+            --task-type code_gen \
+            --sandbox workspace-write \
+            --timeout 1200 \
+            --json \
+            --prompt "$(cat "$RUNNER_TEMP/harness-autopt-controller.md")"

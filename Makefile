@@ -1,4 +1,4 @@
-.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter sync-skill harness-autopt
+.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter sync-skill
 
 default: all
 
@@ -33,15 +33,6 @@ use-nextjs-starter:
 sync-skill:
 	@test -n "$(SKILL)" || { echo "SKILL=<registered-skill> を指定してください。"; exit 1; }
 	uv run python scripts/template/sync_upstream_skill.py --skill "$(SKILL)" $(if $(REF),--ref "$(REF)",)
-
-harness-autopt:
-	uv run python .claude/skills/harness-autoptimizer/scripts/harness_autopt.py \
-		--target "$(or $(TARGET),codex-subagent)" \
-		--goal "$(or $(GOAL),stability)" \
-		--candidate-count "$(or $(CANDIDATES),1)" \
-		--base "$(or $(BASE),origin/main)" \
-		--worktree-root "$(or $(WORKTREE_ROOT),worker/harness-autopt)" \
-		--create-pr
 
 # ==================================================
 # controlling container tasks

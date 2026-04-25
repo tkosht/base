@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import re
 import sys
 import tomllib
@@ -43,9 +44,11 @@ REQUIRED_PATHS = [
     ".github/ISSUE_TEMPLATE/agent-task.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/workflows/template-health.yml",
+    ".github/workflows/harness-autopt.yml",
     "package.json",
     "package-lock.json",
     "docs/ai/repo-contract.md",
+    "docs/ai/experience-capture.md",
     "docs/ai/mcp.md",
     "docs/ai/operator-checklist.md",
     "docs/ai/execution-playbooks.md",
@@ -55,6 +58,10 @@ REQUIRED_PATHS = [
     "docs/ai/skills/grill-me.md",
     "docs/ai/skills/grill-me-essential-first.md",
     "docs/ai/skills/harness-autoptimizer.md",
+    ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
+    ".claude/skills/harness-autoptimizer/prompts/self-audit.md",
+    ".claude/skills/harness-autoptimizer/prompts/experience-to-rule.md",
+    ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
     "docs/design/README.md",
     "docs/design/samples/starter-b2b-corporate",
     "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
@@ -74,6 +81,7 @@ REQUIRED_PATHS = [
     "docs/standards/communication.md",
     "docs/repository-template-design.md",
     "scripts/ci/validate_template.py",
+    "scripts/ci/repo_copy.py",
     "scripts/template/apply_overlay.py",
     "scripts/template/sync_upstream_skill.py",
     "scripts/template/upstream_skills.toml",
@@ -92,6 +100,7 @@ PRIMARY_DOCS = [
     "AGENTS.md",
     "CLAUDE.md",
     "docs/ai/repo-contract.md",
+    "docs/ai/experience-capture.md",
     "docs/ai/mcp.md",
     "docs/ai/operator-checklist.md",
     "docs/ai/execution-playbooks.md",
@@ -204,11 +213,41 @@ CODEX_SHARED_DEFAULT_EXPECTATIONS = {
         "sandbox_workspace_write.network_access = false",
     ),
 }
+REQUIRED_HARNESS_RESOURCE_IDS = {
+    "codex-subagent",
+    "harness-autoptimizer",
+    "instruction-surface",
+    "knowledge-docs",
+    "project-docs",
+    "test-performance",
+}
+PROJECT_DOCS_RESOURCE_PATHS = {
+    "README.md",
+    "DESIGN.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "docs/design/README.md",
+    "src/README.md",
+    "tests/README.md",
+}
+COPYTREE_GUARD_FILES = (
+    "tests/test_template_contract.py",
+    "tests/template_smoke/test_sync_upstream_skill.py",
+)
+EXPERIENCE_CAPTURE_CONTRACT = (
+    "この repo 上で動く Codex agent は、通常タスクの終了時、"
+    "ユーザー訂正時、gate 異常時、実装複雑化や instruction surface "
+    "の矛盾を見つけた時に、経験を将来の行動改善へ残すべきかを軽量に判断する"
+)
 
 
 def _check_primary_terminology(root: Path, errors: list[str]) -> None:
     for rel in PRIMARY_DOCS:
-        text = (root / rel).read_text(encoding="utf-8")
+        path = root / rel
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
         if re.search(r"\bADR\b", text):
             errors.append(f"{rel} must use 設計判断メモ instead of ADR")
         for term, expansions in TERM_EXPANSIONS.items():
@@ -250,6 +289,154 @@ def _check_codex_shared_defaults(root: Path, errors: list[str]) -> None:
                 errors.append(
                     f"{rel} missing Codex shared default contract: {needle}"
                 )
+
+
+def _check_harness_resource_registry(root: Path, errors: list[str]) -> None:
+    registry_path = root / "docs" / "architecture" / "harness-resources.toml"
+    registry = tomllib.loads(registry_path.read_text(encoding="utf-8"))
+    resources = {
+        item["id"]: item
+        for item in registry.get("resources", [])
+        if isinstance(item, dict) and "id" in item
+    }
+    for resource_id in sorted(REQUIRED_HARNESS_RESOURCE_IDS):
+        if resource_id not in resources:
+            errors.append(f"missing harness resource: {resource_id}")
+
+    project_docs = resources.get("project-docs")
+    if isinstance(project_docs, dict):
+        paths = set(project_docs.get("paths", []))
+        mutable_paths = set(project_docs.get("mutable_paths", []))
+        for rel in sorted(PROJECT_DOCS_RESOURCE_PATHS):
+            if rel not in paths:
+                errors.append(f"project-docs missing path: {rel}")
+            if rel not in mutable_paths:
+                errors.append(f"project-docs missing mutable path: {rel}")
+        if project_docs.get("mutation_policy") != "guarded_pr":
+            errors.append("project-docs must use guarded_pr mutation policy")
+
+    knowledge_docs = resources.get("knowledge-docs")
+    if isinstance(knowledge_docs, dict) and (
+        "docs/architecture/decision-records"
+        not in knowledge_docs.get("excluded_paths", [])
+    ):
+        errors.append(
+            "knowledge-docs must exclude docs/architecture/decision-records"
+        )
+
+
+def _is_copytree_call(node: ast.Call) -> bool:
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr == "copytree"
+    if isinstance(node.func, ast.Name):
+        return node.func.id == "copytree"
+    return False
+
+
+def _first_arg_is_root(node: ast.Call) -> bool:
+    return (
+        bool(node.args)
+        and isinstance(node.args[0], ast.Name)
+        and (node.args[0].id == "ROOT")
+    )
+
+
+def _has_ignore_keyword(node: ast.Call) -> bool:
+    return any(keyword.arg == "ignore" for keyword in node.keywords)
+
+
+def _check_heavy_repo_copy_guard(root: Path, errors: list[str]) -> None:
+    for rel in COPYTREE_GUARD_FILES:
+        path = root / rel
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and _is_copytree_call(node)
+                and _first_arg_is_root(node)
+                and not _has_ignore_keyword(node)
+            ):
+                errors.append(
+                    f"{rel} copies ROOT with shutil.copytree without ignore"
+                )
+
+
+def _check_harness_autoptimizer_contract(
+    root: Path, errors: list[str]
+) -> None:
+    makefile_text = (root / "Makefile").read_text(encoding="utf-8")
+    if (
+        "harness-autopt:" in makefile_text
+        or "TARGET" in makefile_text
+        or ("GOAL" in makefile_text)
+    ):
+        errors.append(
+            "Makefile must not expose TARGET/GOAL harness-autopt entrypoint"
+        )
+
+    skill_text = (
+        root / ".claude" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "Codex agent",
+        "Sense",
+        "Classify",
+        "Constrain",
+        "Repair",
+        "Verify",
+        "Self-Audit",
+        "AutoptRequest",
+        "ExperienceCandidate",
+    ):
+        if needle not in skill_text:
+            errors.append(
+                ".claude/skills/harness-autoptimizer/SKILL.md "
+                f"missing controller contract: {needle}"
+            )
+
+    helper_text = (
+        root
+        / ".claude"
+        / "skills"
+        / "harness-autoptimizer"
+        / "scripts"
+        / "harness_autopt.py"
+    ).read_text(encoding="utf-8")
+    forbidden_helpers = (
+        "def run_candidate_generation",
+        "def run_autoptimization",
+        'parser.add_argument("--target"',
+        'parser.add_argument("--goal"',
+        'parser.add_argument("--candidate-count"',
+    )
+    for needle in forbidden_helpers:
+        if needle in helper_text:
+            errors.append(
+                "harness_autopt.py must not keep Python-runner control path: "
+                + needle
+            )
+
+    workflow_text = (
+        root / ".github" / "workflows" / "harness-autopt.yml"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "workflow_dispatch:",
+        "schedule:",
+        "contents: write",
+        "pull-requests: write",
+        "CODEX_AUTH_JSON",
+        "codex_exec.py",
+        "harness-autopt-controller.md",
+    ):
+        if needle not in workflow_text:
+            errors.append(
+                "harness-autopt workflow missing controller contract: "
+                + needle
+            )
+    if "codex_exec.py" not in workflow_text:
+        errors.append(
+            "harness-autopt workflow must start a Codex agent controller"
+        )
 
 
 def _check_design_doc_terminology(root: Path, errors: list[str]) -> None:
@@ -479,6 +666,34 @@ def run_checks(root: Path = ROOT) -> list[str]:
                 "docs/ai/repo-contract.md missing test mode contract: "
                 + needle
             )
+    for needle in (
+        "docs/ai/experience-capture.md",
+        EXPERIENCE_CAPTURE_CONTRACT,
+    ):
+        if needle not in contract_text:
+            errors.append(
+                "docs/ai/repo-contract.md missing experience contract: "
+                + needle
+            )
+
+    experience_path = root / "docs" / "ai" / "experience-capture.md"
+    if experience_path.exists():
+        experience_text = experience_path.read_text(encoding="utf-8")
+        core_question = (
+            "この経験は、将来の Codex agent の行動をより単純・一貫・安全・"
+            "自律的にする形へ圧縮できるか"
+        )
+        for needle in (
+            core_question,
+            "raw prompt",
+            "sanitized summary",
+            "harness-autoptimizer",
+        ):
+            if needle not in experience_text:
+                errors.append(
+                    "docs/ai/experience-capture.md missing experience contract: "
+                    + needle
+                )
 
     testing_text = (root / "docs/standards/testing.md").read_text(
         encoding="utf-8"
@@ -492,6 +707,9 @@ def run_checks(root: Path = ROOT) -> list[str]:
 
     _check_primary_terminology(root, errors)
     _check_codex_shared_defaults(root, errors)
+    _check_harness_resource_registry(root, errors)
+    _check_heavy_repo_copy_guard(root, errors)
+    _check_harness_autoptimizer_contract(root, errors)
     _check_non_root_design_md(root, errors)
     _check_design_contract(root, errors)
     _check_design_doc_terminology(root, errors)

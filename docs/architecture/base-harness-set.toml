@@ -23,6 +23,7 @@ workflows = [
   ".github/workflows/ci.yml",
   ".github/workflows/test-all-subsystems.yml",
   ".github/workflows/claude.yml",
+  ".github/workflows/harness-autopt.yml",
 ]
 
 included_paths = [
@@ -40,6 +41,7 @@ included_paths = [
   ".codex/version.json",
   ".codex/skills",
   ".github/dependabot.yml",
+  ".github/workflows/harness-autopt.yml",
   ".github/ISSUE_TEMPLATE/simple.yml",
   "README.md",
   "Makefile",
@@ -51,6 +53,7 @@ included_paths = [
   "pyproject.toml",
   "uv.lock",
   "docs/ai/repo-contract.md",
+  "docs/ai/experience-capture.md",
   "docs/ai/mcp.md",
   "docs/ai/operator-checklist.md",
   "docs/ai/execution-playbooks.md",
@@ -58,6 +61,10 @@ included_paths = [
   "docs/ai/skills/README.md",
   "docs/ai/skills/ai-agent-collaboration-exec.md",
   "docs/ai/skills/harness-autoptimizer.md",
+  ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
+  ".claude/skills/harness-autoptimizer/prompts/self-audit.md",
+  ".claude/skills/harness-autoptimizer/prompts/experience-to-rule.md",
+  ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
   "docs/ai/skills/grill-me.md",
   "docs/ai/skills/grill-me-essential-first.md",
   "docs/design/README.md",
@@ -76,6 +83,7 @@ included_paths = [
   "docs/standards/review.md",
   "docs/standards/communication.md",
   "scripts/ci/validate_template.py",
+  "scripts/ci/repo_copy.py",
   "scripts/template/sync_upstream_skill.py",
   "scripts/template/upstream_skills.toml",
   "tests/codex_subagent",
