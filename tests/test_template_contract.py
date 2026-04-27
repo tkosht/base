@@ -318,6 +318,62 @@ def test_template_contract_checks_fail_when_autopt_workflow_missing_codex_agent(
     )
 
 
+def test_template_contract_checks_fail_when_autopt_review_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    skill.write_text(
+        skill.read_text(encoding="utf-8").replace(
+            "ReviewReport", "StructuredReviewRemoved"
+        ),
+        encoding="utf-8",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/harness-autoptimizer/SKILL.md "
+        "missing controller contract: ReviewReport"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_github_helper_targets_base(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    helper = repo / "bin" / "github_api_pr.sh"
+    helper.write_text(
+        "#!/usr/bin/env bash\nOWNER=" + "tkosht\nREPO=" + "base\n",
+        encoding="utf-8",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "bin/github_api_pr.sh must not hard-code base repo: REPO=" + "base"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_github_helper_is_not_dynamic(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    helper = repo / "bin" / "github_api_pr.sh"
+    text = helper.read_text(encoding="utf-8")
+    helper.write_text(
+        text.replace("GITHUB_REPOSITORY", "GH_REPOSITORY_REMOVED"),
+        encoding="utf-8",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "bin/github_api_pr.sh must resolve owner/repo dynamically: "
+        "GITHUB_REPOSITORY"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_grill_me_doc_is_missing(
     tmp_path: Path,
 ) -> None:
@@ -342,7 +398,8 @@ def test_template_contract_checks_fail_when_grill_me_skill_dir_is_missing(
         "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, "
         "grill-me-essential-first, harness-autoptimizer, "
-        "repo-instruction-optimizer, skill-authoring"
+        "repo-instruction-optimizer, repo-template-specializer, "
+        "skill-authoring"
     ) in errors
 
 
@@ -371,7 +428,8 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_skill_dir_i
     assert (
         "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "harness-autoptimizer, repo-instruction-optimizer, skill-authoring"
+        "harness-autoptimizer, repo-instruction-optimizer, "
+        "repo-template-specializer, skill-authoring"
     ) in errors
 
 
@@ -386,7 +444,8 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_agent_entry
     assert (
         "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "harness-autoptimizer, repo-instruction-optimizer, skill-authoring"
+        "harness-autoptimizer, repo-instruction-optimizer, "
+        "repo-template-specializer, skill-authoring"
     ) in errors
 
 
@@ -401,7 +460,8 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_codex_entry
     assert (
         "unexpected .codex/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "harness-autoptimizer, repo-instruction-optimizer, skill-authoring"
+        "harness-autoptimizer, repo-instruction-optimizer, "
+        "repo-template-specializer, skill-authoring"
     ) in errors
 
 

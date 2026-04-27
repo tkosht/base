@@ -26,12 +26,12 @@ metadata:
 
 ## Workflow
 
-1. Sense: repo state、gate 結果、duration、failure text、changed paths、task friction、`docs/architecture/harness-resources.toml` を読む。
+1. Sense: repo state、gate 結果、duration、failure text、changed paths、task friction、明示された review artifact、`docs/architecture/harness-resources.toml` を読む。選択 target だけでなく、registry 全 resource paths に対して `ProactiveReviewProbe` による proactive review probe を走らせる。ただし各 resource の `excluded_paths` は尊重する。
 2. Classify: 全 registry resource を比較し、evidence から resource / goal / confidence / reason を決める。人間入力の `TARGET` / `GOAL` は使わない。
 3. Constrain: `AutoptRequest` に editable paths、excluded paths、diff limits、validators、success criteria、draft pull request policy を固定する。
 4. Repair: Codex agent 自身が `AutoptRequest` の範囲内で最小変更する。
 5. Verify: `make doctor`、`make lint`、`make test` と diff guard を通す。
-6. Review: Codex agent 自身が、要件・実装・prompt・test の整合性を code review と同じ厳しさで確認する。material finding があれば同じ `AutoptRequest` 制約内で Repair -> Verify -> Review を繰り返す。
+6. Review: Codex agent 自身が、要件・実装・prompt・test・proactive probe finding・review artifact の整合性を code review と同じ厳しさで確認する。finding は `ReviewFinding` として記録し、`verification_class` で検証種別を残す。target 外 resource の material finding は `out_of_scope` として記録し、黙殺しない。`excluded_paths` 内の歴史的記録や意図的な除外 path は false stop reason にしない。`ReviewReport` の `loop_count`、`converged`、`stop_reason` を確認し、material finding があれば同じ `AutoptRequest` 制約内で Repair -> Verify -> Review を繰り返す。
 7. Self-Audit: 実行経験を ExperienceCandidate として扱い、code simplification、test、validator、skill prompt、canonical rule、設計判断メモ、非追跡 state、discard のどれに値するか判断する。
 8. Reflect: low confidence、unsupported evidence、gate failure、保持価値不足、または unresolved material finding がある場合は修復や昇格をせず sanitized state に理由を残す。
 9. Propose: 成功時だけ draft pull request を作る。
