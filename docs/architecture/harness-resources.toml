@@ -1,5 +1,5 @@
 title = "harness resource registry"
-version = 1
+version = 2
 
 [[resources]]
 id = "codex-subagent"
@@ -60,6 +60,37 @@ validators = [
 mutation_policy = "autonomous_pr"
 risk_level = "high"
 goals = ["stability", "self-audit"]
+
+[[resources]]
+id = "repo-template-specializer"
+kind = "skill"
+authority = "canonical"
+paths = [
+  ".claude/skills/repo-template-specializer",
+  ".agents/skills/repo-template-specializer",
+  ".codex/skills/repo-template-specializer",
+  "docs/ai/skills/repo-template-specializer.md",
+]
+mutable_paths = [
+  ".claude/skills/repo-template-specializer",
+  "docs/ai/skills/repo-template-specializer.md",
+]
+depends_on = [
+  "harness-autoptimizer",
+  "repo-instruction-optimizer",
+  "template-surface",
+  "validation-surface",
+]
+validators = [
+  "make doctor",
+  "make lint",
+  "make test",
+]
+mutation_policy = "guarded_pr"
+risk_level = "medium"
+goals = ["consistency", "specialization", "review-quality"]
+max_changed_files = 4
+max_changed_lines = 450
 
 [[resources]]
 id = "instruction-surface"
