@@ -79,6 +79,7 @@ included_paths = [
   "docs/architecture/overview.md",
   "docs/architecture/decision-records/README.md",
   "docs/architecture/decision-records/knowledge-surface-consolidation.md",
+  "docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md",
   "docs/standards/coding.md",
   "docs/standards/testing.md",
   "docs/standards/security.md",
