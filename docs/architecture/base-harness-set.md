@@ -24,6 +24,7 @@
   - `docs/ai/experience-capture.md`
   - `docs/design/`
   - `docs/architecture/`
+  - `docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md`
   - `docs/standards/`
 - skills
   - `ai-agent-collaboration-exec`

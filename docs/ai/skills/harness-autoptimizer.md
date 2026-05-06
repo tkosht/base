@@ -6,4 +6,5 @@
 - Claude entrypoint: `.claude/skills/harness-autoptimizer`
 - Key outputs: AutoptRequest、ProactiveReviewProbe、ReviewFinding、ReviewReport、ExperienceCandidate、ExperienceAssessment、sanitized run state、diff guard result、gate results、draft pull request URL
 - Notes: 自律判断の主体は Codex agent。Python helper は prompt assembly、sanitized state、diff guard、検証実行、draft pull request 補助に限定する
+- Downstream feedback: `docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md` records the next base-level transfer backlog. Move generic convergence artifacts and policy-pack boundaries into base, but keep downstream product probes out of base core.
 - Prompt entrypoints: `.claude/skills/harness-autoptimizer/prompts/auto-controller.md`、`.claude/skills/harness-autoptimizer/prompts/self-audit.md`、`.claude/skills/harness-autoptimizer/prompts/experience-to-rule.md`、`.claude/skills/harness-autoptimizer/prompts/repair-request.md`
