@@ -61,6 +61,7 @@
   - `.codex/version.json`
   - `.claude/settings.json`
   - `.mcp.json`
+  - `.env.example`
   - `.github/dependabot.yml`
   - `.github/ISSUE_TEMPLATE/simple.yml`
   - `README.md`
@@ -69,6 +70,7 @@
   - `bin/`
   - `docker/`
   - `compose.override.yml`
+  - `secrets/README.md`
   - 既存プロジェクトの package、container、tooling と競合する場合は、移植先を優先して統合する
 
 ## 任意でコピーするもの
@@ -136,7 +138,9 @@
 - `app/` と app 依存の `tests/test_*.py`
 - `.claude/commands/` のうち retained task docs 以外
 - `.codex` 配下の runtime state や cache
-- `.env*`、secret、token、local auth state
+- `.env` と runtime `.env.*`。ただし公開 placeholder の `.env.example` は残す
+- `secrets/**` の実 secret。保護境界を示す `secrets/README.md` は残す
+- token、local auth state
 - `.git`、`.venv`、`node_modules`、`.pytest_cache`、`.ruff_cache`
 
 ## 検証

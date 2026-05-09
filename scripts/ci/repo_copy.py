@@ -16,6 +16,13 @@ TOP_LEVEL_COPY_EXCLUDES = frozenset(
     }
 )
 CODEX_COPY_KEEP = frozenset({"config.toml", "skills", "version.json"})
+SECRETS_COPY_KEEP = frozenset({"README.md"})
+
+
+def _is_env_runtime_file(name: str) -> bool:
+    return name == ".env" or (
+        name.startswith(".env.") and name != ".env.example"
+    )
 
 
 def make_repo_copy_ignore(
@@ -30,6 +37,9 @@ def make_repo_copy_ignore(
             ignored.update(
                 name for name in names if name in TOP_LEVEL_COPY_EXCLUDES
             )
+            ignored.update(
+                name for name in names if _is_env_runtime_file(name)
+            )
         try:
             rel = current.relative_to(resolved_root).as_posix()
         except ValueError:
@@ -37,6 +47,10 @@ def make_repo_copy_ignore(
         if rel == ".codex":
             ignored.update(
                 name for name in names if name not in CODEX_COPY_KEEP
+            )
+        if rel == "secrets":
+            ignored.update(
+                name for name in names if name not in SECRETS_COPY_KEEP
             )
         return ignored
 

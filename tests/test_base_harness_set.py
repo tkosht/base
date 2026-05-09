@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import fnmatch
 import re
 import tomllib
 from pathlib import Path
@@ -15,6 +16,14 @@ PYPROJECT_PATH = ROOT / "pyproject.toml"
 def load_manifest() -> dict[str, object]:
     with MANIFEST_PATH.open("rb") as fh:
         return tomllib.load(fh)
+
+
+def _path_matches_manifest_pattern(pattern: str, path: str) -> bool:
+    return (
+        path == pattern
+        or path.startswith(pattern.rstrip("/") + "/")
+        or fnmatch.fnmatchcase(path, pattern)
+    )
 
 
 def test_manifest_exists() -> None:
@@ -127,6 +136,10 @@ def test_manifest_declares_portable_harness_groups() -> None:
         in by_id["harness-registry"]["paths"]
     )
     assert ".codex/auth.json" in by_id["local-runtime-state"]["paths"]
+    assert by_id["local-runtime-state"]["preserve_paths"] == [
+        ".env.example",
+        "secrets/README.md",
+    ]
 
 
 def test_portable_harness_group_paths_exist_when_copied() -> None:
@@ -143,6 +156,36 @@ def test_portable_harness_group_paths_exist_when_copied() -> None:
         for rel in paths:
             assert isinstance(rel, str)
             assert (ROOT / rel).exists(), (group["id"], rel)
+
+
+def test_runtime_exclusions_preserve_public_placeholders() -> None:
+    manifest = load_manifest()
+    included_paths = set(manifest["included_paths"])
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+    by_id = {group["id"]: group for group in groups}
+
+    local_runtime = by_id["local-runtime-state"]
+    do_not_copy_patterns = local_runtime["paths"]
+    preserve_paths = set(local_runtime["preserve_paths"])
+    expected_preserve_paths = {".env.example", "secrets/README.md"}
+    assert expected_preserve_paths <= preserve_paths
+    assert expected_preserve_paths <= included_paths
+
+    copyable_paths = set(included_paths)
+    for group in groups:
+        assert isinstance(group, dict)
+        if group["tier"] == "do_not_copy":
+            continue
+        copyable_paths.update(group["paths"])
+
+    collisions = {
+        rel
+        for rel in copyable_paths
+        for pattern in do_not_copy_patterns
+        if _path_matches_manifest_pattern(pattern, rel)
+    }
+    assert collisions <= preserve_paths
 
 
 def test_manifest_skills_match_repo_layout() -> None:

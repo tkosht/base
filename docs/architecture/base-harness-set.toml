@@ -28,6 +28,7 @@ workflows = [
 
 included_paths = [
   ".gitignore",
+  ".env.example",
   "DESIGN.md",
   "AGENTS.md",
   "CLAUDE.md",
@@ -82,6 +83,7 @@ included_paths = [
   "docs/standards/security.md",
   "docs/standards/review.md",
   "docs/standards/communication.md",
+  "secrets/README.md",
   "scripts/ci/validate_template.py",
   "scripts/ci/repo_copy.py",
   "scripts/template/sync_upstream_skill.py",
@@ -283,6 +285,7 @@ paths = [
   ".codex/version.json",
   ".claude/settings.json",
   ".mcp.json",
+  ".env.example",
   ".github/dependabot.yml",
   ".github/ISSUE_TEMPLATE/simple.yml",
   "README.md",
@@ -292,6 +295,7 @@ paths = [
   "bin",
   "docker",
   "compose.override.yml",
+  "secrets/README.md",
 ]
 post_copy_actions = [
   "Remove target repo conflicts before replacing package or container files.",
@@ -318,6 +322,11 @@ paths = [
   "node_modules",
   "secrets",
 ]
+preserve_paths = [
+  ".env.example",
+  "secrets/README.md",
+]
 post_copy_actions = [
   "Never move secrets or local runtime state through the harness copy path.",
+  "Preserve .env.example and secrets/README.md as public placeholders.",
 ]
