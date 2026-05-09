@@ -29,15 +29,40 @@ def test_copy_repo_prunes_runtime_and_dependency_dirs(
 
     for rel in (
         ".git",
+        ".env",
         ".pytest_cache",
         ".ruff_cache",
         ".venv",
         "node_modules",
     ):
         assert not (repo / rel).exists(), rel
+    assert (repo / ".env.example").exists()
     assert (repo / ".codex" / "config.toml").exists()
     assert (repo / ".codex" / "skills").exists()
     assert not (repo / ".codex" / "sessions").exists()
+    assert (repo / "secrets" / "README.md").exists()
+
+
+def test_copy_repo_preserves_placeholders_without_runtime_secrets(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / ".env").write_text("TOKEN=secret\n", encoding="utf-8")
+    (source / ".env.local").write_text("TOKEN=secret\n", encoding="utf-8")
+    (source / ".env.example").write_text("TOKEN=\n", encoding="utf-8")
+    secrets = source / "secrets"
+    secrets.mkdir()
+    (secrets / "README.md").write_text("# secrets\n", encoding="utf-8")
+    (secrets / "token.txt").write_text("secret\n", encoding="utf-8")
+
+    repo = copy_repo_for_test(source, tmp_path)
+
+    assert not (repo / ".env").exists()
+    assert not (repo / ".env.local").exists()
+    assert (repo / ".env.example").exists()
+    assert (repo / "secrets" / "README.md").exists()
+    assert not (repo / "secrets" / "token.txt").exists()
 
 
 def _replace_once(path: Path, old: str, new: str) -> None:

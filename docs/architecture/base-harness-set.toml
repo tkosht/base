@@ -29,6 +29,7 @@ workflows = [
 
 included_paths = [
   ".gitignore",
+  ".env.example",
   "DESIGN.md",
   "AGENTS.md",
   "CLAUDE.md",
@@ -85,6 +86,7 @@ included_paths = [
   "docs/standards/security.md",
   "docs/standards/review.md",
   "docs/standards/communication.md",
+  "secrets/README.md",
   "scripts/ci/validate_template.py",
   "scripts/ci/repo_copy.py",
   "scripts/template/sync_upstream_skill.py",
@@ -151,3 +153,184 @@ excluded_paths = [
 [python]
 version = "3.12"
 requires_python = ">=3.12,<=3.14"
+
+[[portable_harness_groups]]
+id = "agent-instruction-surface"
+tier = "must_copy"
+summary = "Canonical agent instructions and thin compatibility adapters."
+paths = [
+  "AGENTS.md",
+  "CLAUDE.md",
+  "GEMINI.md",
+  ".cursor/rules/rules.mdc",
+  ".cursor/rules/core.mdc",
+  ".cursor/rules/project.mdc",
+  "DESIGN.md",
+]
+post_copy_actions = [
+  "Keep AGENTS.md canonical.",
+  "Keep CLAUDE.md, GEMINI.md, and .cursor/rules as thin adapters.",
+]
+
+[[portable_harness_groups]]
+id = "knowledge-and-standards"
+tier = "copy_with_adjustments"
+summary = "Repo contract, knowledge placement, design guidance, and standards."
+paths = [
+  "docs/ai/repo-contract.md",
+  "docs/ai/experience-capture.md",
+  "docs/ai/mcp.md",
+  "docs/ai/operator-checklist.md",
+  "docs/ai/execution-playbooks.md",
+  "docs/ai/checklists/codex-mcp-collaboration-template.md",
+  "docs/design/README.md",
+  "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
+  "docs/design/samples/starter-b2b-corporate/preview.html",
+  "docs/architecture/knowledge-architecture.md",
+  "docs/architecture/overview.md",
+  "docs/standards/coding.md",
+  "docs/standards/testing.md",
+  "docs/standards/security.md",
+  "docs/standards/review.md",
+  "docs/standards/communication.md",
+]
+post_copy_actions = [
+  "Replace template examples with target repo facts.",
+  "Keep long-lived decisions in docs/architecture/decision-records.",
+]
+
+[[portable_harness_groups]]
+id = "skill-surface"
+tier = "must_copy"
+summary = "Skill implementations, compatibility shims, and user-facing skill docs."
+paths = [
+  ".claude/skills",
+  ".agents/skills",
+  ".codex/skills",
+  "docs/ai/skills",
+]
+post_copy_actions = [
+  "Preserve symlink entrypoints for .agents and .codex.",
+  "Review skill descriptions for target repo ownership.",
+]
+
+[[portable_harness_groups]]
+id = "collaboration-command-docs"
+tier = "optional"
+summary = "Claude task docs for commit, main branch cleanup, and Codex subagents."
+paths = [
+  ".claude/commands/tasks/codex-subagent.md",
+  ".claude/commands/tasks/commit.md",
+  ".claude/commands/tasks/mainbranch.md",
+]
+post_copy_actions = [
+  "Copy only when the target repo uses these task docs.",
+]
+
+[[portable_harness_groups]]
+id = "harness-registry"
+tier = "must_copy"
+summary = "Canonical base harness manifest and autoptimization resource registry."
+paths = [
+  "docs/architecture/base-harness-set.md",
+  "docs/architecture/base-harness-set.toml",
+  "docs/architecture/harness-resources.toml",
+  "docs/architecture/decision-records/README.md",
+  "docs/architecture/decision-records/knowledge-surface-consolidation.md",
+]
+post_copy_actions = [
+  "Reclassify resources that do not exist in the target repo.",
+]
+
+[[portable_harness_groups]]
+id = "validation-and-copy-tools"
+tier = "must_copy"
+summary = "Local validation gates and tests that keep the harness coherent."
+paths = [
+  "Makefile",
+  "pyproject.toml",
+  "scripts/ci/validate_template.py",
+  "scripts/ci/repo_copy.py",
+  "scripts/template/apply_overlay.py",
+  "scripts/template/sync_upstream_skill.py",
+  "scripts/template/upstream_skills.toml",
+  "tests/test_base_harness_set.py",
+  "tests/test_template_contract.py",
+  "tests/template_smoke",
+  "tests/codex_subagent",
+  "tests/harness_autoptimizer",
+]
+post_copy_actions = [
+  "Run make doctor, make lint, and make test after copying.",
+]
+
+[[portable_harness_groups]]
+id = "automation-workflows"
+tier = "copy_with_adjustments"
+summary = "GitHub workflows that run validation and harness autoptimization."
+paths = [
+  ".github/workflows/ci.yml",
+  ".github/workflows/test-all-subsystems.yml",
+  ".github/workflows/claude.yml",
+  ".github/workflows/harness-autopt.yml",
+  ".github/workflows/template-health.yml",
+]
+post_copy_actions = [
+  "Check workflow permissions and required secrets in the target repo.",
+  "Adjust path filters to match target repo directories.",
+]
+
+[[portable_harness_groups]]
+id = "ops-scaffold"
+tier = "copy_with_adjustments"
+summary = "Shared tool, container, package, and repository scaffolding."
+paths = [
+  ".codex/config.toml",
+  ".codex/version.json",
+  ".claude/settings.json",
+  ".mcp.json",
+  ".env.example",
+  ".github/dependabot.yml",
+  ".github/ISSUE_TEMPLATE/simple.yml",
+  "README.md",
+  "package.json",
+  "package-lock.json",
+  "uv.lock",
+  "bin",
+  "docker",
+  "compose.override.yml",
+  "secrets/README.md",
+]
+post_copy_actions = [
+  "Remove target repo conflicts before replacing package or container files.",
+  "Keep only .codex/config.toml, .codex/version.json, and .codex/skills.",
+]
+
+[[portable_harness_groups]]
+id = "local-runtime-state"
+tier = "do_not_copy"
+summary = "Machine-local, secret, cache, and generated runtime state."
+paths = [
+  ".git",
+  ".env",
+  ".env.*",
+  ".codex/auth.json",
+  ".codex/__auth.json",
+  ".codex/history.jsonl",
+  ".codex/log",
+  ".codex/sessions",
+  ".codex/state_*.sqlite",
+  ".pytest_cache",
+  ".ruff_cache",
+  ".venv",
+  "node_modules",
+  "secrets",
+]
+preserve_paths = [
+  ".env.example",
+  "secrets/README.md",
+]
+post_copy_actions = [
+  "Never move secrets or local runtime state through the harness copy path.",
+  "Preserve .env.example and secrets/README.md as public placeholders.",
+]

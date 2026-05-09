@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import fnmatch
 import re
 import sys
 import tomllib
@@ -235,6 +236,10 @@ PROJECT_DOCS_RESOURCE_PATHS = {
     "src/README.md",
     "tests/README.md",
 }
+PORTABLE_HARNESS_PRESERVE_PATHS = {
+    ".env.example",
+    "secrets/README.md",
+}
 COPYTREE_GUARD_FILES = (
     "tests/test_template_contract.py",
     "tests/template_smoke/test_sync_upstream_skill.py",
@@ -326,6 +331,61 @@ def _check_harness_resource_registry(root: Path, errors: list[str]) -> None:
     ):
         errors.append(
             "knowledge-docs must exclude docs/architecture/decision-records"
+        )
+
+
+def _path_matches_manifest_pattern(pattern: str, path: str) -> bool:
+    return (
+        path == pattern
+        or path.startswith(pattern.rstrip("/") + "/")
+        or fnmatch.fnmatchcase(path, pattern)
+    )
+
+
+def _check_base_harness_manifest(root: Path, errors: list[str]) -> None:
+    manifest_path = root / "docs" / "architecture" / "base-harness-set.toml"
+    manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    included_paths = set(manifest.get("included_paths", []))
+    groups = {
+        item["id"]: item
+        for item in manifest.get("portable_harness_groups", [])
+        if isinstance(item, dict) and "id" in item
+    }
+    local_runtime = groups.get("local-runtime-state")
+    if not isinstance(local_runtime, dict):
+        errors.append(
+            "base harness manifest missing local-runtime-state group"
+        )
+        return
+
+    preserve_paths = set(local_runtime.get("preserve_paths", []))
+    missing_preserve_paths = sorted(
+        PORTABLE_HARNESS_PRESERVE_PATHS - preserve_paths
+    )
+    for rel in missing_preserve_paths:
+        errors.append(f"local-runtime-state must preserve path: {rel}")
+    for rel in sorted(PORTABLE_HARNESS_PRESERVE_PATHS - included_paths):
+        errors.append(
+            f"base harness included_paths missing preserve path: {rel}"
+        )
+
+    copyable_paths = set(included_paths)
+    for group in groups.values():
+        if group.get("tier") == "do_not_copy":
+            continue
+        copyable_paths.update(group.get("paths", []))
+
+    do_not_copy_patterns = local_runtime.get("paths", [])
+    collisions = sorted(
+        rel
+        for rel in copyable_paths
+        for pattern in do_not_copy_patterns
+        if _path_matches_manifest_pattern(pattern, rel)
+        and rel not in preserve_paths
+    )
+    for rel in collisions:
+        errors.append(
+            "copyable harness path is covered by local-runtime-state: " + rel
         )
 
 
@@ -783,6 +843,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
     _check_primary_terminology(root, errors)
     _check_codex_shared_defaults(root, errors)
     _check_harness_resource_registry(root, errors)
+    _check_base_harness_manifest(root, errors)
     _check_github_api_helper(root, errors)
     _check_heavy_repo_copy_guard(root, errors)
     _check_harness_autoptimizer_contract(root, errors)
