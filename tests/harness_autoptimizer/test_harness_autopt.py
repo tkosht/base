@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -30,6 +31,25 @@ def _resource(
         max_changed_files=2,
         max_changed_lines=200,
     )
+
+
+class RecordingRunner:
+    def __init__(self) -> None:
+        self.calls: list[tuple[list[str], Path, bool]] = []
+
+    def run(
+        self,
+        cmd: list[str],
+        cwd: Path,
+        *,
+        check: bool = False,
+    ) -> harness_autopt.CommandResult:
+        self.calls.append((cmd, cwd, check))
+        if cmd[:3] == ["gh", "pr", "create"]:
+            return harness_autopt.CommandResult(
+                0, "https://example.test/pull/1\n", ""
+            )
+        return harness_autopt.CommandResult(0, "", "")
 
 
 def test_load_resource_registry_includes_codex_subagent() -> None:
@@ -355,6 +375,362 @@ def test_guarded_pr_requires_explicit_opt_in() -> None:
     assert harness_autopt.is_pr_creation_allowed(resource, True) is True
 
 
+def test_create_pull_request_rejects_unconverged_review_report(
+    tmp_path: Path,
+) -> None:
+    runner = RecordingRunner()
+    resource = _resource(resource_id="harness-autoptimizer")
+    state = harness_autopt.AutoptState(
+        run_id="run-1",
+        branch="autopt/harness-autoptimizer-20260427-run1",
+        worktree=tmp_path,
+        resource_id="harness-autoptimizer",
+        goal="self-audit",
+    )
+    diff_guard = harness_autopt.DiffGuardResult(
+        ok=True,
+        changed_files=("tests/harness_autoptimizer/test_harness_autopt.py",),
+        changed_lines=1,
+    )
+    review_report = harness_autopt.ReviewReport(
+        loop_count=1,
+        findings=(),
+        convergence_conditions=("material findings unresolved",),
+        converged=False,
+        stop_reason="material findings unresolved",
+    )
+
+    with pytest.raises(RuntimeError, match="ReviewReport must be converged"):
+        harness_autopt.create_pull_request(
+            runner,
+            tmp_path,
+            state,
+            resource,
+            diff_guard,
+            "main",
+            review_report,
+            draft=True,
+        )
+
+    assert runner.calls == []
+
+
+def test_create_pull_request_includes_converged_review_report(
+    tmp_path: Path,
+) -> None:
+    runner = RecordingRunner()
+    resource = _resource(resource_id="harness-autoptimizer")
+    state = harness_autopt.AutoptState(
+        run_id="run-1",
+        branch="autopt/harness-autoptimizer-20260427-run1",
+        worktree=tmp_path,
+        resource_id="harness-autoptimizer",
+        goal="self-audit",
+    )
+    diff_guard = harness_autopt.DiffGuardResult(
+        ok=True,
+        changed_files=("tests/harness_autoptimizer/test_harness_autopt.py",),
+        changed_lines=1,
+    )
+    review_report = harness_autopt.build_review_report(
+        findings=(
+            harness_autopt.ReviewFinding(
+                id="review-gate",
+                severity="medium",
+                material=True,
+                status="fixed",
+                verification_class="test",
+                summary="PR creation requires converged review report",
+            ),
+        ),
+        loop_count=2,
+        gate_passed=True,
+        diff_guard=diff_guard,
+        self_audit_completed=True,
+    )
+
+    url = harness_autopt.create_pull_request(
+        runner,
+        tmp_path,
+        state,
+        resource,
+        diff_guard,
+        "origin/main",
+        review_report,
+        draft=True,
+    )
+
+    gh_command = runner.calls[-1][0]
+    body = gh_command[gh_command.index("--body") + 1]
+    assert url == "https://example.test/pull/1"
+    assert "--draft" in gh_command
+    assert "## Review Loop" in body
+    assert "loop count: 2" in body
+    assert "converged: true" in body
+
+
+def test_review_report_converges_when_material_findings_are_closed() -> None:
+    finding = harness_autopt.ReviewFinding(
+        id="repo-identity",
+        severity="high",
+        material=True,
+        status="fixed",
+        verification_class="validator",
+        summary="legacy repo identity removed",
+        evidence=("make doctor",),
+    )
+    diff_guard = harness_autopt.DiffGuardResult(
+        ok=True,
+        changed_files=("scripts/ci/validate_template.py",),
+        changed_lines=12,
+    )
+
+    report = harness_autopt.build_review_report(
+        findings=(finding,),
+        loop_count=2,
+        gate_passed=True,
+        diff_guard=diff_guard,
+        self_audit_completed=True,
+    )
+
+    assert harness_autopt.is_review_converged(report) is True
+    assert report.stop_reason == "converged"
+    assert "material findings resolved" in report.convergence_conditions
+
+
+def test_review_report_rejects_unresolved_material_finding() -> None:
+    finding = harness_autopt.ReviewFinding(
+        id="review-loop",
+        severity="medium",
+        material=True,
+        status="unresolved",
+        verification_class="manual_review",
+        summary="loop evidence was not recorded",
+    )
+    diff_guard = harness_autopt.DiffGuardResult(
+        ok=True,
+        changed_files=("tests/harness_autoptimizer/test_harness_autopt.py",),
+        changed_lines=8,
+    )
+
+    report = harness_autopt.build_review_report(
+        findings=(finding,),
+        loop_count=1,
+        gate_passed=True,
+        diff_guard=diff_guard,
+        self_audit_completed=True,
+    )
+
+    assert report.converged is False
+    assert report.stop_reason == "material findings unresolved"
+
+
+def test_review_report_allows_non_material_deferred_finding() -> None:
+    finding = harness_autopt.ReviewFinding(
+        id="later-cleanup",
+        severity="low",
+        material=False,
+        status="deferred",
+        verification_class="manual_review",
+        summary="follow-up cleanup can be handled separately",
+    )
+    diff_guard = harness_autopt.DiffGuardResult(
+        ok=True,
+        changed_files=("docs/ai/skills/harness-autoptimizer.md",),
+        changed_lines=4,
+    )
+
+    report = harness_autopt.build_review_report(
+        findings=(finding,),
+        loop_count=1,
+        gate_passed=True,
+        diff_guard=diff_guard,
+        self_audit_completed=True,
+    )
+
+    assert report.converged is True
+
+
+def test_proactive_review_probe_detects_non_target_resource_issue(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "target"
+    adjacent = tmp_path / "adjacent"
+    target.mkdir()
+    adjacent.mkdir()
+    (target / "SKILL.md").write_text("current target\n", encoding="utf-8")
+    (adjacent / "SKILL.md").write_text(
+        "docs/architecture/base-" + "harness-set.md\n",
+        encoding="utf-8",
+    )
+    resources = {
+        "harness-autoptimizer": harness_autopt.HarnessResource(
+            id="harness-autoptimizer",
+            kind="skill",
+            authority="canonical",
+            paths=("target",),
+            mutable_paths=("target",),
+            validators=("make test",),
+        ),
+        "codex-subagent": harness_autopt.HarnessResource(
+            id="codex-subagent",
+            kind="skill",
+            authority="canonical",
+            paths=("adjacent",),
+            mutable_paths=("adjacent",),
+            validators=("make test",),
+        ),
+    }
+    probe = harness_autopt.ProactiveReviewProbe(
+        id="deleted-reference",
+        summary="deleted reference remains in registry resource",
+        needles=("docs/architecture/base-" + "harness-set.md",),
+    )
+
+    findings = harness_autopt.run_proactive_review_probes(
+        tmp_path,
+        resources,
+        (probe,),
+        target_resource_id="harness-autoptimizer",
+    )
+    report = harness_autopt.build_review_report(
+        findings=findings,
+        loop_count=1,
+        gate_passed=True,
+        diff_guard=harness_autopt.DiffGuardResult(
+            ok=True,
+            changed_files=("target/SKILL.md",),
+            changed_lines=1,
+        ),
+        self_audit_completed=True,
+    )
+
+    assert len(findings) == 1
+    assert findings[0].status == "out_of_scope"
+    assert findings[0].material is True
+    assert "resource=codex-subagent" in findings[0].evidence
+    assert report.converged is False
+    assert report.stop_reason == "material findings unresolved"
+
+
+def test_proactive_review_probe_marks_target_issue_unresolved(
+    tmp_path: Path,
+) -> None:
+    target = tmp_path / "target"
+    target.mkdir()
+    (target / "SKILL.md").write_text("legacy marker\n", encoding="utf-8")
+    resources = {
+        "harness-autoptimizer": harness_autopt.HarnessResource(
+            id="harness-autoptimizer",
+            kind="skill",
+            authority="canonical",
+            paths=("target",),
+            mutable_paths=("target",),
+            validators=("make test",),
+        )
+    }
+    probe = harness_autopt.ProactiveReviewProbe(
+        id="legacy-marker",
+        summary="legacy marker remains",
+        needles=("legacy marker",),
+    )
+
+    findings = harness_autopt.run_proactive_review_probes(
+        tmp_path,
+        resources,
+        (probe,),
+        target_resource_id="harness-autoptimizer",
+    )
+
+    assert len(findings) == 1
+    assert findings[0].status == "unresolved"
+
+
+def test_proactive_review_probe_respects_resource_excluded_paths(
+    tmp_path: Path,
+) -> None:
+    active = tmp_path / "docs" / "active"
+    excluded = tmp_path / "docs" / "decision-records"
+    active.mkdir(parents=True)
+    excluded.mkdir(parents=True)
+    (active / "current.md").write_text("current docs\n", encoding="utf-8")
+    (excluded / "historical.md").write_text(
+        "docs/architecture/base-" + "harness-set.md\n",
+        encoding="utf-8",
+    )
+    resources = {
+        "knowledge-docs": harness_autopt.HarnessResource(
+            id="knowledge-docs",
+            kind="knowledge_docs",
+            authority="canonical",
+            paths=("docs",),
+            mutable_paths=("docs",),
+            validators=("make test",),
+            excluded_paths=("docs/decision-records",),
+        )
+    }
+    probe = harness_autopt.ProactiveReviewProbe(
+        id="deleted-reference",
+        summary="deleted reference remains in registry resource",
+        needles=("docs/architecture/base-" + "harness-set.md",),
+    )
+
+    findings = harness_autopt.run_proactive_review_probes(
+        tmp_path,
+        resources,
+        (probe,),
+        target_resource_id="knowledge-docs",
+    )
+
+    assert findings == ()
+
+
+def test_review_finding_uses_verification_class_not_command() -> None:
+    finding = harness_autopt.ReviewFinding(
+        id="validator-coverage",
+        severity="medium",
+        material=True,
+        status="fixed",
+        verification_class="test",
+        summary="regression is covered by a test class",
+    )
+
+    assert finding.verification_class == "test"
+    assert not hasattr(finding, "command")
+
+
+def test_write_review_report_omits_raw_trace_payloads(tmp_path: Path) -> None:
+    finding = harness_autopt.ReviewFinding(
+        id="raw-trace",
+        severity="high",
+        material=True,
+        status="fixed",
+        verification_class="manual_review",
+        summary="raw_prompt SECRET_PROMPT",
+        evidence=("raw_output=RAW_MODEL_OUTPUT", "safe evidence"),
+    )
+    report = harness_autopt.build_review_report(
+        findings=(finding,),
+        loop_count=1,
+        gate_passed=True,
+        diff_guard=harness_autopt.DiffGuardResult(
+            ok=True,
+            changed_files=("README.md",),
+            changed_lines=1,
+        ),
+        self_audit_completed=True,
+    )
+
+    path = harness_autopt.write_review_report(tmp_path, "run-1", report)
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw_json = json.dumps(payload)
+
+    assert payload["findings"][0]["summary"] == "[omitted raw trace]"
+    assert "safe evidence" in payload["findings"][0]["evidence"]
+    assert "SECRET_PROMPT" not in raw_json
+    assert "RAW_MODEL_OUTPUT" not in raw_json
+
+
 def test_build_pr_body_omits_raw_prompt_and_output() -> None:
     resource = harness_autopt.HarnessResource(
         id="codex-subagent",
@@ -388,6 +764,106 @@ def test_build_pr_body_omits_raw_prompt_and_output() -> None:
     assert "run-1" in body
     assert "SECRET_PROMPT" not in body
     assert "`make test`: pass" in body
+
+
+def test_build_pr_body_includes_review_loop_summary() -> None:
+    resource = harness_autopt.HarnessResource(
+        id="harness-autoptimizer",
+        kind="skill",
+        authority="canonical",
+        paths=("x",),
+        mutable_paths=("x",),
+        validators=("make test",),
+    )
+    state = harness_autopt.AutoptState(
+        run_id="run-1",
+        branch="autopt/harness-autoptimizer-20260424-run1",
+        worktree=Path("/tmp/worktree"),
+        resource_id="harness-autoptimizer",
+        goal="self-audit",
+    )
+    report = harness_autopt.build_review_report(
+        findings=(
+            harness_autopt.ReviewFinding(
+                id="loop-report",
+                severity="medium",
+                material=True,
+                status="fixed",
+                verification_class="test",
+                summary="review loop is structured",
+            ),
+        ),
+        loop_count=3,
+        gate_passed=True,
+        diff_guard=harness_autopt.DiffGuardResult(
+            ok=True,
+            changed_files=(
+                "tests/harness_autoptimizer/test_harness_autopt.py",
+            ),
+            changed_lines=20,
+        ),
+        self_audit_completed=True,
+    )
+
+    body = harness_autopt.build_pr_body(
+        state=state,
+        resource=resource,
+        diff_guard=harness_autopt.DiffGuardResult(
+            ok=True,
+            changed_files=(
+                "tests/harness_autoptimizer/test_harness_autopt.py",
+            ),
+            changed_lines=20,
+        ),
+        gate_commands=("make test",),
+        review_report=report,
+    )
+
+    assert "## Review Loop" in body
+    assert "loop count: 3" in body
+    assert "finding status: fixed: 1" in body
+
+
+def test_build_pr_body_omits_raw_trace_from_review_stop_reason() -> None:
+    resource = harness_autopt.HarnessResource(
+        id="harness-autoptimizer",
+        kind="skill",
+        authority="canonical",
+        paths=("x",),
+        mutable_paths=("x",),
+        validators=("make test",),
+    )
+    state = harness_autopt.AutoptState(
+        run_id="run-1",
+        branch="autopt/harness-autoptimizer-20260424-run1",
+        worktree=Path("/tmp/worktree"),
+        resource_id="harness-autoptimizer",
+        goal="self-audit",
+    )
+    report = harness_autopt.ReviewReport(
+        loop_count=1,
+        findings=(),
+        convergence_conditions=("raw traces omitted",),
+        converged=False,
+        stop_reason="raw_output SECRET_PROMPT",
+    )
+
+    body = harness_autopt.build_pr_body(
+        state=state,
+        resource=resource,
+        diff_guard=harness_autopt.DiffGuardResult(
+            ok=True,
+            changed_files=(
+                "tests/harness_autoptimizer/test_harness_autopt.py",
+            ),
+            changed_lines=20,
+        ),
+        gate_commands=("make test",),
+        review_report=report,
+    )
+
+    assert "[omitted raw trace]" in body
+    assert "SECRET_PROMPT" not in body
 
 
 def test_autopt_state_omits_raw_prompt_and_output_payloads() -> None:

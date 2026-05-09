@@ -94,6 +94,7 @@
   - `docs/ai/experience-capture.md`
   - `docs/design/`
   - `docs/architecture/`
+  - `docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md`
   - `docs/standards/`
 - skills
   - `ai-agent-collaboration-exec`
@@ -104,6 +105,7 @@
   - `grill-me-essential-first`
   - `harness-autoptimizer`
   - `repo-instruction-optimizer`
+  - `repo-template-specializer`
   - `skill-authoring`
 - ハーネス資源 registry
   - `docs/architecture/harness-resources.toml`
@@ -120,6 +122,7 @@
   - `.claude/skills/harness-autoptimizer/prompts/*`
   - `scripts/ci/repo_copy.py`
   - `tests/codex_subagent/*`
+  - `tests/harness_autoptimizer/*`
   - `tests/test_base_harness_set.py`
   - `tests/test_template_contract.py`
 - ops scaffold

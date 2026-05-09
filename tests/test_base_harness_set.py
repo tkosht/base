@@ -48,6 +48,7 @@ def test_harness_resource_registry_covers_retained_autoptimizer() -> None:
     assert "instruction-surface" in resource_ids
     assert "knowledge-docs" in resource_ids
     assert "project-docs" in resource_ids
+    assert "repo-template-specializer" in resource_ids
     assert "test-performance" in resource_ids
 
 

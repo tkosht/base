@@ -22,6 +22,7 @@ RETAINED_SKILLS = [
     "grill-me-essential-first",
     "harness-autoptimizer",
     "repo-instruction-optimizer",
+    "repo-template-specializer",
     "skill-authoring",
 ]
 REQUIRED_PATHS = [
@@ -59,6 +60,7 @@ REQUIRED_PATHS = [
     "docs/ai/skills/grill-me.md",
     "docs/ai/skills/grill-me-essential-first.md",
     "docs/ai/skills/harness-autoptimizer.md",
+    "docs/ai/skills/repo-template-specializer.md",
     ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
     ".claude/skills/harness-autoptimizer/prompts/self-audit.md",
     ".claude/skills/harness-autoptimizer/prompts/experience-to-rule.md",
@@ -87,6 +89,7 @@ REQUIRED_PATHS = [
     "scripts/template/sync_upstream_skill.py",
     "scripts/template/upstream_skills.toml",
     "templates/manifest.yaml",
+    "bin/github_api_pr.sh",
     "secrets/README.md",
 ]
 FORBIDDEN_PATHS = [
@@ -220,6 +223,7 @@ REQUIRED_HARNESS_RESOURCE_IDS = {
     "instruction-surface",
     "knowledge-docs",
     "project-docs",
+    "repo-template-specializer",
     "test-performance",
 }
 PROJECT_DOCS_RESOURCE_PATHS = {
@@ -446,6 +450,14 @@ def _check_harness_autoptimizer_contract(
         "Verify",
         "Self-Audit",
         "AutoptRequest",
+        "ReviewFinding",
+        "ReviewReport",
+        "ProactiveReviewProbe",
+        "proactive review probe",
+        "out_of_scope",
+        "verification_class",
+        "loop_count",
+        "converged",
         "ExperienceCandidate",
     ):
         if needle not in skill_text:
@@ -453,6 +465,28 @@ def _check_harness_autoptimizer_contract(
                 ".claude/skills/harness-autoptimizer/SKILL.md "
                 f"missing controller contract: {needle}"
             )
+
+    for rel in (
+        ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
+        ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
+    ):
+        path = root / rel
+        if not path.exists():
+            continue
+        prompt_text = path.read_text(encoding="utf-8")
+        for needle in (
+            "ReviewFinding",
+            "ReviewReport",
+            "proactive",
+            "out_of_scope",
+            "verification_class",
+            "loop_count",
+            "converged",
+        ):
+            if needle not in prompt_text:
+                errors.append(
+                    f"{rel} missing structured review contract: {needle}"
+                )
 
     helper_text = (
         root
@@ -462,6 +496,24 @@ def _check_harness_autoptimizer_contract(
         / "scripts"
         / "harness_autopt.py"
     ).read_text(encoding="utf-8")
+    for needle in (
+        "class ReviewFinding",
+        "class ProactiveReviewProbe",
+        "class ReviewReport",
+        "def build_review_report",
+        "def run_proactive_review_probes",
+        "def write_review_report",
+        "ReviewReport must be converged before creating a pull request",
+        "review_report=review_report",
+        "verification_class",
+        "loop_count",
+        "converged",
+    ):
+        if needle not in helper_text:
+            errors.append(
+                "harness_autopt.py missing structured review helper: " + needle
+            )
+
     forbidden_helpers = (
         "def run_candidate_generation",
         "def run_autoptimization",
@@ -497,6 +549,29 @@ def _check_harness_autoptimizer_contract(
         errors.append(
             "harness-autopt workflow must start a Codex agent controller"
         )
+
+
+def _check_github_api_helper(root: Path, errors: list[str]) -> None:
+    helper = root / "bin" / "github_api_pr.sh"
+    if not helper.exists():
+        return
+    text = helper.read_text(encoding="utf-8")
+    for forbidden in (
+        "REPO=" "base",
+        "OWNER=" "tkosht",
+        "repos/tkosht/" "base",
+    ):
+        if forbidden in text:
+            errors.append(
+                "bin/github_api_pr.sh must not hard-code base repo: "
+                + forbidden
+            )
+    for needle in ("GITHUB_REPOSITORY", "git config --get remote.origin.url"):
+        if needle not in text:
+            errors.append(
+                "bin/github_api_pr.sh must resolve owner/repo dynamically: "
+                + needle
+            )
 
 
 def _check_design_doc_terminology(root: Path, errors: list[str]) -> None:
@@ -769,6 +844,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
     _check_codex_shared_defaults(root, errors)
     _check_harness_resource_registry(root, errors)
     _check_base_harness_manifest(root, errors)
+    _check_github_api_helper(root, errors)
     _check_heavy_repo_copy_guard(root, errors)
     _check_harness_autoptimizer_contract(root, errors)
     _check_non_root_design_md(root, errors)

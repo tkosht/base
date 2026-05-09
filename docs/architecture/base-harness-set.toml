@@ -1,5 +1,5 @@
 title = "base harness set"
-version = 2
+version = 3
 
 skills = [
   "ai-agent-collaboration-exec",
@@ -10,6 +10,7 @@ skills = [
   "grill-me-essential-first",
   "harness-autoptimizer",
   "repo-instruction-optimizer",
+  "repo-template-specializer",
   "skill-authoring",
 ]
 
@@ -68,6 +69,7 @@ included_paths = [
   ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
   "docs/ai/skills/grill-me.md",
   "docs/ai/skills/grill-me-essential-first.md",
+  "docs/ai/skills/repo-template-specializer.md",
   "docs/design/README.md",
   "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
   "docs/design/samples/starter-b2b-corporate/preview.html",
@@ -78,6 +80,7 @@ included_paths = [
   "docs/architecture/overview.md",
   "docs/architecture/decision-records/README.md",
   "docs/architecture/decision-records/knowledge-surface-consolidation.md",
+  "docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md",
   "docs/standards/coding.md",
   "docs/standards/testing.md",
   "docs/standards/security.md",
@@ -89,6 +92,7 @@ included_paths = [
   "scripts/template/sync_upstream_skill.py",
   "scripts/template/upstream_skills.toml",
   "tests/codex_subagent",
+  "tests/harness_autoptimizer",
   "tests/test_base_harness_set.py",
   "tests/test_template_contract.py",
 ]

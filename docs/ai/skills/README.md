@@ -16,4 +16,5 @@
 - `grill-me-essential-first`
 - `harness-autoptimizer`
 - `repo-instruction-optimizer`
+- `repo-template-specializer`
 - `skill-authoring`

@@ -64,6 +64,31 @@ HIGH_SIGNAL_TERMS = {
     "--target",
     "--goal",
 }
+REVIEW_SEVERITIES = {"high", "medium", "low"}
+REVIEW_STATUSES = {
+    "fixed",
+    "not_applicable",
+    "deferred",
+    "out_of_scope",
+    "unresolved",
+}
+REVIEW_VERIFICATION_CLASSES = {
+    "validator",
+    "test",
+    "lint",
+    "diff_guard",
+    "manual_review",
+}
+RAW_TRACE_MARKERS = (
+    "raw_prompt",
+    "raw prompt",
+    "raw_output",
+    "raw output",
+    "model_output",
+    "model output",
+    "stdout",
+    "stderr",
+)
 
 
 @dataclass(frozen=True)
@@ -181,6 +206,58 @@ class ExperienceAssessment:
     reason: str
 
 
+@dataclass(frozen=True)
+class ReviewFinding:
+    id: str
+    severity: str
+    material: bool
+    status: str
+    verification_class: str
+    summary: str
+    evidence: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if self.severity not in REVIEW_SEVERITIES:
+            raise ValueError(f"unknown review severity: {self.severity}")
+        if self.status not in REVIEW_STATUSES:
+            raise ValueError(f"unknown review finding status: {self.status}")
+        if self.verification_class not in REVIEW_VERIFICATION_CLASSES:
+            raise ValueError(
+                "unknown review verification_class: " + self.verification_class
+            )
+
+
+@dataclass(frozen=True)
+class ProactiveReviewProbe:
+    id: str
+    summary: str
+    needles: tuple[str, ...]
+    resource_ids: tuple[str, ...] = ()
+    severity: str = "medium"
+    material: bool = True
+    verification_class: str = "manual_review"
+
+    def __post_init__(self) -> None:
+        if self.severity not in REVIEW_SEVERITIES:
+            raise ValueError(
+                f"unknown proactive probe severity: {self.severity}"
+            )
+        if self.verification_class not in REVIEW_VERIFICATION_CLASSES:
+            raise ValueError(
+                "unknown proactive probe verification_class: "
+                + self.verification_class
+            )
+
+
+@dataclass(frozen=True)
+class ReviewReport:
+    loop_count: int
+    findings: tuple[ReviewFinding, ...]
+    convergence_conditions: tuple[str, ...]
+    converged: bool
+    stop_reason: str
+
+
 @dataclass
 class AutoptState:
     run_id: str
@@ -221,6 +298,15 @@ def sanitize_state_payload(payload: dict[str, Any]) -> dict[str, Any]:
             continue
         clean[key] = value
     return clean
+
+
+def sanitize_review_text(value: str) -> str:
+    """Omit raw trace text from persisted review reports."""
+
+    lowered = value.casefold()
+    if any(marker in lowered for marker in RAW_TRACE_MARKERS):
+        return "[omitted raw trace]"
+    return value
 
 
 def _experience_text(candidate: ExperienceCandidate) -> str:
@@ -640,6 +726,92 @@ def is_request_actionable(
     return request.classification.confidence >= min_confidence
 
 
+def iter_resource_probe_files(
+    root: Path,
+    rel: str,
+    *,
+    excluded_prefixes: tuple[str, ...] = (),
+) -> tuple[str, ...]:
+    clean = normalize_rel_path(rel)
+    if is_protected_path(clean) or is_path_excluded(clean, excluded_prefixes):
+        return ()
+
+    path = root / clean
+    if path.is_file():
+        return (clean,)
+    if not path.is_dir():
+        return ()
+
+    files: list[str] = []
+    for child in sorted(path.rglob("*")):
+        if not child.is_file():
+            continue
+        rel_child = child.relative_to(root).as_posix()
+        if is_protected_path(rel_child) or is_path_excluded(
+            rel_child, excluded_prefixes
+        ):
+            continue
+        files.append(rel_child)
+    return tuple(files)
+
+
+def run_proactive_review_probes(
+    root: Path,
+    resources: dict[str, HarnessResource],
+    probes: tuple[ProactiveReviewProbe, ...],
+    *,
+    target_resource_id: str,
+) -> tuple[ReviewFinding, ...]:
+    """Scan registry resource paths for material issues beyond the target."""
+
+    findings: list[ReviewFinding] = []
+    for probe in probes:
+        resource_ids = probe.resource_ids or tuple(sorted(resources))
+        for resource_id in resource_ids:
+            resource = resources.get(resource_id)
+            if resource is None:
+                continue
+            for rel in resource.paths:
+                for file_rel in iter_resource_probe_files(
+                    root,
+                    rel,
+                    excluded_prefixes=resource.excluded_paths,
+                ):
+                    try:
+                        text = (root / file_rel).read_text(encoding="utf-8")
+                    except UnicodeDecodeError:
+                        continue
+                    for needle in probe.needles:
+                        if needle not in text:
+                            continue
+                        status = (
+                            "unresolved"
+                            if resource_id == target_resource_id
+                            else "out_of_scope"
+                        )
+                        finding_id = (
+                            f"{probe.id}:{resource_id}:{file_rel}"
+                        ).replace("/", "-")
+                        findings.append(
+                            ReviewFinding(
+                                id=finding_id,
+                                severity=probe.severity,
+                                material=probe.material,
+                                status=status,
+                                verification_class=probe.verification_class,
+                                summary=(
+                                    f"{probe.summary}: {needle} in {file_rel}"
+                                ),
+                                evidence=(
+                                    f"resource={resource_id}",
+                                    f"path={file_rel}",
+                                    f"needle={needle}",
+                                ),
+                            )
+                        )
+    return tuple(findings)
+
+
 def autopt_request_to_dict(request: AutoptRequest) -> dict[str, Any]:
     return asdict(request)
 
@@ -736,8 +908,121 @@ def write_autopt_request(
     return request_path
 
 
+def _has_unresolved_material_finding(
+    findings: tuple[ReviewFinding, ...],
+) -> bool:
+    unresolved_statuses = {"deferred", "out_of_scope", "unresolved"}
+    return any(
+        finding.material and finding.status in unresolved_statuses
+        for finding in findings
+    )
+
+
+def build_review_report(
+    *,
+    findings: tuple[ReviewFinding, ...],
+    loop_count: int,
+    gate_passed: bool,
+    diff_guard: DiffGuardResult,
+    self_audit_completed: bool,
+) -> ReviewReport:
+    if loop_count < 1:
+        raise ValueError("loop_count must be at least 1")
+
+    material_resolved = not _has_unresolved_material_finding(findings)
+    converged = (
+        gate_passed
+        and diff_guard.ok
+        and self_audit_completed
+        and material_resolved
+    )
+
+    convergence_conditions = (
+        "validators pass" if gate_passed else "validators failed",
+        "diff guard pass" if diff_guard.ok else "diff guard failed",
+        (
+            "material findings resolved"
+            if material_resolved
+            else "material findings unresolved"
+        ),
+        (
+            "self-audit completed"
+            if self_audit_completed
+            else "self-audit incomplete"
+        ),
+        "raw traces omitted",
+    )
+    stop_reasons = tuple(
+        condition
+        for condition in convergence_conditions
+        if condition.endswith("failed")
+        or condition.endswith("unresolved")
+        or condition.endswith("incomplete")
+    )
+    return ReviewReport(
+        loop_count=loop_count,
+        findings=findings,
+        convergence_conditions=convergence_conditions,
+        converged=converged,
+        stop_reason="; ".join(stop_reasons) if stop_reasons else "converged",
+    )
+
+
+def is_review_converged(report: ReviewReport) -> bool:
+    return report.converged
+
+
+def review_report_to_dict(report: ReviewReport) -> dict[str, Any]:
+    return {
+        "loop_count": report.loop_count,
+        "findings": [
+            {
+                "id": finding.id,
+                "severity": finding.severity,
+                "material": finding.material,
+                "status": finding.status,
+                "verification_class": finding.verification_class,
+                "summary": sanitize_review_text(finding.summary),
+                "evidence": [
+                    sanitize_review_text(item) for item in finding.evidence
+                ],
+            }
+            for finding in report.findings
+        ],
+        "convergence_conditions": list(report.convergence_conditions),
+        "converged": report.converged,
+        "stop_reason": sanitize_review_text(report.stop_reason),
+    }
+
+
+def write_review_report(
+    log_root: Path, run_id: str, report: ReviewReport
+) -> Path:
+    path = log_root / datetime.now(UTC).strftime("%Y/%m/%d") / run_id
+    path.mkdir(parents=True, exist_ok=True)
+    review_path = path / "review.json"
+    review_path.write_text(
+        json.dumps(
+            review_report_to_dict(report),
+            indent=2,
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+    return review_path
+
+
 def build_pr_title(resource: HarnessResource, goal: str) -> str:
     return f"[harness-autopt] improve {resource.id} {goal}"
+
+
+def summarize_review_findings(
+    findings: tuple[ReviewFinding, ...],
+) -> dict[str, int]:
+    counts = {status: 0 for status in sorted(REVIEW_STATUSES)}
+    for finding in findings:
+        counts[finding.status] += 1
+    return {status: count for status, count in counts.items() if count}
 
 
 def build_pr_body(
@@ -746,6 +1031,7 @@ def build_pr_body(
     resource: HarnessResource,
     diff_guard: DiffGuardResult,
     gate_commands: tuple[str, ...],
+    review_report: ReviewReport | None = None,
 ) -> str:
     files = (
         "\n".join(f"- `{path}`" for path in diff_guard.changed_files)
@@ -756,6 +1042,22 @@ def build_pr_body(
         f"Codex-controlled harness optimization run `{state.run_id}` improved "
         f"`{resource.id}` for `{state.goal}`."
     )
+    review_section = ""
+    if review_report is not None:
+        counts = summarize_review_findings(review_report.findings)
+        finding_summary = (
+            ", ".join(f"{status}: {count}" for status, count in counts.items())
+            or "none"
+        )
+        stop_reason = sanitize_review_text(review_report.stop_reason)
+        review_section = f"""
+## Review Loop
+
+- loop count: {review_report.loop_count}
+- converged: {str(review_report.converged).lower()}
+- finding status: {finding_summary}
+- stop reason: {stop_reason}
+"""
     return f"""## Summary
 
 {summary}
@@ -779,6 +1081,7 @@ def build_pr_body(
 - changed files: {len(diff_guard.changed_files)}
 - changed lines: {diff_guard.changed_lines}
 - violations: none
+{review_section}
 
 Raw prompts, raw model outputs, and local runtime logs are intentionally omitted.
 """
@@ -884,15 +1187,23 @@ def create_pull_request(
     resource: HarnessResource,
     diff_guard: DiffGuardResult,
     base: str,
+    review_report: ReviewReport,
     *,
     draft: bool = False,
 ) -> str:
+    if not is_review_converged(review_report):
+        raise RuntimeError(
+            "ReviewReport must be converged before creating a pull request: "
+            + sanitize_review_text(review_report.stop_reason)
+        )
+
     title = build_pr_title(resource, state.goal)
     body = build_pr_body(
         state=state,
         resource=resource,
         diff_guard=diff_guard,
         gate_commands=resource.validators,
+        review_report=review_report,
     )
     runner.run(["git", "add", "-A"], worktree, check=True)
     runner.run(
