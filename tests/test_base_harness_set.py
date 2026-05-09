@@ -87,6 +87,64 @@ def test_manifest_paths_match_filesystem() -> None:
         assert not (ROOT / rel).exists(), rel
 
 
+def test_manifest_declares_portable_harness_groups() -> None:
+    manifest = load_manifest()
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+
+    expected_ids = {
+        "agent-instruction-surface",
+        "knowledge-and-standards",
+        "skill-surface",
+        "collaboration-command-docs",
+        "harness-registry",
+        "validation-and-copy-tools",
+        "automation-workflows",
+        "ops-scaffold",
+        "local-runtime-state",
+    }
+    by_id = {group["id"]: group for group in groups}
+    assert set(by_id) == expected_ids
+
+    expected_tiers = {
+        "agent-instruction-surface": "must_copy",
+        "knowledge-and-standards": "copy_with_adjustments",
+        "skill-surface": "must_copy",
+        "collaboration-command-docs": "optional",
+        "harness-registry": "must_copy",
+        "validation-and-copy-tools": "must_copy",
+        "automation-workflows": "copy_with_adjustments",
+        "ops-scaffold": "copy_with_adjustments",
+        "local-runtime-state": "do_not_copy",
+    }
+    for group_id, tier in expected_tiers.items():
+        assert by_id[group_id]["tier"] == tier
+
+    assert "AGENTS.md" in by_id["agent-instruction-surface"]["paths"]
+    assert ".claude/skills" in by_id["skill-surface"]["paths"]
+    assert (
+        "docs/architecture/harness-resources.toml"
+        in by_id["harness-registry"]["paths"]
+    )
+    assert ".codex/auth.json" in by_id["local-runtime-state"]["paths"]
+
+
+def test_portable_harness_group_paths_exist_when_copied() -> None:
+    manifest = load_manifest()
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+
+    for group in groups:
+        assert isinstance(group, dict)
+        if group["tier"] == "do_not_copy":
+            continue
+        paths = group["paths"]
+        assert isinstance(paths, list)
+        for rel in paths:
+            assert isinstance(rel, str)
+            assert (ROOT / rel).exists(), (group["id"], rel)
+
+
 def test_manifest_skills_match_repo_layout() -> None:
     manifest = load_manifest()
     skills = manifest["skills"]
