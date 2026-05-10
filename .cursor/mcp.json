@@ -5,7 +5,7 @@
       "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "serena": {
-      "url": "http://localhost:9121/sse"
+      "url": "http://serena:9121/sse"
     },
     "cognee": {
       "command": "sh",
@@ -13,4 +13,3 @@
     }
   }
 }
-
