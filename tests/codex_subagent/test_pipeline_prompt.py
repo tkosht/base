@@ -71,6 +71,41 @@ def test_build_stage_prompt_allows_next_stages_when_dynamic():
     assert '"next_stages"' in prompt
 
 
+def test_build_stage_prompt_includes_manager_leaf_policy():
+    capsule = {
+        "schema_version": SCHEMA_VERSION,
+        "pipeline_run_id": "run-4",
+        "facts": [],
+    }
+    policy = codex_exec.StageExecutionPolicy(
+        stage_id="plan",
+        role="planner",
+        node_kind="manager",
+        sandbox=codex_exec.SandboxMode.READ_ONLY,
+        workdir=None,
+        write_roots=[],
+        input_keys=["task"],
+        max_attempts=1,
+        depends_on=[],
+        merge_strategy=None,
+    )
+
+    prompt = codex_exec.build_stage_prompt(
+        stage_id="plan",
+        base_prompt="Plan the work",
+        capsule=capsule,
+        capsule_store="embed",
+        capsule_path=None,
+        stage_spec=None,
+        allow_dynamic=False,
+        stage_policy=policy,
+    )
+
+    assert "- Node kind: manager" in prompt
+    assert "Manager-only" in prompt
+    assert "Do not implement code changes" in prompt
+
+
 def test_parse_stage_result_output_accepts_json():
     output = "\n".join(
         [

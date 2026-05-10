@@ -63,6 +63,25 @@ def test_load_resource_registry_includes_codex_subagent() -> None:
     assert ".claude/skills/codex-subagent" in resource.mutable_paths
 
 
+def test_autoptimizer_prompts_require_manager_leaf_dag_team() -> None:
+    prompt_dir = (
+        ROOT / ".claude" / "skills" / "harness-autoptimizer" / "prompts"
+    )
+    auto_controller = (prompt_dir / "auto-controller.md").read_text(
+        encoding="utf-8"
+    )
+    repair_request = (prompt_dir / "repair-request.md").read_text(
+        encoding="utf-8"
+    )
+
+    combined = auto_controller + "\n" + repair_request
+
+    assert 'team_policy: "manager_leaf_v1"' in combined
+    assert "DAG-managed team" in combined
+    assert "manager-only" in combined
+    assert "leaf" in combined
+
+
 def test_load_resource_registry_includes_markdown_docs_resource() -> None:
     resources = harness_autopt.load_resource_registry(
         ROOT / "docs" / "architecture" / "harness-resources.toml"

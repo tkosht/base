@@ -22,6 +22,7 @@ codex-subagent は `codex exec` を「サブエージェント」として複数
 - 既定サンドボックス: `read-only`（安全・再現性優先）
 - ログ: `.codex/sessions/codex_exec/{human|auto}/YYYY/MM/DD/run-*.jsonl`（TTY で自動分類）
 - v2 pipeline: `schema_version: "2.0"` の spec、checkpoint state、`--resume-run`、`depends_on` DAG、stage ごとの `role` / `write_roots` / `max_attempts` に対応
+- manager-leaf team: `team_policy: "manager_leaf_v1"` を指定すると DAG と `node_kind: "manager" | "leaf"` が必須になり、manager node は read-only / no-write / non-executor に制限される
 
 ## Quick Start
 ```bash
@@ -181,6 +182,7 @@ Return JSON ONLY. capsule_patch で /draft を object で更新すること。
 - 新規 spec は `schema_version: "2.0"` を明示し、必要なら `depends_on` で branch/join を表現する
 - `role`, `write_roots`, `max_attempts`, `input_keys` を stage ごとに明示すると、review / verify / reducer の逸脱を抑えやすい
 - graph で writer stage を使う場合は `write_roots` を明示する。parallel branch は isolated workspace 上で走り、同じファイルを変更した branch は conflict failure になる
+- harness-autoptimizer など manager-leaf team が必要な実行では `team_policy: "manager_leaf_v1"` を指定し、manager node は分解・割当・進行管理・sanitized result 集約だけを行う。repair / review / verify などの実作業は leaf node に割り当てる
 - pipeline mode の `workdir` は repo 内だけを許可し、absolute path でも isolated workspace 配下へ remap される。repo 外 path は拒否される
 - 失敗後は checkpoint state から `--resume-run` で再開できる
 - `--resume-run <run_id>` は現在の `--log-dir` / `--log-scope` 配下を優先し、見つからない場合だけ default log root を探索する

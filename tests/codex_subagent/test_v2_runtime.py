@@ -108,6 +108,154 @@ def test_canonicalize_pipeline_spec_sets_v2_defaults():
     assert canonical["stages"][2]["depends_on"] == ["execute"]
 
 
+def test_canonicalize_manager_leaf_team_policy_accepts_valid_dag():
+    spec = {
+        "schema_version": codex_exec.PIPELINE_SPEC_VERSION,
+        "team_policy": codex_exec.TEAM_POLICY_MANAGER_LEAF_V1,
+        "stages": [
+            {
+                "id": "plan",
+                "role": "planner",
+                "node_kind": "manager",
+                "depends_on": [],
+            },
+            {
+                "id": "execute_leaf",
+                "role": "executor",
+                "node_kind": "leaf",
+                "depends_on": ["plan"],
+                "write_roots": ["src"],
+            },
+            {
+                "id": "review_leaf",
+                "role": "reviewer",
+                "node_kind": "leaf",
+                "depends_on": ["plan"],
+                "write_roots": [],
+            },
+        ],
+    }
+
+    canonical = codex_exec.canonicalize_pipeline_spec(spec)
+
+    assert canonical["team_policy"] == "manager_leaf_v1"
+    assert canonical["uses_graph"] is True
+    assert canonical["stages"][0]["node_kind"] == "manager"
+    assert canonical["stages"][1]["node_kind"] == "leaf"
+
+
+def test_manager_leaf_team_policy_rejects_linear_spec():
+    spec = {
+        "schema_version": codex_exec.PIPELINE_SPEC_VERSION,
+        "team_policy": codex_exec.TEAM_POLICY_MANAGER_LEAF_V1,
+        "stages": [
+            {"id": "plan", "role": "planner", "node_kind": "manager"},
+            {"id": "execute", "role": "executor", "node_kind": "leaf"},
+        ],
+    }
+
+    with pytest.raises(ValueError, match="must declare a DAG"):
+        codex_exec.canonicalize_pipeline_spec(spec)
+
+
+def test_manager_leaf_team_policy_rejects_missing_node_kind():
+    spec = {
+        "schema_version": codex_exec.PIPELINE_SPEC_VERSION,
+        "team_policy": codex_exec.TEAM_POLICY_MANAGER_LEAF_V1,
+        "stages": [
+            {"id": "plan", "role": "planner", "depends_on": []},
+            {
+                "id": "execute",
+                "role": "executor",
+                "node_kind": "leaf",
+                "depends_on": ["plan"],
+                "write_roots": ["src"],
+            },
+        ],
+    }
+
+    with pytest.raises(ValueError, match="must declare node_kind"):
+        codex_exec.canonicalize_pipeline_spec(spec)
+
+
+def test_manager_leaf_team_policy_rejects_implicit_dependency():
+    spec = {
+        "schema_version": codex_exec.PIPELINE_SPEC_VERSION,
+        "team_policy": codex_exec.TEAM_POLICY_MANAGER_LEAF_V1,
+        "stages": [
+            {
+                "id": "plan",
+                "role": "planner",
+                "node_kind": "manager",
+                "depends_on": [],
+            },
+            {
+                "id": "execute",
+                "role": "executor",
+                "node_kind": "leaf",
+                "write_roots": ["src"],
+            },
+        ],
+    }
+
+    with pytest.raises(ValueError, match="explicitly declare depends_on"):
+        codex_exec.canonicalize_pipeline_spec(spec)
+
+
+@pytest.mark.parametrize(
+    ("bad_stage", "message"),
+    [
+        (
+            {
+                "id": "plan",
+                "role": "planner",
+                "node_kind": "manager",
+                "depends_on": [],
+                "write_roots": ["src"],
+            },
+            "cannot declare write_roots",
+        ),
+        (
+            {
+                "id": "plan",
+                "role": "planner",
+                "node_kind": "manager",
+                "depends_on": [],
+                "sandbox": "workspace-write",
+            },
+            "must use read-only sandbox",
+        ),
+        (
+            {
+                "id": "plan",
+                "role": "executor",
+                "node_kind": "manager",
+                "depends_on": [],
+            },
+            "cannot use executor role",
+        ),
+    ],
+)
+def test_manager_leaf_team_policy_rejects_manager_work(bad_stage, message):
+    spec = {
+        "schema_version": codex_exec.PIPELINE_SPEC_VERSION,
+        "team_policy": codex_exec.TEAM_POLICY_MANAGER_LEAF_V1,
+        "stages": [
+            bad_stage,
+            {
+                "id": "execute_leaf",
+                "role": "executor",
+                "node_kind": "leaf",
+                "depends_on": ["plan"],
+                "write_roots": ["src"],
+            },
+        ],
+    }
+
+    with pytest.raises(ValueError, match=message):
+        codex_exec.canonicalize_pipeline_spec(spec)
+
+
 def test_enforce_stage_write_policy_restores_unauthorized(monkeypatch):
     before = {
         "allowed/file.txt": codex_exec.RepoSnapshotEntry(
@@ -153,6 +301,7 @@ def test_enforce_stage_write_policy_restores_unauthorized(monkeypatch):
     policy = codex_exec.StageExecutionPolicy(
         stage_id="review",
         role="reviewer",
+        node_kind=None,
         sandbox=codex_exec.SandboxMode.READ_ONLY,
         workdir=None,
         write_roots=["allowed"],
