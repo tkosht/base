@@ -9,12 +9,16 @@
 
 詳細な運用契約、Model Context Protocol（MCP）方針、skill 仕様、知識配置、実装標準は `docs/` に置きます。
 
+- visual contract: `DESIGN.md`
 - AI 共通運用契約: `docs/ai/repo-contract.md`
+- Codex 経験捕捉: `docs/ai/experience-capture.md`
+- design guidance: `docs/design/README.md`
 - Model Context Protocol（MCP）方針: `docs/ai/mcp.md`
 - skill reference: `docs/ai/skills/`
 - 知識配置: `docs/architecture/knowledge-architecture.md`
 - 構造説明: `docs/architecture/overview.md`
 - 実装標準: `docs/standards/`
+- ハーネス資源 registry: `docs/architecture/harness-resources.toml`
 
 `CLAUDE.md` は Claude Code 向けの薄いアダプタです。`GEMINI.md` と `.cursor/` は互換面として残ることがありますが、新しい repo-wide ルールを増やす場所にはしません。
 
@@ -32,6 +36,7 @@
 - 変更を伴う作業は `main` / `master` 以外で行う。
 - 破壊的な git / ファイル操作は明示依頼なしでは行わない。ユーザーや自動生成の既存変更は巻き戻さない。
 - 文書化された shared settings と skill entrypoints は code と同等以上の慎重さで扱う。
+- タスク終了時やユーザー訂正時に、経験を将来の行動改善へ残すべきかを軽量に判断する。詳細は `docs/ai/experience-capture.md` に従う。
 
 ## Execution
 

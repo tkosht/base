@@ -14,6 +14,10 @@
   - File: `.codex/skills/.system/skill-installer/SKILL.md`
 - `codex-subagent`: Project-local skill to orchestrate `codex exec` runs (single/parallel/competition) with logging and guardrails.
   - Files: `.claude/skills/codex-subagent/SKILL.md`, `.claude/skills/codex-subagent/scripts/*`, `.agents/skills/codex-subagent`, `.codex/skills/codex-subagent`
+- `grill-me`: Project-local vendored skill imported from `mattpocock/skills` to pressure-test a plan or design one question at a time.
+  - Files: `.claude/skills/grill-me/SKILL.md`, `.agents/skills/grill-me`, `.codex/skills/grill-me`
+- `grill-me-essential-first`: Project-local skill to pressure-test a plan or design while forcing the unresolved essential questions to be handled before low-priority details.
+  - Files: `.claude/skills/grill-me-essential-first/SKILL.md`, `.agents/skills/grill-me-essential-first`, `.codex/skills/grill-me-essential-first`
 - `ai-agent-collaboration-exec`: Project-local skill to design and operate AI collaboration where execution is delegated to subagents (Executor/Reviewer/Verifier).
   - Files: `.claude/skills/ai-agent-collaboration-exec/SKILL.md`, `.claude/skills/ai-agent-collaboration-exec/references/*`, `.agents/skills/ai-agent-collaboration-exec`, `.codex/skills/ai-agent-collaboration-exec`
 

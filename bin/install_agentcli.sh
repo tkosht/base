@@ -23,7 +23,7 @@ sh bin/install_claudecode.sh
 
 sh bin/install_codexcli.sh
 
-sh bin/install_geminicli.sh
+# sh bin/install_geminicli.sh
 
-sh bin/install_cursorcli.sh
+# sh bin/install_cursorcli.sh
 

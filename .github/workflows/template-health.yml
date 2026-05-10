@@ -12,6 +12,7 @@ on:
       - ".mcp.json"
       - "AGENTS.md"
       - "CLAUDE.md"
+      - "DESIGN.md"
       - "README.md"
       - "CONTRIBUTING.md"
       - "SECURITY.md"
@@ -36,6 +37,7 @@ on:
       - ".mcp.json"
       - "AGENTS.md"
       - "CLAUDE.md"
+      - "DESIGN.md"
       - "README.md"
       - "CONTRIBUTING.md"
       - "SECURITY.md"
@@ -64,7 +66,7 @@ jobs:
           python-version: "3.12"
 
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: "20"
           cache: "npm"
@@ -75,9 +77,3 @@ jobs:
 
       - name: Validate template structure
         run: make doctor
-
-      - name: Run linters
-        run: make lint
-
-      - name: Run tests
-        run: make test

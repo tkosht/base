@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import ast
+import fnmatch
 import re
 import sys
+import tomllib
 from pathlib import Path
 
 if __package__ in {None, ""}:
@@ -15,11 +18,16 @@ RETAINED_SKILLS = [
     "codex-subagent",
     "git-commit-pr",
     "git-mainbranch",
+    "grill-me",
+    "grill-me-essential-first",
+    "harness-autoptimizer",
     "repo-instruction-optimizer",
+    "repo-template-specializer",
     "skill-authoring",
 ]
 REQUIRED_PATHS = [
     "README.md",
+    "DESIGN.md",
     "AGENTS.md",
     "CLAUDE.md",
     "CONTRIBUTING.md",
@@ -38,20 +46,36 @@ REQUIRED_PATHS = [
     ".github/ISSUE_TEMPLATE/agent-task.yml",
     ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/workflows/template-health.yml",
+    ".github/workflows/harness-autopt.yml",
     "package.json",
     "package-lock.json",
     "docs/ai/repo-contract.md",
+    "docs/ai/experience-capture.md",
     "docs/ai/mcp.md",
     "docs/ai/operator-checklist.md",
     "docs/ai/execution-playbooks.md",
     "docs/ai/checklists/codex-mcp-collaboration-template.md",
     "docs/ai/skills/README.md",
     "docs/ai/skills/ai-agent-collaboration-exec.md",
+    "docs/ai/skills/grill-me.md",
+    "docs/ai/skills/grill-me-essential-first.md",
+    "docs/ai/skills/harness-autoptimizer.md",
+    "docs/ai/skills/repo-template-specializer.md",
+    ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
+    ".claude/skills/harness-autoptimizer/prompts/self-audit.md",
+    ".claude/skills/harness-autoptimizer/prompts/experience-to-rule.md",
+    ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
+    "docs/design/README.md",
+    "docs/design/samples/starter-b2b-corporate",
+    "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
+    "docs/design/samples/starter-b2b-corporate/preview.html",
     "docs/architecture/overview.md",
     "docs/architecture/knowledge-architecture.md",
     "docs/architecture/base-harness-set.md",
     "docs/architecture/base-harness-set.toml",
+    "docs/architecture/harness-resources.toml",
     "docs/architecture/decision-records/README.md",
+    "docs/architecture/decision-records/codex-shared-defaults.md",
     "docs/architecture/decision-records/knowledge-surface-consolidation.md",
     "docs/standards/coding.md",
     "docs/standards/testing.md",
@@ -60,8 +84,12 @@ REQUIRED_PATHS = [
     "docs/standards/communication.md",
     "docs/repository-template-design.md",
     "scripts/ci/validate_template.py",
+    "scripts/ci/repo_copy.py",
     "scripts/template/apply_overlay.py",
+    "scripts/template/sync_upstream_skill.py",
+    "scripts/template/upstream_skills.toml",
     "templates/manifest.yaml",
+    "bin/github_api_pr.sh",
     "secrets/README.md",
 ]
 FORBIDDEN_PATHS = [
@@ -72,17 +100,21 @@ FORBIDDEN_PATHS = [
 ]
 PRIMARY_DOCS = [
     "README.md",
+    "DESIGN.md",
     "AGENTS.md",
     "CLAUDE.md",
     "docs/ai/repo-contract.md",
+    "docs/ai/experience-capture.md",
     "docs/ai/mcp.md",
     "docs/ai/operator-checklist.md",
     "docs/ai/execution-playbooks.md",
     "docs/ai/checklists/codex-mcp-collaboration-template.md",
+    "docs/design/README.md",
     "docs/architecture/overview.md",
     "docs/architecture/knowledge-architecture.md",
     "docs/architecture/base-harness-set.md",
     "docs/architecture/decision-records/README.md",
+    "docs/architecture/decision-records/codex-shared-defaults.md",
     "docs/architecture/decision-records/knowledge-surface-consolidation.md",
     "docs/standards/coding.md",
     "docs/standards/testing.md",
@@ -100,11 +132,131 @@ TERM_EXPANSIONS = {
     ),
     "OAuth": ("OAuth 認証",),
 }
+DESIGN_DOCS = [
+    "DESIGN.md",
+    "docs/design/README.md",
+    "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
+]
+DESIGN_TERM_EXPANSIONS = {
+    "B2B": ("企業間取引（B2B）",),
+    "LP": ("ランディングページ（LP）",),
+    "CTA": (
+        "行動喚起（CTA）",
+        "コールトゥアクション（CTA）",
+    ),
+    "UI": ("ユーザーインターフェース（UI）",),
+}
+DESIGN_READ_FIRST_CONTRACT = (
+    "design 系作業では、root の `DESIGN.md` を先に読み、"
+    "必要に応じて `docs/design/README.md` を補助面として読む。"
+)
+DESIGN_ROLE_CONTRACT = "`DESIGN.md`: generated repo の visual contract の正本"
+DESIGN_README_ROLE_CONTRACT = (
+    "`docs/design/README.md`: root `DESIGN.md` を支える design guidance "
+    "の canonical な補助面"
+)
+DESIGN_README_MIN_ROLE = (
+    "この文書は root の `DESIGN.md` を支える design guidance "
+    "の canonical な補助面です。"
+)
+DESIGN_README_SYNC_REF = (
+    "同期ポリシーの正本は `docs/ai/repo-contract.md` です。"
+)
+DESIGN_SYNC_POLICY_CONTRACT = (
+    "`docs/design/README.md` は template-maintained な補助面であり、"
+    "自動同期はしない"
+)
+DESIGN_SYNC_INTAKE_CONTRACT = "maintainer が手動で取り込む"
+DESIGN_CHECKLIST_UPDATE_CONTRACT = (
+    "generated repo の visual contract の通常更新対象として、"
+    "実プロジェクト向けに更新する"
+)
+DESIGN_CHECKLIST_SUPPLEMENT_CONTRACT = (
+    "template-maintained な補助面なので、generated repo では通常更新しない。"
+)
+DESIGN_PREVIEW_NOTES = {
+    "docs/design/samples/starter-b2b-corporate/preview.html": (
+        "Reference-only",
+        "Source note:",
+        "Reviewed date:",
+        "Sync note:",
+    )
+}
+SUPPORTED_CODEX_SANDBOX_MODES = {
+    "danger-full-access",
+    "workspace-write",
+}
+CODEX_SHARED_DEFAULT_EXPECTATIONS = {
+    "docs/standards/security.md": (
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        "workspace-write",
+        "generated repo",
+        "mount 範囲",
+        "秘密情報",
+        "外向き通信",
+        "sandbox_workspace_write.network_access = false",
+    ),
+    "docs/ai/repo-contract.md": (
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        "workspace-write",
+        "generated repo",
+        "threat model",
+        "mount 範囲",
+        "秘密情報",
+        "外向き通信",
+        "sandbox_workspace_write.network_access = false",
+    ),
+    "docs/architecture/decision-records/codex-shared-defaults.md": (
+        'approval_policy = "never"',
+        'sandbox_mode = "danger-full-access"',
+        "workspace-write",
+        "generated repo",
+        "threat model",
+        "sandbox_workspace_write.network_access = false",
+    ),
+}
+REQUIRED_HARNESS_RESOURCE_IDS = {
+    "codex-subagent",
+    "harness-autoptimizer",
+    "instruction-surface",
+    "knowledge-docs",
+    "project-docs",
+    "repo-template-specializer",
+    "test-performance",
+}
+PROJECT_DOCS_RESOURCE_PATHS = {
+    "README.md",
+    "DESIGN.md",
+    "CONTRIBUTING.md",
+    "SECURITY.md",
+    "CODE_OF_CONDUCT.md",
+    "docs/design/README.md",
+    "src/README.md",
+    "tests/README.md",
+}
+PORTABLE_HARNESS_PRESERVE_PATHS = {
+    ".env.example",
+    "secrets/README.md",
+}
+COPYTREE_GUARD_FILES = (
+    "tests/test_template_contract.py",
+    "tests/template_smoke/test_sync_upstream_skill.py",
+)
+EXPERIENCE_CAPTURE_CONTRACT = (
+    "この repo 上で動く Codex agent は、通常タスクの終了時、"
+    "ユーザー訂正時、gate 異常時、実装複雑化や instruction surface "
+    "の矛盾を見つけた時に、経験を将来の行動改善へ残すべきかを軽量に判断する"
+)
 
 
 def _check_primary_terminology(root: Path, errors: list[str]) -> None:
     for rel in PRIMARY_DOCS:
-        text = (root / rel).read_text(encoding="utf-8")
+        path = root / rel
+        if not path.exists():
+            continue
+        text = path.read_text(encoding="utf-8")
         if re.search(r"\bADR\b", text):
             errors.append(f"{rel} must use 設計判断メモ instead of ADR")
         for term, expansions in TERM_EXPANSIONS.items():
@@ -113,6 +265,431 @@ def _check_primary_terminology(root: Path, errors: list[str]) -> None:
             ):
                 errors.append(
                     f"{rel} uses {term} without an approved expansion"
+                )
+
+
+def _check_codex_shared_defaults(root: Path, errors: list[str]) -> None:
+    config_text = (root / ".codex/config.toml").read_text(encoding="utf-8")
+    config = tomllib.loads(config_text)
+    if config.get("approval_policy") != "never":
+        return
+    sandbox_mode = config.get("sandbox_mode")
+    if sandbox_mode not in SUPPORTED_CODEX_SANDBOX_MODES:
+        errors.append(
+            ".codex/config.toml must keep sandbox_mode in "
+            '{"danger-full-access", "workspace-write"} '
+            'when approval_policy = "never" is shipped'
+        )
+    if sandbox_mode == "workspace-write":
+        workspace_write = config.get("sandbox_workspace_write")
+        if not isinstance(workspace_write, dict) or (
+            workspace_write.get("network_access") is not False
+        ):
+            errors.append(
+                ".codex/config.toml must keep "
+                "sandbox_workspace_write.network_access = false "
+                'when approval_policy = "never" is shipped'
+            )
+
+    for rel, needles in CODEX_SHARED_DEFAULT_EXPECTATIONS.items():
+        text = (root / rel).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                errors.append(
+                    f"{rel} missing Codex shared default contract: {needle}"
+                )
+
+
+def _check_harness_resource_registry(root: Path, errors: list[str]) -> None:
+    registry_path = root / "docs" / "architecture" / "harness-resources.toml"
+    registry = tomllib.loads(registry_path.read_text(encoding="utf-8"))
+    resources = {
+        item["id"]: item
+        for item in registry.get("resources", [])
+        if isinstance(item, dict) and "id" in item
+    }
+    for resource_id in sorted(REQUIRED_HARNESS_RESOURCE_IDS):
+        if resource_id not in resources:
+            errors.append(f"missing harness resource: {resource_id}")
+
+    project_docs = resources.get("project-docs")
+    if isinstance(project_docs, dict):
+        paths = set(project_docs.get("paths", []))
+        mutable_paths = set(project_docs.get("mutable_paths", []))
+        for rel in sorted(PROJECT_DOCS_RESOURCE_PATHS):
+            if rel not in paths:
+                errors.append(f"project-docs missing path: {rel}")
+            if rel not in mutable_paths:
+                errors.append(f"project-docs missing mutable path: {rel}")
+        if project_docs.get("mutation_policy") != "guarded_pr":
+            errors.append("project-docs must use guarded_pr mutation policy")
+
+    knowledge_docs = resources.get("knowledge-docs")
+    if isinstance(knowledge_docs, dict) and (
+        "docs/architecture/decision-records"
+        not in knowledge_docs.get("excluded_paths", [])
+    ):
+        errors.append(
+            "knowledge-docs must exclude docs/architecture/decision-records"
+        )
+
+
+def _path_matches_manifest_pattern(pattern: str, path: str) -> bool:
+    return (
+        path == pattern
+        or path.startswith(pattern.rstrip("/") + "/")
+        or fnmatch.fnmatchcase(path, pattern)
+    )
+
+
+def _check_base_harness_manifest(root: Path, errors: list[str]) -> None:
+    manifest_path = root / "docs" / "architecture" / "base-harness-set.toml"
+    manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
+    included_paths = set(manifest.get("included_paths", []))
+    groups = {
+        item["id"]: item
+        for item in manifest.get("portable_harness_groups", [])
+        if isinstance(item, dict) and "id" in item
+    }
+    local_runtime = groups.get("local-runtime-state")
+    if not isinstance(local_runtime, dict):
+        errors.append(
+            "base harness manifest missing local-runtime-state group"
+        )
+        return
+
+    preserve_paths = set(local_runtime.get("preserve_paths", []))
+    missing_preserve_paths = sorted(
+        PORTABLE_HARNESS_PRESERVE_PATHS - preserve_paths
+    )
+    for rel in missing_preserve_paths:
+        errors.append(f"local-runtime-state must preserve path: {rel}")
+    for rel in sorted(PORTABLE_HARNESS_PRESERVE_PATHS - included_paths):
+        errors.append(
+            f"base harness included_paths missing preserve path: {rel}"
+        )
+
+    copyable_paths = set(included_paths)
+    for group in groups.values():
+        if group.get("tier") == "do_not_copy":
+            continue
+        copyable_paths.update(group.get("paths", []))
+
+    do_not_copy_patterns = local_runtime.get("paths", [])
+    collisions = sorted(
+        rel
+        for rel in copyable_paths
+        for pattern in do_not_copy_patterns
+        if _path_matches_manifest_pattern(pattern, rel)
+        and rel not in preserve_paths
+    )
+    for rel in collisions:
+        errors.append(
+            "copyable harness path is covered by local-runtime-state: " + rel
+        )
+
+
+def _is_copytree_call(node: ast.Call) -> bool:
+    if isinstance(node.func, ast.Attribute):
+        return node.func.attr == "copytree"
+    if isinstance(node.func, ast.Name):
+        return node.func.id == "copytree"
+    return False
+
+
+def _first_arg_is_root(node: ast.Call) -> bool:
+    return (
+        bool(node.args)
+        and isinstance(node.args[0], ast.Name)
+        and (node.args[0].id == "ROOT")
+    )
+
+
+def _has_ignore_keyword(node: ast.Call) -> bool:
+    return any(keyword.arg == "ignore" for keyword in node.keywords)
+
+
+def _check_heavy_repo_copy_guard(root: Path, errors: list[str]) -> None:
+    for rel in COPYTREE_GUARD_FILES:
+        path = root / rel
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=rel)
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and _is_copytree_call(node)
+                and _first_arg_is_root(node)
+                and not _has_ignore_keyword(node)
+            ):
+                errors.append(
+                    f"{rel} copies ROOT with shutil.copytree without ignore"
+                )
+
+
+def _check_harness_autoptimizer_contract(
+    root: Path, errors: list[str]
+) -> None:
+    makefile_text = (root / "Makefile").read_text(encoding="utf-8")
+    if (
+        "harness-autopt:" in makefile_text
+        or "TARGET" in makefile_text
+        or ("GOAL" in makefile_text)
+    ):
+        errors.append(
+            "Makefile must not expose TARGET/GOAL harness-autopt entrypoint"
+        )
+
+    skill_text = (
+        root / ".claude" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "Codex agent",
+        "Sense",
+        "Classify",
+        "Constrain",
+        "Repair",
+        "Verify",
+        "Self-Audit",
+        "AutoptRequest",
+        "ReviewFinding",
+        "ReviewReport",
+        "ProactiveReviewProbe",
+        "proactive review probe",
+        "out_of_scope",
+        "verification_class",
+        "loop_count",
+        "converged",
+        "ExperienceCandidate",
+    ):
+        if needle not in skill_text:
+            errors.append(
+                ".claude/skills/harness-autoptimizer/SKILL.md "
+                f"missing controller contract: {needle}"
+            )
+
+    for rel in (
+        ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
+        ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
+    ):
+        path = root / rel
+        if not path.exists():
+            continue
+        prompt_text = path.read_text(encoding="utf-8")
+        for needle in (
+            "ReviewFinding",
+            "ReviewReport",
+            "proactive",
+            "out_of_scope",
+            "verification_class",
+            "loop_count",
+            "converged",
+        ):
+            if needle not in prompt_text:
+                errors.append(
+                    f"{rel} missing structured review contract: {needle}"
+                )
+
+    helper_text = (
+        root
+        / ".claude"
+        / "skills"
+        / "harness-autoptimizer"
+        / "scripts"
+        / "harness_autopt.py"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "class ReviewFinding",
+        "class ProactiveReviewProbe",
+        "class ReviewReport",
+        "def build_review_report",
+        "def run_proactive_review_probes",
+        "def write_review_report",
+        "ReviewReport must be converged before creating a pull request",
+        "review_report=review_report",
+        "verification_class",
+        "loop_count",
+        "converged",
+    ):
+        if needle not in helper_text:
+            errors.append(
+                "harness_autopt.py missing structured review helper: " + needle
+            )
+
+    forbidden_helpers = (
+        "def run_candidate_generation",
+        "def run_autoptimization",
+        'parser.add_argument("--target"',
+        'parser.add_argument("--goal"',
+        'parser.add_argument("--candidate-count"',
+    )
+    for needle in forbidden_helpers:
+        if needle in helper_text:
+            errors.append(
+                "harness_autopt.py must not keep Python-runner control path: "
+                + needle
+            )
+
+    workflow_text = (
+        root / ".github" / "workflows" / "harness-autopt.yml"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "workflow_dispatch:",
+        "schedule:",
+        "contents: write",
+        "pull-requests: write",
+        "CODEX_AUTH_JSON",
+        "codex_exec.py",
+        "harness-autopt-controller.md",
+    ):
+        if needle not in workflow_text:
+            errors.append(
+                "harness-autopt workflow missing controller contract: "
+                + needle
+            )
+    if "codex_exec.py" not in workflow_text:
+        errors.append(
+            "harness-autopt workflow must start a Codex agent controller"
+        )
+
+
+def _check_github_api_helper(root: Path, errors: list[str]) -> None:
+    helper = root / "bin" / "github_api_pr.sh"
+    if not helper.exists():
+        return
+    text = helper.read_text(encoding="utf-8")
+    for forbidden in (
+        "REPO=" "base",
+        "OWNER=" "tkosht",
+        "repos/tkosht/" "base",
+    ):
+        if forbidden in text:
+            errors.append(
+                "bin/github_api_pr.sh must not hard-code base repo: "
+                + forbidden
+            )
+    for needle in ("GITHUB_REPOSITORY", "git config --get remote.origin.url"):
+        if needle not in text:
+            errors.append(
+                "bin/github_api_pr.sh must resolve owner/repo dynamically: "
+                + needle
+            )
+
+
+def _check_design_doc_terminology(root: Path, errors: list[str]) -> None:
+    for rel in DESIGN_DOCS:
+        text = (root / rel).read_text(encoding="utf-8")
+        for term, expansions in DESIGN_TERM_EXPANSIONS.items():
+            count = len(re.findall(rf"\b{term}\b", text))
+            if count == 0:
+                continue
+            if not any(expansion in text for expansion in expansions):
+                errors.append(
+                    f"{rel} uses {term} without an approved expansion"
+                )
+            if count == 1:
+                errors.append(
+                    f"{rel} uses {term} only once; spell it out instead of abbreviating"
+                )
+
+
+def _check_design_contract(root: Path, errors: list[str]) -> None:
+    repo_contract = (root / "docs/ai/repo-contract.md").read_text(
+        encoding="utf-8"
+    )
+    for needle in (
+        DESIGN_READ_FIRST_CONTRACT,
+        DESIGN_ROLE_CONTRACT,
+        DESIGN_README_ROLE_CONTRACT,
+        DESIGN_SYNC_POLICY_CONTRACT,
+        DESIGN_SYNC_INTAKE_CONTRACT,
+        "## Generated Repo Checklist",
+        "3. `DESIGN.md`",
+        DESIGN_CHECKLIST_UPDATE_CONTRACT,
+        "8. `docs/design/README.md`",
+        DESIGN_CHECKLIST_SUPPLEMENT_CONTRACT,
+    ):
+        if needle not in repo_contract:
+            errors.append(
+                "docs/ai/repo-contract.md missing design contract: " + needle
+            )
+
+    design_readme = (root / "docs/design/README.md").read_text(
+        encoding="utf-8"
+    )
+    for needle in (DESIGN_README_MIN_ROLE, DESIGN_README_SYNC_REF):
+        if needle not in design_readme:
+            errors.append(
+                "docs/design/README.md missing design guidance contract: "
+                + needle
+            )
+
+    for rel, needles in DESIGN_PREVIEW_NOTES.items():
+        text = (root / rel).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                errors.append(f"{rel} missing preview note: {needle}")
+
+
+def _check_non_root_design_md(root: Path, errors: list[str]) -> None:
+    unexpected = sorted(
+        str(path.relative_to(root))
+        for path in root.rglob("DESIGN.md")
+        if path.relative_to(root).as_posix() != "DESIGN.md"
+    )
+    if unexpected:
+        errors.append(
+            "non-root DESIGN.md is forbidden: " + ", ".join(unexpected)
+        )
+
+
+def _extract_workflow_paths(text: str) -> list[list[str]]:
+    sections: list[list[str]] = []
+    lines = text.splitlines()
+    index = 0
+    while index < len(lines):
+        match = re.match(r"^(\s*)paths:\s*$", lines[index])
+        if not match:
+            index += 1
+            continue
+        indent = len(match.group(1))
+        index += 1
+        entries: list[str] = []
+        while index < len(lines):
+            line = lines[index]
+            stripped = line.strip()
+            current_indent = len(line) - len(line.lstrip(" "))
+            if stripped and current_indent <= indent:
+                break
+            item = re.match(r'^\s*-\s*[\'"]?([^\'"]+)[\'"]?\s*$', line)
+            if item:
+                entries.append(item.group(1))
+            index += 1
+        sections.append(entries)
+    return sections
+
+
+def _paths_cover_design_docs(paths: list[str]) -> bool:
+    return any(path in {"docs/design/**", "docs/**", "**"} for path in paths)
+
+
+def _check_workflow_path_filters(root: Path, errors: list[str]) -> None:
+    for rel in (
+        ".github/workflows/template-health.yml",
+        ".github/workflows/ci.yml",
+    ):
+        text = (root / rel).read_text(encoding="utf-8")
+        sections = _extract_workflow_paths(text)
+        if not sections:
+            continue
+        for index, paths in enumerate(sections, start=1):
+            if "DESIGN.md" not in paths:
+                errors.append(
+                    f"{rel} missing workflow path coverage for DESIGN.md "
+                    f"in paths section {index}"
+                )
+            if not _paths_cover_design_docs(paths):
+                errors.append(
+                    f"{rel} missing workflow path coverage for docs/design/** "
+                    f"in paths section {index}"
                 )
 
 
@@ -223,6 +800,34 @@ def run_checks(root: Path = ROOT) -> list[str]:
                 "docs/ai/repo-contract.md missing test mode contract: "
                 + needle
             )
+    for needle in (
+        "docs/ai/experience-capture.md",
+        EXPERIENCE_CAPTURE_CONTRACT,
+    ):
+        if needle not in contract_text:
+            errors.append(
+                "docs/ai/repo-contract.md missing experience contract: "
+                + needle
+            )
+
+    experience_path = root / "docs" / "ai" / "experience-capture.md"
+    if experience_path.exists():
+        experience_text = experience_path.read_text(encoding="utf-8")
+        core_question = (
+            "この経験は、将来の Codex agent の行動をより単純・一貫・安全・"
+            "自律的にする形へ圧縮できるか"
+        )
+        for needle in (
+            core_question,
+            "raw prompt",
+            "sanitized summary",
+            "harness-autoptimizer",
+        ):
+            if needle not in experience_text:
+                errors.append(
+                    "docs/ai/experience-capture.md missing experience contract: "
+                    + needle
+                )
 
     testing_text = (root / "docs/standards/testing.md").read_text(
         encoding="utf-8"
@@ -235,21 +840,22 @@ def run_checks(root: Path = ROOT) -> list[str]:
             )
 
     _check_primary_terminology(root, errors)
+    _check_codex_shared_defaults(root, errors)
+    _check_harness_resource_registry(root, errors)
+    _check_base_harness_manifest(root, errors)
+    _check_github_api_helper(root, errors)
+    _check_heavy_repo_copy_guard(root, errors)
+    _check_harness_autoptimizer_contract(root, errors)
+    _check_non_root_design_md(root, errors)
+    _check_design_contract(root, errors)
+    _check_design_doc_terminology(root, errors)
 
     workflow_expectations = {
         ".github/workflows/template-health.yml": (
             "make bootstrap",
             "make doctor",
-            "make lint",
-            "make test",
         ),
         ".github/workflows/ci.yml": (
-            "make doctor",
-            "make lint",
-            "make test",
-        ),
-        ".github/workflows/test-all-subsystems.yml": (
-            "make doctor",
             "make lint",
             "make test",
         ),
@@ -262,6 +868,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
         for forbidden in ("memory-bank/", "docs/04.knowledge/"):
             if forbidden in text:
                 errors.append(f"{rel} must not reference {forbidden}")
+    _check_workflow_path_filters(root, errors)
 
     live_marker_files = sorted(
         str(path.relative_to(root))

@@ -24,6 +24,9 @@ description: Codex exec subagent for parallel code generation, review, and analy
 | `--json` | JSON output | `/codex-subagent gen "util" --json` | Automation |
 | `-v` | Verbose (show scores) | `/codex-subagent gen "api" -c -v` | Debugging |
 | `--model MODEL` | codex model override | `/codex-subagent analyze "task" --model gpt-5.3-codex-spark` | A/B evaluation |
+| `--judge-mode hybrid` | Pairwise judge finalizer | `/codex-subagent gen "auth" -c --judge-mode hybrid` | Higher-confidence selection |
+| `--resume-run PATH` | Resume pipeline checkpoint | `/codex-subagent analyze "task" --resume-run output/state.json` | Retry after failure |
+| `--max-parallel-stages N` | DAG stage fan-out cap | `/codex-subagent analyze "task" --max-parallel-stages 2` | Branch/join pipelines |
 
 ## Task Types
 
@@ -108,6 +111,15 @@ uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
   --count $COUNT \
   --task-type $TASK_TYPE \
   --strategy $STRATEGY \
+  --judge-mode hybrid \
+  --sandbox read-only \
+  --json
+
+# v2 pipeline mode
+uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
+  --mode pipeline \
+  --pipeline-spec "$SPEC" \
+  --max-parallel-stages 2 \
   --sandbox read-only \
   --json
 ```
@@ -117,6 +129,11 @@ uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
 - 非0終了時は stdout は保持され、stderr は `--json` 出力の `stderr`/`error_message` で確認できる。
 - 終了コード: `0=全成功`, `2=サブエージェント失敗`, `3=ラッパー内部エラー`。`parallel` は候補のいずれかが失敗した時点で `2`。
 - `--profile fast/very-fast` 指定時、`codex_exec.py` は警告を stderr に出し、ガードレール文をプロンプト先頭へ注入する（それでもタスク分割を優先）。
+- pipeline v2 は `schema_version: "2.0"` の spec、checkpoint state、`--resume-run`、`depends_on` ベースの branch/join、stage ごとの `role` / `write_roots` / `max_attempts` をサポートする。
+- graph の writer stage は `write_roots` を明示する。parallel branch は isolated workspace で実行され、同じファイルを変更した branch は conflict failure になる。
+- pipeline mode の `workdir` は repo 内だけを許可する。absolute path でも isolated workspace 配下へ remap され、repo 外 path は拒否される。
+- `--pipeline-stages` は legacy shorthand として維持する。新規 pipeline は `--pipeline-spec` を優先する。
+- `--resume-run <run_id>` は現在の log root を優先して解決する。
 
 4. **Post-process**:
    - Extract output from JSON

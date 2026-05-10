@@ -9,8 +9,8 @@ services:
       uv run serena start-mcp-server --transport sse --port 9121
     tty: false
     restart: unless-stopped
-    ports:
-      - "9121:9121"
+    expose:
+      - "9121"
 #     networks:
 #       base_net:
 #         aliases: [ "serena" ]
@@ -20,4 +20,3 @@ services:
 #   base_net:
 #     external: true
 #     name: base_net
-

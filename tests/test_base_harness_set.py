@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import fnmatch
 import re
 import tomllib
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs" / "architecture" / "base-harness-set.toml"
+RESOURCE_REGISTRY_PATH = (
+    ROOT / "docs" / "architecture" / "harness-resources.toml"
+)
 PYPROJECT_PATH = ROOT / "pyproject.toml"
 
 
@@ -14,8 +18,66 @@ def load_manifest() -> dict[str, object]:
         return tomllib.load(fh)
 
 
+def _path_matches_manifest_pattern(pattern: str, path: str) -> bool:
+    return (
+        path == pattern
+        or path.startswith(pattern.rstrip("/") + "/")
+        or fnmatch.fnmatchcase(path, pattern)
+    )
+
+
 def test_manifest_exists() -> None:
     assert MANIFEST_PATH.exists()
+
+
+def test_harness_resource_registry_exists() -> None:
+    assert RESOURCE_REGISTRY_PATH.exists()
+
+
+def test_harness_resource_registry_covers_retained_autoptimizer() -> None:
+    registry = tomllib.loads(
+        RESOURCE_REGISTRY_PATH.read_text(encoding="utf-8")
+    )
+    resource_ids = {
+        item["id"]
+        for item in registry["resources"]
+        if isinstance(item, dict) and "id" in item
+    }
+    assert "codex-subagent" in resource_ids
+    assert "harness-autoptimizer" in resource_ids
+    assert "instruction-surface" in resource_ids
+    assert "knowledge-docs" in resource_ids
+    assert "project-docs" in resource_ids
+    assert "repo-template-specializer" in resource_ids
+    assert "test-performance" in resource_ids
+
+
+def test_markdown_harness_resources_keep_guardrails() -> None:
+    registry = tomllib.loads(
+        RESOURCE_REGISTRY_PATH.read_text(encoding="utf-8")
+    )
+    resources = {
+        item["id"]: item
+        for item in registry["resources"]
+        if isinstance(item, dict) and "id" in item
+    }
+
+    project_docs = resources["project-docs"]
+    assert project_docs["kind"] == "documentation"
+    assert project_docs["mutation_policy"] == "guarded_pr"
+    assert "README.md" in project_docs["mutable_paths"]
+    assert project_docs["max_changed_files"] == 2
+    assert project_docs["max_changed_lines"] == 200
+
+    knowledge_docs = resources["knowledge-docs"]
+    assert "docs/architecture/decision-records" in (
+        knowledge_docs["excluded_paths"]
+    )
+
+    test_performance = resources["test-performance"]
+    assert test_performance["kind"] == "test_performance"
+    assert test_performance["goals"] == ["efficiency"]
+    assert "scripts/ci/repo_copy.py" in test_performance["mutable_paths"]
 
 
 def test_manifest_paths_match_filesystem() -> None:
@@ -33,6 +95,98 @@ def test_manifest_paths_match_filesystem() -> None:
     for rel in excluded_paths:
         assert isinstance(rel, str)
         assert not (ROOT / rel).exists(), rel
+
+
+def test_manifest_declares_portable_harness_groups() -> None:
+    manifest = load_manifest()
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+
+    expected_ids = {
+        "agent-instruction-surface",
+        "knowledge-and-standards",
+        "skill-surface",
+        "collaboration-command-docs",
+        "harness-registry",
+        "validation-and-copy-tools",
+        "automation-workflows",
+        "ops-scaffold",
+        "local-runtime-state",
+    }
+    by_id = {group["id"]: group for group in groups}
+    assert set(by_id) == expected_ids
+
+    expected_tiers = {
+        "agent-instruction-surface": "must_copy",
+        "knowledge-and-standards": "copy_with_adjustments",
+        "skill-surface": "must_copy",
+        "collaboration-command-docs": "optional",
+        "harness-registry": "must_copy",
+        "validation-and-copy-tools": "must_copy",
+        "automation-workflows": "copy_with_adjustments",
+        "ops-scaffold": "copy_with_adjustments",
+        "local-runtime-state": "do_not_copy",
+    }
+    for group_id, tier in expected_tiers.items():
+        assert by_id[group_id]["tier"] == tier
+
+    assert "AGENTS.md" in by_id["agent-instruction-surface"]["paths"]
+    assert ".claude/skills" in by_id["skill-surface"]["paths"]
+    assert (
+        "docs/architecture/harness-resources.toml"
+        in by_id["harness-registry"]["paths"]
+    )
+    assert ".codex/auth.json" in by_id["local-runtime-state"]["paths"]
+    assert by_id["local-runtime-state"]["preserve_paths"] == [
+        ".env.example",
+        "secrets/README.md",
+    ]
+
+
+def test_portable_harness_group_paths_exist_when_copied() -> None:
+    manifest = load_manifest()
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+
+    for group in groups:
+        assert isinstance(group, dict)
+        if group["tier"] == "do_not_copy":
+            continue
+        paths = group["paths"]
+        assert isinstance(paths, list)
+        for rel in paths:
+            assert isinstance(rel, str)
+            assert (ROOT / rel).exists(), (group["id"], rel)
+
+
+def test_runtime_exclusions_preserve_public_placeholders() -> None:
+    manifest = load_manifest()
+    included_paths = set(manifest["included_paths"])
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+    by_id = {group["id"]: group for group in groups}
+
+    local_runtime = by_id["local-runtime-state"]
+    do_not_copy_patterns = local_runtime["paths"]
+    preserve_paths = set(local_runtime["preserve_paths"])
+    expected_preserve_paths = {".env.example", "secrets/README.md"}
+    assert expected_preserve_paths <= preserve_paths
+    assert expected_preserve_paths <= included_paths
+
+    copyable_paths = set(included_paths)
+    for group in groups:
+        assert isinstance(group, dict)
+        if group["tier"] == "do_not_copy":
+            continue
+        copyable_paths.update(group["paths"])
+
+    collisions = {
+        rel
+        for rel in copyable_paths
+        for pattern in do_not_copy_patterns
+        if _path_matches_manifest_pattern(pattern, rel)
+    }
+    assert collisions <= preserve_paths
 
 
 def test_manifest_skills_match_repo_layout() -> None:
@@ -60,6 +214,18 @@ def test_manifest_skills_match_repo_layout() -> None:
     assert actual_skill_dirs == expected
     assert actual_agent_symlinks == expected
     assert actual_symlinks == expected
+
+
+def test_manifest_skills_have_canonical_docs() -> None:
+    manifest = load_manifest()
+    skills = manifest["skills"]
+    assert isinstance(skills, list)
+
+    for skill in skills:
+        assert isinstance(skill, str)
+        assert (
+            ROOT / "docs" / "ai" / "skills" / f"{skill}.md"
+        ).exists(), skill
 
 
 def test_manifest_command_docs_and_workflows_exist() -> None:
@@ -111,9 +277,7 @@ def test_python_baseline_is_312_everywhere() -> None:
 
     workflow_expectations = {
         ".github/workflows/ci.yml": ["python-version: '3.12'"],
-        ".github/workflows/test-all-subsystems.yml": [
-            "python-version: '3.12'"
-        ],
+        ".github/workflows/template-health.yml": ['python-version: "3.12"'],
         ".github/workflows/claude.yml": ["python-version: '3.12'"],
     }
     for rel, needles in workflow_expectations.items():
