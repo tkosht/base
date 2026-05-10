@@ -133,8 +133,8 @@ def sync_skill(
     target.write_text(text, encoding="utf-8")
 
     ensure_relative_symlink(
-        root / ".agents" / "skills" / skill_name,
-        f"../../.claude/skills/{skill_name}",
+        root / ".claude" / "skills" / skill_name,
+        f"../../.agents/skills/{skill_name}",
     )
     ensure_relative_symlink(
         root / ".codex" / "skills" / skill_name,

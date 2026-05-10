@@ -2,4 +2,4 @@
 repo = "mattpocock/skills"
 ref = "main"
 source = "grill-me/SKILL.md"
-target = ".claude/skills/grill-me/SKILL.md"
+target = ".agents/skills/grill-me/SKILL.md"

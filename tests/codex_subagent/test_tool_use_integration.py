@@ -10,7 +10,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = (
     ROOT
-    / ".claude"
+    / ".agents"
     / "skills"
     / "codex-subagent"
     / "scripts"
@@ -36,11 +36,11 @@ TOOL_LOAD_MARKER = "TOOL_USE_LOAD_TEST_V1"
 def _build_prompt() -> str:
     files = [
         "docs/ai/skills/ai-agent-collaboration-exec.md",
-        ".claude/skills/ai-agent-collaboration-exec/SKILL.md",
-        ".claude/skills/ai-agent-collaboration-exec/references/execution_framework.md",
-        ".claude/skills/ai-agent-collaboration-exec/references/pipeline_spec_template.json",
-        ".claude/skills/ai-agent-collaboration-exec/references/subagent_prompt_templates.md",
-        ".claude/skills/ai-agent-collaboration-exec/references/contract_output.md",
+        ".agents/skills/ai-agent-collaboration-exec/SKILL.md",
+        ".agents/skills/ai-agent-collaboration-exec/references/execution_framework.md",
+        ".agents/skills/ai-agent-collaboration-exec/references/pipeline_spec_template.json",
+        ".agents/skills/ai-agent-collaboration-exec/references/subagent_prompt_templates.md",
+        ".agents/skills/ai-agent-collaboration-exec/references/contract_output.md",
     ]
     instructions = [
         "You are a skill validation agent.",
@@ -61,12 +61,12 @@ def _build_prompt() -> str:
 def _build_tool_load_prompt() -> tuple[str, list[str]]:
     files = [
         "docs/ai/skills/ai-agent-collaboration-exec.md",
-        ".claude/skills/ai-agent-collaboration-exec/SKILL.md",
-        ".claude/skills/ai-agent-collaboration-exec/references/execution_framework.md",
-        ".claude/skills/ai-agent-collaboration-exec/references/pipeline_spec_template.json",
-        ".claude/skills/ai-agent-collaboration-exec/references/subagent_prompt_templates.md",
-        ".claude/skills/ai-agent-collaboration-exec/references/contract_output.md",
-        ".claude/skills/codex-subagent/SKILL.md",
+        ".agents/skills/ai-agent-collaboration-exec/SKILL.md",
+        ".agents/skills/ai-agent-collaboration-exec/references/execution_framework.md",
+        ".agents/skills/ai-agent-collaboration-exec/references/pipeline_spec_template.json",
+        ".agents/skills/ai-agent-collaboration-exec/references/subagent_prompt_templates.md",
+        ".agents/skills/ai-agent-collaboration-exec/references/contract_output.md",
+        ".agents/skills/codex-subagent/SKILL.md",
         ".claude/commands/tasks/codex-subagent.md",
         "README.md",
         "pyproject.toml",

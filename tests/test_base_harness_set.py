@@ -143,7 +143,7 @@ def test_manifest_declares_portable_harness_groups() -> None:
         assert by_id[group_id]["tier"] == tier
 
     assert "AGENTS.md" in by_id["agent-instruction-surface"]["paths"]
-    assert ".claude/skills" in by_id["skill-surface"]["paths"]
+    assert ".agents/skills" in by_id["skill-surface"]["paths"]
     assert (
         "docs/architecture/harness-resources.toml"
         in by_id["harness-registry"]["paths"]
@@ -232,23 +232,31 @@ def test_manifest_skills_match_repo_layout() -> None:
     expected = sorted(skills)
     actual_skill_dirs = sorted(
         path.name
-        for path in (ROOT / ".claude" / "skills").iterdir()
+        for path in (ROOT / ".agents" / "skills").iterdir()
         if path.is_dir()
     )
-    actual_symlinks = sorted(
+    actual_claude_symlinks = sorted(
+        path.name
+        for path in (ROOT / ".claude" / "skills").iterdir()
+        if path.is_symlink()
+    )
+    actual_codex_symlinks = sorted(
         path.name
         for path in (ROOT / ".codex" / "skills").iterdir()
         if path.is_symlink()
     )
-    actual_agent_symlinks = sorted(
-        path.name
-        for path in (ROOT / ".agents" / "skills").iterdir()
-        if path.is_symlink()
-    )
 
     assert actual_skill_dirs == expected
-    assert actual_agent_symlinks == expected
-    assert actual_symlinks == expected
+    assert actual_claude_symlinks == expected
+    assert actual_codex_symlinks == expected
+    for skill in expected:
+        expected_target = Path(f"../../.agents/skills/{skill}")
+        assert (
+            ROOT / ".claude" / "skills" / skill
+        ).readlink() == expected_target
+        assert (
+            ROOT / ".codex" / "skills" / skill
+        ).readlink() == expected_target
 
 
 def test_manifest_skills_have_canonical_docs() -> None:

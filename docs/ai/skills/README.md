@@ -2,9 +2,9 @@
 
 このディレクトリは、論理 skill の説明正本です。
 
-- Codex entrypoint: `.agents/skills/<skill-name>`
-- Claude entrypoint: `.claude/skills/<skill-name>`
-- 必要なら `.codex/skills/<skill-name>` は Codex 互換 shim として参照されます
+- Skill source: `.agents/skills/<skill-name>`
+- Claude shim: `.claude/skills/<skill-name>`
+- Codex compatibility shim: `.codex/skills/<skill-name>`
 
 ## Retained Skills
 

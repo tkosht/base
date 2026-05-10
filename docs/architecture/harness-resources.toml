@@ -6,14 +6,14 @@ id = "codex-subagent"
 kind = "skill"
 authority = "canonical"
 paths = [
-  ".claude/skills/codex-subagent",
   ".agents/skills/codex-subagent",
+  ".claude/skills/codex-subagent",
   ".codex/skills/codex-subagent",
   "docs/ai/skills/codex-subagent.md",
   "tests/codex_subagent",
 ]
 mutable_paths = [
-  ".claude/skills/codex-subagent",
+  ".agents/skills/codex-subagent",
   "docs/ai/skills/codex-subagent.md",
   "tests/codex_subagent",
 ]
@@ -35,15 +35,15 @@ id = "harness-autoptimizer"
 kind = "skill"
 authority = "canonical"
 paths = [
-  ".claude/skills/harness-autoptimizer",
   ".agents/skills/harness-autoptimizer",
+  ".claude/skills/harness-autoptimizer",
   ".codex/skills/harness-autoptimizer",
   "docs/ai/skills/harness-autoptimizer.md",
   ".github/workflows/harness-autopt.yml",
   "tests/harness_autoptimizer",
 ]
 mutable_paths = [
-  ".claude/skills/harness-autoptimizer",
+  ".agents/skills/harness-autoptimizer",
   "docs/ai/skills/harness-autoptimizer.md",
   ".github/workflows/harness-autopt.yml",
   "tests/harness_autoptimizer",
@@ -66,13 +66,13 @@ id = "repo-template-specializer"
 kind = "skill"
 authority = "canonical"
 paths = [
-  ".claude/skills/repo-template-specializer",
   ".agents/skills/repo-template-specializer",
+  ".claude/skills/repo-template-specializer",
   ".codex/skills/repo-template-specializer",
   "docs/ai/skills/repo-template-specializer.md",
 ]
 mutable_paths = [
-  ".claude/skills/repo-template-specializer",
+  ".agents/skills/repo-template-specializer",
   "docs/ai/skills/repo-template-specializer.md",
 ]
 depends_on = [

@@ -2,7 +2,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPTS = ROOT / ".claude" / "skills" / "codex-subagent" / "scripts"
+SCRIPTS = ROOT / ".agents" / "skills" / "codex-subagent" / "scripts"
 sys.path.append(str(SCRIPTS))
 
 import codex_exec  # noqa: E402

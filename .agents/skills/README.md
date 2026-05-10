@@ -2,6 +2,6 @@
 
 このディレクトリは Codex 向けの repo-local skill entrypoint です。
 
-- canonical reference: `docs/ai/skills/*.md`
-- implementation source: `.claude/skills/*`
-- compatibility shim: `.codex/skills/*`
+- implementation source: `.agents/skills/*`
+- user-facing reference: `docs/ai/skills/*.md`
+- compatibility shims: `.claude/skills/*`, `.codex/skills/*`

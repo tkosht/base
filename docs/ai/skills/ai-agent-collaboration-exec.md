@@ -36,5 +36,5 @@
 
 ## Entrypoints
 
-- Codex entrypoint: `.agents/skills/ai-agent-collaboration-exec`
-- Claude entrypoint: `.claude/skills/ai-agent-collaboration-exec`
+- Skill source: `.agents/skills/ai-agent-collaboration-exec`
+- Claude shim: `.claude/skills/ai-agent-collaboration-exec`

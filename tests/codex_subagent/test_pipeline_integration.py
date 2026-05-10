@@ -9,11 +9,11 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPTS = ROOT / ".claude" / "skills" / "codex-subagent" / "scripts"
+SCRIPTS = ROOT / ".agents" / "skills" / "codex-subagent" / "scripts"
 sys.path.append(str(SCRIPTS))
 SCRIPT = (
     ROOT
-    / ".claude"
+    / ".agents"
     / "skills"
     / "codex-subagent"
     / "scripts"

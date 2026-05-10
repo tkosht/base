@@ -48,4 +48,4 @@
 
 - `AGENTS.md` は短い入口に保ち、長い手順や変化しやすい詳細は `docs/` へ分離する。
 - 長く残す知識は `docs/architecture/knowledge-architecture.md` に従って配置し、設計理由は `docs/architecture/decision-records/` に設計判断メモとして残す。
-- Codex 用 skill entrypoint は `.agents/skills/`、Claude 用は `.claude/skills/` を正面入口とする。`.codex/skills/` は互換 shim として扱う。
+- skill entrypoint の正本は `.agents/skills/` とする。`.claude/skills/` と `.codex/skills/` は互換 shim として扱う。
