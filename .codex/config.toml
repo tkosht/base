@@ -20,6 +20,8 @@ model_reasoning_effort = "xhigh"
 plan_mode_reasoning_effort = "xhigh"
 personality = "pragmatic"
 
+[features]
+goals = true
 
 [sandbox_workspace_write]
 network_access = false
