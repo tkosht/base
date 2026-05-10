@@ -77,9 +77,3 @@ jobs:
 
       - name: Validate template structure
         run: make doctor
-
-      - name: Run linters
-        run: make lint
-
-      - name: Run tests
-        run: make test

@@ -675,7 +675,6 @@ def _check_workflow_path_filters(root: Path, errors: list[str]) -> None:
     for rel in (
         ".github/workflows/template-health.yml",
         ".github/workflows/ci.yml",
-        ".github/workflows/test-all-subsystems.yml",
     ):
         text = (root / rel).read_text(encoding="utf-8")
         sections = _extract_workflow_paths(text)
@@ -855,16 +854,8 @@ def run_checks(root: Path = ROOT) -> list[str]:
         ".github/workflows/template-health.yml": (
             "make bootstrap",
             "make doctor",
-            "make lint",
-            "make test",
         ),
         ".github/workflows/ci.yml": (
-            "make doctor",
-            "make lint",
-            "make test",
-        ),
-        ".github/workflows/test-all-subsystems.yml": (
-            "make doctor",
             "make lint",
             "make test",
         ),
