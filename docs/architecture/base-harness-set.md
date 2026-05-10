@@ -10,7 +10,7 @@
 
 - 標準 Python: `3.12`
 - `pyproject.toml` の `requires-python`: `>=3.12,<=3.14`
-- GitHub Actions の `ci`、`test-all-subsystems`、`claude` も `3.12` を基準に運用する
+- GitHub Actions の `ci`、`template-health`、`claude` も `3.12` を基準に運用する
 
 ## 移植単位
 
@@ -51,7 +51,6 @@
   - Model Context Protocol（MCP）や secret handling の記述は、移植先の実際の connector と権限に合わせて見直す
 - automation workflows
   - `.github/workflows/ci.yml`
-  - `.github/workflows/test-all-subsystems.yml`
   - `.github/workflows/claude.yml`
   - `.github/workflows/harness-autopt.yml`
   - `.github/workflows/template-health.yml`
@@ -115,7 +114,7 @@
   - `mainbranch.md`
 - workflows
   - `ci.yml`
-  - `test-all-subsystems.yml`
+  - `template-health.yml`
   - `claude.yml`
   - `harness-autopt.yml`
 - validation
@@ -150,4 +149,4 @@
 
 - `tests/test_base_harness_set.py` で、一覧どおりに存在しているかと削除対象が消えているかを確認する
 - `tests/codex_subagent/*` で `codex-subagent` の単体検証面と実行テスト面を維持する
-- `ci.yml` / `test-all-subsystems.yml` はベースハーネス前提で `make test` を実行する
+- `template-health.yml` は bootstrap と構造検証を、`ci.yml` は lint と test を実行する

@@ -277,9 +277,7 @@ def test_python_baseline_is_312_everywhere() -> None:
 
     workflow_expectations = {
         ".github/workflows/ci.yml": ["python-version: '3.12'"],
-        ".github/workflows/test-all-subsystems.yml": [
-            "python-version: '3.12'"
-        ],
+        ".github/workflows/template-health.yml": ['python-version: "3.12"'],
         ".github/workflows/claude.yml": ["python-version: '3.12'"],
     }
     for rel, needles in workflow_expectations.items():

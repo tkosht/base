@@ -22,9 +22,9 @@ command_docs = [
 
 workflows = [
   ".github/workflows/ci.yml",
-  ".github/workflows/test-all-subsystems.yml",
   ".github/workflows/claude.yml",
   ".github/workflows/harness-autopt.yml",
+  ".github/workflows/template-health.yml",
 ]
 
 included_paths = [
@@ -270,7 +270,6 @@ tier = "copy_with_adjustments"
 summary = "GitHub workflows that run validation and harness autoptimization."
 paths = [
   ".github/workflows/ci.yml",
-  ".github/workflows/test-all-subsystems.yml",
   ".github/workflows/claude.yml",
   ".github/workflows/harness-autopt.yml",
   ".github/workflows/template-health.yml",
