@@ -165,7 +165,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_squash_candidate_cont
     assert (
         ".claude/skills/git-mainbranch/SKILL.md "
         'missing cleanup contract: gh pr list --state merged --search "head:<branch>" '
-        "--json number,state,mergedAt,headRefName"
+        "--json number,state,mergedAt,headRefName,headRefOid,baseRefName,mergeCommit"
     ) in errors
 
 
@@ -193,8 +193,11 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_guard_is
         skill,
         "force delete の客観証拠は、PR merged、"
         "upstream/remote branch gone、残存 worktree で checkout "
-        "されていないこと、`git cherry -v <target_branch> <branch>` "
-        "に `+` 行が無いことのすべて",
+        "されていないこと、merged PR の `headRefName` が "
+        "`<branch>` と一致すること、`headRefOid` が "
+        "`git rev-parse <branch>` と一致すること、`baseRefName` "
+        "が `<target_branch>` と一致すること、`git merge-base "
+        "--is-ancestor <mergeCommit.oid> <target_branch>` が成功することのすべて",
         "force delete の客観証拠は、PR merged のみ",
     )
 
@@ -205,8 +208,11 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_guard_is
         "missing cleanup contract: "
         "force delete の客観証拠は、PR merged、"
         "upstream/remote branch gone、残存 worktree で checkout "
-        "されていないこと、`git cherry -v <target_branch> <branch>` "
-        "に `+` 行が無いことのすべて"
+        "されていないこと、merged PR の `headRefName` が "
+        "`<branch>` と一致すること、`headRefOid` が "
+        "`git rev-parse <branch>` と一致すること、`baseRefName` "
+        "が `<target_branch>` と一致すること、`git merge-base "
+        "--is-ancestor <mergeCommit.oid> <target_branch>` が成功することのすべて"
     ) in errors
 
 
@@ -291,7 +297,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_remote_gone_
     ) in errors
 
 
-def test_template_contract_checks_fail_when_git_mainbranch_playbook_cherry_contract_is_missing(
+def test_template_contract_checks_fail_when_git_mainbranch_playbook_pr_target_contract_is_missing(
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
@@ -305,20 +311,27 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_cherry_contr
     )
     _replace_once(
         playbook,
-        "git cherry -v <target_branch> <branch>",
-        "git log <target_branch>..<branch>",
+        "merged PR の `headRefName` が `<branch>` と一致すること、"
+        "`headRefOid` が `git rev-parse <branch>` と一致すること、"
+        "`baseRefName` が `<target_branch>` と一致すること、"
+        "`git merge-base --is-ancestor <mergeCommit.oid> <target_branch>` が成功すること",
+        "merged PR があること",
     )
     _replace_once(
         playbook,
-        "git cherry -v <target_branch> <branch>",
-        "git log <target_branch>..<branch>",
+        "merged PR の `headRefName` が `<branch>` と一致すること、"
+        "`headRefOid` が `git rev-parse <branch>` と一致すること、"
+        "`baseRefName` が `<target_branch>` と一致すること、"
+        "`git merge-base --is-ancestor <mergeCommit.oid> <target_branch>` が成功すること",
+        "merged PR があること",
     )
 
     errors = run_checks(repo)
 
     assert (
         ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
-        "missing cleanup contract: git cherry -v <target_branch> <branch>"
+        "missing cleanup contract: "
+        "merged PR の `headRefName` が `<branch>` と一致すること"
     ) in errors
 
 

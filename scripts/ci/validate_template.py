@@ -568,12 +568,15 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         "git branch -vv",
         "upstream が gone のローカルブランチ",
         'gh pr list --state merged --search "head:<branch>" '
-        "--json number,state,mergedAt,headRefName",
+        "--json number,state,mergedAt,headRefName,headRefOid,baseRefName,mergeCommit",
         "git branch --merged <target_branch>` に出ない",
         "force delete の客観証拠は、PR merged、"
         "upstream/remote branch gone、残存 worktree で checkout "
-        "されていないこと、`git cherry -v <target_branch> <branch>` "
-        "に `+` 行が無いことのすべて",
+        "されていないこと、merged PR の `headRefName` が "
+        "`<branch>` と一致すること、`headRefOid` が "
+        "`git rev-parse <branch>` と一致すること、`baseRefName` "
+        "が `<target_branch>` と一致すること、`git merge-base "
+        "--is-ancestor <mergeCommit.oid> <target_branch>` が成功することのすべて",
         "追加のユーザー承認を求めず `git branch -D <branch>`",
         "証拠欠落をユーザー承認で補わない",
         "git branch -D <branch>",
@@ -603,14 +606,18 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         "upstream が gone のローカルブランチ",
         "remote branch gone と PR merge の両方",
         "対象 worktree が残っていない",
-        "git cherry -v <target_branch> <branch>",
+        "merged PR の `headRefName` が `<branch>` と一致すること",
+        "`headRefOid` が `git rev-parse <branch>` と一致すること",
+        "`baseRefName` が `<target_branch>` と一致すること",
+        "`git merge-base --is-ancestor <mergeCommit.oid> <target_branch>` "
+        "が成功すること",
         "force_deleted_branches",
         "追加のユーザー承認を求めず `git branch -D <branch>`",
         "証拠欠落をユーザー承認で補わない",
         "worktree safety 条件を満たさない場合は branch deletion も skip",
         "git branch -D <branch>",
         'gh pr list --state merged --search "head:<branch>" '
-        "--json number,state,mergedAt,headRefName",
+        "--json number,state,mergedAt,headRefName,headRefOid,baseRefName,mergeCommit",
     ):
         if needle not in playbook_text:
             errors.append(

@@ -37,15 +37,15 @@
 ## 5. Candidate Collection
 - 通常削除候補は `git branch --merged <target_branch>` から集める。
 - squash merge 済みブランチは ancestry 上 merge 済みではないため、`git branch --merged <target_branch>` だけでは見つからない。
-- `git branch -vv` で upstream が gone のローカルブランチを抽出し、`gh pr list --state merged --search "head:<branch>" --json number,state,mergedAt,headRefName` で PR merge を確認する。
-- force delete の客観証拠は、remote branch gone と PR merge の両方、対象 worktree が残っていないこと、`git cherry -v <target_branch> <branch>` に `+` 行が無いことのすべてとする。
+- `git branch -vv` で upstream が gone のローカルブランチを抽出し、`gh pr list --state merged --search "head:<branch>" --json number,state,mergedAt,headRefName,headRefOid,baseRefName,mergeCommit` で PR merge、merged PR head、merge 先を確認する。
+- force delete の客観証拠は、remote branch gone と PR merge の両方、対象 worktree が残っていないこと、merged PR の `headRefName` が `<branch>` と一致すること、`headRefOid` が `git rev-parse <branch>` と一致すること、`baseRefName` が `<target_branch>` と一致すること、`git merge-base --is-ancestor <mergeCommit.oid> <target_branch>` が成功することのすべてとする。
 - すべての証拠を確認できる obsolete branch は、追加のユーザー承認を求めず `git branch -D <branch>` を実行し、`force_deleted_branches` に記録する。
 - 証拠が 1 つでも不足する場合は削除せず、`force_delete_candidates` に不足証拠の理由を記録する。証拠欠落をユーザー承認で補わない。
 
 ## 6. Typical Failure Cases
 ### Case A: Unmerged work remains
 - 症状: `git branch -d <branch>` が「not fully merged」で失敗する。
-- 対応: PR merged、upstream/remote branch gone、残存 worktree で checkout されていないこと、`git cherry -v <target_branch> <branch>` に `+` 行が無いことを確認できる場合だけ `git branch -D <branch>` を実行し、`force_deleted_branches` に記録する。証拠が不足する場合は削除せず、`force_delete_candidates` に理由を記録する。
+- 対応: PR merged、upstream/remote branch gone、残存 worktree で checkout されていないこと、merged PR の `headRefName` が `<branch>` と一致すること、`headRefOid` が `git rev-parse <branch>` と一致すること、`baseRefName` が `<target_branch>` と一致すること、`git merge-base --is-ancestor <mergeCommit.oid> <target_branch>` が成功することを確認できる場合だけ `git branch -D <branch>` を実行し、`force_deleted_branches` に記録する。証拠が不足する場合は削除せず、`force_delete_candidates` に理由を記録する。
 
 ### Case B: No target branch exists
 - 症状: `main`/`master` がどちらも存在しない。
