@@ -191,15 +191,22 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_guard_is
     skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(
         skill,
-        "PR merge、remote branch gone、worktree 削除済みを確認し",
-        "PR merge を確認し",
+        "force delete の客観証拠は、PR merged、"
+        "upstream/remote branch gone、残存 worktree で checkout "
+        "されていないこと、`git cherry -v <target_branch> <branch>` "
+        "に `+` 行が無いことのすべて",
+        "force delete の客観証拠は、PR merged のみ",
     )
 
     errors = run_checks(repo)
 
     assert (
         ".claude/skills/git-mainbranch/SKILL.md "
-        "missing cleanup contract: PR merge、remote branch gone、worktree 削除済みを確認し"
+        "missing cleanup contract: "
+        "force delete の客観証拠は、PR merged、"
+        "upstream/remote branch gone、残存 worktree で checkout "
+        "されていないこと、`git cherry -v <target_branch> <branch>` "
+        "に `+` 行が無いことのすべて"
     ) in errors
 
 
@@ -210,8 +217,8 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_executio
     skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(
         skill,
-        "ユーザーが `force_delete_candidates` を不要ブランチとして削除するよう明示した場合だけ",
-        "force_delete_candidates を削除する場合",
+        "追加のユーザー承認を求めず `git branch -D <branch>`",
+        "`git branch -D <branch>`",
     )
 
     errors = run_checks(repo)
@@ -219,7 +226,26 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_executio
     assert (
         ".claude/skills/git-mainbranch/SKILL.md "
         "missing cleanup contract: "
-        "ユーザーが `force_delete_candidates` を不要ブランチとして削除するよう明示した場合だけ"
+        "追加のユーザー承認を求めず `git branch -D <branch>`"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_git_mainbranch_missing_proof_guard_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    _replace_once(
+        skill,
+        "証拠欠落をユーザー承認で補わない",
+        "証拠欠落時は確認する",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/SKILL.md "
+        "missing cleanup contract: 証拠欠落をユーザー承認で補わない"
     ) in errors
 
 
@@ -253,8 +279,8 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_remote_gone_
     )
     _replace_once(
         playbook,
-        "remote branch gone と PR merge の両方を確認でき",
-        "PR merge を確認でき",
+        "remote branch gone と PR merge の両方",
+        "PR merge",
     )
 
     errors = run_checks(repo)
@@ -262,6 +288,37 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_remote_gone_
     assert (
         ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
         "missing cleanup contract: remote branch gone と PR merge の両方"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_git_mainbranch_playbook_cherry_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    playbook = (
+        repo
+        / ".claude"
+        / "skills"
+        / "git-mainbranch"
+        / "references"
+        / "mainbranch-playbook.md"
+    )
+    _replace_once(
+        playbook,
+        "git cherry -v <target_branch> <branch>",
+        "git log <target_branch>..<branch>",
+    )
+    _replace_once(
+        playbook,
+        "git cherry -v <target_branch> <branch>",
+        "git log <target_branch>..<branch>",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+        "missing cleanup contract: git cherry -v <target_branch> <branch>"
     ) in errors
 
 

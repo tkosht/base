@@ -570,12 +570,14 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         'gh pr list --state merged --search "head:<branch>" '
         "--json number,state,mergedAt,headRefName",
         "git branch --merged <target_branch>` に出ない",
-        "PR merge、remote branch gone、worktree 削除済みを確認し",
-        "ユーザーが `force_delete_candidates` を不要ブランチとして"
-        "削除するよう明示した場合だけ",
+        "force delete の客観証拠は、PR merged、"
+        "upstream/remote branch gone、残存 worktree で checkout "
+        "されていないこと、`git cherry -v <target_branch> <branch>` "
+        "に `+` 行が無いことのすべて",
+        "追加のユーザー承認を求めず `git branch -D <branch>`",
+        "証拠欠落をユーザー承認で補わない",
         "git branch -D <branch>",
         "git worktree remove --force",
-        "ユーザーが明示承認した場合だけ",
     ):
         if needle not in skill_text:
             errors.append(
@@ -601,8 +603,11 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         "upstream が gone のローカルブランチ",
         "remote branch gone と PR merge の両方",
         "対象 worktree が残っていない",
+        "git cherry -v <target_branch> <branch>",
         "force_deleted_branches",
-        "不要ブランチとして削除を明示した",
+        "追加のユーザー承認を求めず `git branch -D <branch>`",
+        "証拠欠落をユーザー承認で補わない",
+        "worktree safety 条件を満たさない場合は branch deletion も skip",
         "git branch -D <branch>",
         'gh pr list --state merged --search "head:<branch>" '
         "--json number,state,mergedAt,headRefName",
