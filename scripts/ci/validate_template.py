@@ -564,6 +564,12 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         "git worktree list --porcelain",
         "git -C <path> status --porcelain",
         "git worktree remove <path>",
+        "git branch -vv",
+        "upstream が gone のローカルブランチ",
+        'gh pr list --state merged --search "head:<branch>" '
+        "--json number,state,mergedAt,headRefName",
+        "git branch --merged <target_branch>` に出ない",
+        "PR merge、remote branch gone、worktree 削除済みを確認し",
         "git worktree remove --force",
         "ユーザーが明示承認した場合だけ",
     ):
@@ -587,6 +593,12 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         "git worktree remove --force",
         "used by worktree",
         "force_delete_candidates",
+        "Candidate Collection",
+        "upstream が gone のローカルブランチ",
+        "remote branch gone と PR merge の両方",
+        "対象 worktree が残っていない",
+        'gh pr list --state merged --search "head:<branch>" '
+        "--json number,state,mergedAt,headRefName",
     ):
         if needle not in playbook_text:
             errors.append(

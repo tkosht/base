@@ -149,6 +149,86 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_contract_is_
     ) in errors
 
 
+def test_template_contract_checks_fail_when_git_mainbranch_squash_candidate_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    _replace_once(
+        skill,
+        'gh pr list --state merged --search "head:<branch>"',
+        'gh pr list --state merged --search "removed:<branch>"',
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/SKILL.md "
+        'missing cleanup contract: gh pr list --state merged --search "head:<branch>" '
+        "--json number,state,mergedAt,headRefName"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_git_mainbranch_remote_gone_evidence_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    _replace_once(skill, "upstream が gone", "upstream を確認")
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/SKILL.md "
+        "missing cleanup contract: upstream が gone のローカルブランチ"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_git_mainbranch_force_delete_guard_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    _replace_once(
+        skill,
+        "PR merge、remote branch gone、worktree 削除済みを確認し",
+        "PR merge を確認し",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/SKILL.md "
+        "missing cleanup contract: PR merge、remote branch gone、worktree 削除済みを確認し"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_git_mainbranch_playbook_remote_gone_and_pr_merge_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    playbook = (
+        repo
+        / ".claude"
+        / "skills"
+        / "git-mainbranch"
+        / "references"
+        / "mainbranch-playbook.md"
+    )
+    _replace_once(
+        playbook,
+        "remote branch gone と PR merge の両方を確認でき",
+        "PR merge を確認でき",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+        "missing cleanup contract: remote branch gone と PR merge の両方"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_workspace_network_enabled(
     tmp_path: Path,
 ) -> None:

@@ -32,7 +32,13 @@
 - 現在ブランチ（`git branch` の `*` 行）
 - `target_branch`
 
-## 5. Typical Failure Cases
+## 5. Candidate Collection
+- 通常削除候補は `git branch --merged <target_branch>` から集める。
+- squash merge 済みブランチは ancestry 上 merge 済みではないため、`git branch --merged <target_branch>` だけでは見つからない。
+- `git branch -vv` で upstream が gone のローカルブランチを抽出し、`gh pr list --state merged --search "head:<branch>" --json number,state,mergedAt,headRefName` で PR merge を確認する。
+- remote branch gone と PR merge の両方を確認でき、対象 worktree が残っていないブランチは `force_delete_candidates` に記録する。`git branch -D` はユーザーが明示承認した場合だけ使う。
+
+## 6. Typical Failure Cases
 ### Case A: Unmerged work remains
 - 症状: `git branch -d <branch>` が「not fully merged」で失敗する。
 - 対応: PR merge、remote branch gone、worktree 削除済みを確認できる場合は `force_delete_candidates` に記録する。`git branch -D` はユーザーが明示承認した場合だけ使う。
