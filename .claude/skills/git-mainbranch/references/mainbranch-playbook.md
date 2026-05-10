@@ -37,6 +37,7 @@
 - squash merge 済みブランチは ancestry 上 merge 済みではないため、`git branch --merged <target_branch>` だけでは見つからない。
 - `git branch -vv` で upstream が gone のローカルブランチを抽出し、`gh pr list --state merged --search "head:<branch>" --json number,state,mergedAt,headRefName` で PR merge を確認する。
 - remote branch gone と PR merge の両方を確認でき、対象 worktree が残っていないブランチは `force_delete_candidates` に記録する。`git branch -D` はユーザーが明示承認した場合だけ使う。
+- ユーザーが不要ブランチとして削除を明示した `force_delete_candidates` は、実行直前に PR merge、remote branch gone、worktree 不在を再確認してから `git branch -D <branch>` を実行し、`force_deleted_branches` に記録する。
 
 ## 6. Typical Failure Cases
 ### Case A: Unmerged work remains

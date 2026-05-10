@@ -560,6 +560,7 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
     for needle in (
         "removed_worktrees",
         "skipped_worktrees",
+        "force_deleted_branches",
         "force_delete_candidates",
         "git worktree list --porcelain",
         "git -C <path> status --porcelain",
@@ -570,6 +571,9 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         "--json number,state,mergedAt,headRefName",
         "git branch --merged <target_branch>` に出ない",
         "PR merge、remote branch gone、worktree 削除済みを確認し",
+        "ユーザーが `force_delete_candidates` を不要ブランチとして"
+        "削除するよう明示した場合だけ",
+        "git branch -D <branch>",
         "git worktree remove --force",
         "ユーザーが明示承認した場合だけ",
     ):
@@ -597,6 +601,9 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
         "upstream が gone のローカルブランチ",
         "remote branch gone と PR merge の両方",
         "対象 worktree が残っていない",
+        "force_deleted_branches",
+        "不要ブランチとして削除を明示した",
+        "git branch -D <branch>",
         'gh pr list --state merged --search "head:<branch>" '
         "--json number,state,mergedAt,headRefName",
     ):

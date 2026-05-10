@@ -4,4 +4,4 @@
 - Use when: `git-commit-pr` 後の後処理
 - Codex entrypoint: `.agents/skills/git-mainbranch`
 - Claude entrypoint: `.claude/skills/git-mainbranch`
-- Key outputs: sync status、removed worktrees、skipped worktrees、deleted branches、force delete candidates、skipped branches
+- Key outputs: sync status、removed worktrees、skipped worktrees、deleted branches、force deleted branches、force delete candidates、skipped branches
