@@ -421,7 +421,8 @@ def test_template_contract_checks_fail_when_grill_me_skill_dir_is_missing(
 
     assert (
         "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
-        "codex-subagent, git-commit-pr, git-mainbranch, "
+        "codex-subagent, dependabot-pr-maintainer, "
+        "git-commit-pr, git-mainbranch, "
         "grill-me-essential-first, harness-autoptimizer, "
         "repo-instruction-optimizer, repo-template-specializer, "
         "skill-authoring"
@@ -452,9 +453,10 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_skill_dir_i
 
     assert (
         "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
-        "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "harness-autoptimizer, repo-instruction-optimizer, "
-        "repo-template-specializer, skill-authoring"
+        "codex-subagent, dependabot-pr-maintainer, "
+        "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
+        "repo-instruction-optimizer, repo-template-specializer, "
+        "skill-authoring"
     ) in errors
 
 
@@ -468,9 +470,10 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_agent_entry
 
     assert (
         "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
-        "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "harness-autoptimizer, repo-instruction-optimizer, "
-        "repo-template-specializer, skill-authoring"
+        "codex-subagent, dependabot-pr-maintainer, "
+        "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
+        "repo-instruction-optimizer, repo-template-specializer, "
+        "skill-authoring"
     ) in errors
 
 
@@ -484,9 +487,10 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_codex_entry
 
     assert (
         "unexpected .codex/skills layout: ai-agent-collaboration-exec, "
-        "codex-subagent, git-commit-pr, git-mainbranch, grill-me, "
-        "harness-autoptimizer, repo-instruction-optimizer, "
-        "repo-template-specializer, skill-authoring"
+        "codex-subagent, dependabot-pr-maintainer, "
+        "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
+        "repo-instruction-optimizer, repo-template-specializer, "
+        "skill-authoring"
     ) in errors
 
 

@@ -10,6 +10,7 @@
 
 - `ai-agent-collaboration-exec`
 - `codex-subagent`
+- `dependabot-pr-maintainer`
 - `git-commit-pr`
 - `git-mainbranch`
 - `grill-me`

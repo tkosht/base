@@ -4,6 +4,7 @@ version = 3
 skills = [
   "ai-agent-collaboration-exec",
   "codex-subagent",
+  "dependabot-pr-maintainer",
   "git-commit-pr",
   "git-mainbranch",
   "grill-me",
@@ -62,6 +63,7 @@ included_paths = [
   "docs/ai/checklists/codex-mcp-collaboration-template.md",
   "docs/ai/skills/README.md",
   "docs/ai/skills/ai-agent-collaboration-exec.md",
+  "docs/ai/skills/dependabot-pr-maintainer.md",
   "docs/ai/skills/harness-autoptimizer.md",
   ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
   ".claude/skills/harness-autoptimizer/prompts/self-audit.md",

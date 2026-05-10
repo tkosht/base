@@ -14,6 +14,8 @@
   - File: `.codex/skills/.system/skill-installer/SKILL.md`
 - `codex-subagent`: Project-local skill to orchestrate `codex exec` runs (single/parallel/competition) with logging and guardrails.
   - Files: `.claude/skills/codex-subagent/SKILL.md`, `.claude/skills/codex-subagent/scripts/*`, `.agents/skills/codex-subagent`, `.codex/skills/codex-subagent`
+- `dependabot-pr-maintainer`: Project-local skill to triage, update, verify, and merge Dependabot pull requests with explicit merge intent.
+  - Files: `.claude/skills/dependabot-pr-maintainer/SKILL.md`, `.agents/skills/dependabot-pr-maintainer`, `.codex/skills/dependabot-pr-maintainer`
 - `grill-me`: Project-local vendored skill imported from `mattpocock/skills` to pressure-test a plan or design one question at a time.
   - Files: `.claude/skills/grill-me/SKILL.md`, `.agents/skills/grill-me`, `.codex/skills/grill-me`
 - `grill-me-essential-first`: Project-local skill to pressure-test a plan or design while forcing the unresolved essential questions to be handled before low-priority details.
