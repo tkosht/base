@@ -10,7 +10,7 @@ services:
     tty: false
     restart: unless-stopped
     ports:
-      - "9121:9121"
+      - "9121"
 #     networks:
 #       base_net:
 #         aliases: [ "serena" ]
