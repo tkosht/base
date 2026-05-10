@@ -553,6 +553,48 @@ def _check_harness_autoptimizer_contract(
         )
 
 
+def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
+    skill_text = (
+        root / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "removed_worktrees",
+        "skipped_worktrees",
+        "force_delete_candidates",
+        "git worktree list --porcelain",
+        "git -C <path> status --porcelain",
+        "git worktree remove <path>",
+        "git worktree remove --force",
+        "ユーザーが明示承認した場合だけ",
+    ):
+        if needle not in skill_text:
+            errors.append(
+                ".claude/skills/git-mainbranch/SKILL.md "
+                f"missing cleanup contract: {needle}"
+            )
+
+    playbook_text = (
+        root
+        / ".claude"
+        / "skills"
+        / "git-mainbranch"
+        / "references"
+        / "mainbranch-playbook.md"
+    ).read_text(encoding="utf-8")
+    for needle in (
+        "Worktree Cleanup Before Branch Deletion",
+        "git -C <path> status --porcelain",
+        "git worktree remove --force",
+        "used by worktree",
+        "force_delete_candidates",
+    ):
+        if needle not in playbook_text:
+            errors.append(
+                ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+                f"missing cleanup contract: {needle}"
+            )
+
+
 def _check_github_api_helper(root: Path, errors: list[str]) -> None:
     helper = root / "bin" / "github_api_pr.sh"
     if not helper.exists():
@@ -848,6 +890,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
     _check_github_api_helper(root, errors)
     _check_heavy_repo_copy_guard(root, errors)
     _check_harness_autoptimizer_contract(root, errors)
+    _check_git_mainbranch_contract(root, errors)
     _check_non_root_design_md(root, errors)
     _check_design_contract(root, errors)
     _check_design_doc_terminology(root, errors)

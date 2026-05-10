@@ -107,6 +107,48 @@ def test_template_contract_checks_pass_for_workspace_write(
     assert run_checks(repo) == []
 
 
+def test_template_contract_checks_fail_when_git_mainbranch_worktree_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    _replace_once(skill, "skipped_worktrees", "skipped-worktrees")
+    _replace_once(skill, "skipped_worktrees", "skipped-worktrees")
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/SKILL.md "
+        "missing cleanup contract: skipped_worktrees"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_git_mainbranch_playbook_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    playbook = (
+        repo
+        / ".claude"
+        / "skills"
+        / "git-mainbranch"
+        / "references"
+        / "mainbranch-playbook.md"
+    )
+    _replace_once(
+        playbook,
+        "Worktree Cleanup Before Branch Deletion",
+        "Worktree Cleanup Removed",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+        "missing cleanup contract: Worktree Cleanup Before Branch Deletion"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_workspace_network_enabled(
     tmp_path: Path,
 ) -> None:
