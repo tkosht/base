@@ -219,6 +219,16 @@ CODEX_SHARED_DEFAULT_EXPECTATIONS = {
         "sandbox_workspace_write.network_access = false",
     ),
 }
+CODEX_GOALS_FEATURE_CONFIG_EXPECTATIONS = (
+    "goals は /goal の利用面を開く機能フラグ",
+    "goal session はユーザーが明示的に指示した場合だけ開始する",
+    "不要な generated repo はこの [features] block を削除してよい",
+)
+CODEX_GOALS_FEATURE_DOC_EXPECTATIONS = (
+    "`features.goals = true`",
+    "goal session はユーザーが明示的に指示した場合だけ開始する",
+    "[features]` block を削除して repo 単位の明示 opt-in",
+)
 REQUIRED_HARNESS_RESOURCE_IDS = {
     "codex-subagent",
     "harness-autoptimizer",
@@ -300,6 +310,27 @@ def _check_codex_shared_defaults(root: Path, errors: list[str]) -> None:
                 errors.append(
                     f"{rel} missing Codex shared default contract: {needle}"
                 )
+
+    features = config.get("features")
+    if not isinstance(features, dict) or features.get("goals") is not True:
+        return
+
+    for needle in CODEX_GOALS_FEATURE_CONFIG_EXPECTATIONS:
+        if needle not in config_text:
+            errors.append(
+                ".codex/config.toml missing Codex goals feature contract: "
+                + needle
+            )
+
+    repo_contract_text = (root / "docs" / "ai" / "repo-contract.md").read_text(
+        encoding="utf-8"
+    )
+    for needle in CODEX_GOALS_FEATURE_DOC_EXPECTATIONS:
+        if needle not in repo_contract_text:
+            errors.append(
+                "docs/ai/repo-contract.md missing Codex goals feature "
+                "contract: " + needle
+            )
 
 
 def _check_harness_resource_registry(root: Path, errors: list[str]) -> None:

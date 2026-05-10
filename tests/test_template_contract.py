@@ -395,6 +395,44 @@ def test_template_contract_checks_fail_when_full_access_guidance_is_missing(
     ) in errors
 
 
+def test_template_contract_checks_fail_when_codex_goals_config_guidance_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    config = repo / ".codex" / "config.toml"
+    _replace_once(
+        config,
+        "goal session はユーザーが明示的に指示した場合だけ開始する",
+        "goal session は必要に応じて開始する",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".codex/config.toml missing Codex goals feature contract: "
+        "goal session はユーザーが明示的に指示した場合だけ開始する"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_codex_goals_repo_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    repo_contract = repo / "docs" / "ai" / "repo-contract.md"
+    _replace_once(
+        repo_contract,
+        "goal session はユーザーが明示的に指示した場合だけ開始する",
+        "goal session は必要に応じて開始する",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "docs/ai/repo-contract.md missing Codex goals feature contract: "
+        "goal session はユーザーが明示的に指示した場合だけ開始する"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_project_docs_resource_is_missing(
     tmp_path: Path,
 ) -> None:

@@ -20,6 +20,11 @@ model_reasoning_effort = "xhigh"
 plan_mode_reasoning_effort = "xhigh"
 personality = "pragmatic"
 
+# goals は /goal の利用面を開く機能フラグ（feature flag）であり、
+# goal session はユーザーが明示的に指示した場合だけ開始する。
+# 不要な generated repo はこの [features] block を削除してよい。
+[features]
+goals = true
 
 [sandbox_workspace_write]
 network_access = false
