@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[2]
 RETAINED_SKILLS = [
     "ai-agent-collaboration-exec",
     "codex-subagent",
+    "dependabot-pr-maintainer",
     "git-commit-pr",
     "git-mainbranch",
     "grill-me",
@@ -57,6 +58,7 @@ REQUIRED_PATHS = [
     "docs/ai/checklists/codex-mcp-collaboration-template.md",
     "docs/ai/skills/README.md",
     "docs/ai/skills/ai-agent-collaboration-exec.md",
+    "docs/ai/skills/dependabot-pr-maintainer.md",
     "docs/ai/skills/grill-me.md",
     "docs/ai/skills/grill-me-essential-first.md",
     "docs/ai/skills/harness-autoptimizer.md",
