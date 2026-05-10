@@ -203,6 +203,42 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_guard_is
     ) in errors
 
 
+def test_template_contract_checks_fail_when_git_mainbranch_force_delete_execution_contract_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    _replace_once(
+        skill,
+        "ユーザーが `force_delete_candidates` を不要ブランチとして削除するよう明示した場合だけ",
+        "force_delete_candidates を削除する場合",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/SKILL.md "
+        "missing cleanup contract: "
+        "ユーザーが `force_delete_candidates` を不要ブランチとして削除するよう明示した場合だけ"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_git_mainbranch_force_deleted_output_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    _replace_once(skill, "force_deleted_branches", "force-deleted-branches")
+    _replace_once(skill, "force_deleted_branches", "force-deleted-branches")
+
+    errors = run_checks(repo)
+
+    assert (
+        ".claude/skills/git-mainbranch/SKILL.md "
+        "missing cleanup contract: force_deleted_branches"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_git_mainbranch_playbook_remote_gone_and_pr_merge_contract_is_missing(
     tmp_path: Path,
 ) -> None:
