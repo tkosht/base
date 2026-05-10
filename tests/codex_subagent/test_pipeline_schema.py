@@ -26,6 +26,35 @@ def test_pipeline_spec_schema_valid(tmp_path):
     assert loaded["stages"][0]["id"] == "draft"
 
 
+def test_pipeline_spec_schema_accepts_manager_leaf_policy(tmp_path):
+    spec = {
+        "schema_version": codex_exec.PIPELINE_SPEC_VERSION,
+        "team_policy": codex_exec.TEAM_POLICY_MANAGER_LEAF_V1,
+        "stages": [
+            {
+                "id": "plan",
+                "role": "planner",
+                "node_kind": "manager",
+                "depends_on": [],
+            },
+            {
+                "id": "execute_leaf",
+                "role": "executor",
+                "node_kind": "leaf",
+                "depends_on": ["plan"],
+                "write_roots": ["src"],
+            },
+        ],
+    }
+    path = tmp_path / "spec.json"
+    path.write_text(json.dumps(spec), encoding="utf-8")
+
+    loaded = codex_exec.load_pipeline_spec(path)
+
+    assert loaded["team_policy"] == "manager_leaf_v1"
+    assert loaded["stages"][0]["node_kind"] == "manager"
+
+
 def test_pipeline_spec_schema_accepts_shipped_v2_template():
     template_path = (
         ROOT

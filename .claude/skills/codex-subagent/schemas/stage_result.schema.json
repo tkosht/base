@@ -28,6 +28,13 @@
             "reducer"
           ]
         },
+        "node_kind": {
+          "type": "string",
+          "enum": [
+            "manager",
+            "leaf"
+          ]
+        },
         "sandbox": {
           "type": "string",
           "enum": [

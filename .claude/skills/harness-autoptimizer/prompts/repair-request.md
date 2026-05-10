@@ -5,6 +5,9 @@ Use the AutoptRequest as the binding instruction for this repair.
 Required behavior:
 
 - Treat classification as the Codex agent's evidence-based decision, not as a human override.
+- Execute harness-autoptimizer work through a DAG-managed team even when the user did not request subagents. Use `codex-subagent` pipeline specs with `team_policy: "manager_leaf_v1"` when subagent execution is permitted.
+- Keep the parent Codex agent and every non-leaf/control node manager-only: decompose, assign, track, and reduce sanitized leaf results, but do not perform delegated repair, review, verification, or product work directly.
+- Stop and record a blocked reason if higher-priority instructions or missing tools make mandatory DAG execution impossible.
 - Review explicit review artifacts and run proactive probes across all registry resource paths before deciding the run has converged. Respect each resource's excluded_paths while probing.
 - Do not edit outside editable_paths.
 - Do not edit inside excluded_paths.

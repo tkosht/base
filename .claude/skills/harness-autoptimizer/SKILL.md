@@ -24,6 +24,8 @@ metadata:
 
 経験捕捉はこの controller 経由の実行に限定しません。この repo 上で動く Codex agent は、通常タスクの終了時、ユーザー訂正時、gate 異常時、実装複雑化や instruction 矛盾を見つけた時に、軽量 Self-Audit で保持判断します。
 
+実行タスクは、ユーザー指定がない場合でも DAG team を必須とします。親 Codex agent と leaf 以外の制御ノードは manager として分解・割当・進行管理・sanitized result の集約に限定し、repair / review / verify などの実作業は leaf node に委譲します。subagent 実行が高優先度指示や tool 不足で使えない場合は、親が代行せず blocked reason として停止します。
+
 ## Workflow
 
 1. Sense: repo state、gate 結果、duration、failure text、changed paths、task friction、明示された review artifact、`docs/architecture/harness-resources.toml` を読む。選択 target だけでなく、registry 全 resource paths に対して `ProactiveReviewProbe` による proactive review probe を走らせる。ただし各 resource の `excluded_paths` は尊重する。
@@ -59,3 +61,5 @@ uv run python .claude/skills/harness-autoptimizer/scripts/harness_autopt.py \
 - raw prompt、raw model output、秘密情報、runtime logs、一回限りの作業メモは tracked knowledge に昇格しない。
 - 永続化する経験は、再発可能性、影響度、一般性、検証可能性、context cost を満たす蒸留済み artifact だけにする。
 - 自己レビューの反復は scope creep の許可ではない。同じ resource / goal / constraints 内で解消できない finding は停止理由として記録する。
+- DAG team 実行を既定必須にし、`codex-subagent` pipeline では `team_policy: "manager_leaf_v1"` を使う。
+- 非 leaf / control node は manager-only とし、実装・検証・レビュー作業を直接実行しない。

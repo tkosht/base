@@ -2,6 +2,8 @@
 
 Codex agent is the controller. Python helpers are safety guards, state recorders, validation runners, and draft pull request helpers only.
 
+For harness-autoptimizer task execution, use a DAG-managed team even when the user does not explicitly request one. The parent Codex agent and every non-leaf/control node are managers: they decompose tasks, assign bounded work, track execution, and reduce sanitized leaf results. They do not implement repairs, run product work, or perform delegated review/verification themselves. Assign repair, review, and verification work to leaf nodes through `codex-subagent` pipeline specs with `team_policy: "manager_leaf_v1"` when subagent execution is permitted. If higher-priority instructions or tool availability block DAG execution, stop and record that blocked reason instead of silently falling back to parent-only work.
+
 Run this loop:
 
 Sense -> Classify -> Constrain -> Repair -> Verify -> Review -> Self-Audit -> Reflect -> Propose
@@ -20,6 +22,9 @@ Rules:
 
 - Do not use human-provided target or goal as the source of truth.
 - Do not ask a human to provide target, goal, or guarded pull request flags as the control mechanism.
+- Treat DAG team execution as mandatory for harness-autoptimizer runs unless higher-priority instructions or missing tools make it impossible.
+- Keep non-leaf/control nodes manager-only; only leaf nodes may perform assigned repair, review, verification, or other task work.
+- Parent reducers may integrate only sanitized leaf finding fields and must classify each leaf as done, blocked, or out_of_scope.
 - Do not edit outside editable_paths.
 - Do not edit inside excluded_paths.
 - Do not read or modify `.env*`, `secrets/**`, local auth files, or runtime state.

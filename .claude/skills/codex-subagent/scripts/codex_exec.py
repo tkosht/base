@@ -114,6 +114,9 @@ MAX_CAPTURE_BYTES = 5 * 1024 * 1024  # 5MB (stdout/stderr capture cap)
 CAPSULE_STORE_AUTO_THRESHOLD = 20_000  # bytes
 SCHEMA_VERSION = "1.1"
 PIPELINE_SPEC_VERSION = "2.0"
+TEAM_POLICY_MANAGER_LEAF_V1 = "manager_leaf_v1"
+TEAM_POLICY_VALUES = {TEAM_POLICY_MANAGER_LEAF_V1}
+NODE_KIND_VALUES = {"manager", "leaf"}
 LLM_EVAL_SAMPLE_RATE = 0.2  # 20% sampling for LLM evaluation
 EXIT_SUCCESS = 0
 EXIT_SUBAGENT_FAILED = 2
@@ -323,6 +326,7 @@ class MergeConfig:
 class StageExecutionPolicy:
     stage_id: str
     role: str
+    node_kind: str | None
     sandbox: SandboxMode
     workdir: str | None
     write_roots: list[str]
@@ -545,6 +549,10 @@ def normalize_stage_spec(
 ) -> dict[str, Any]:
     stage_id = str(stage_spec["id"])
     role = default_stage_role(stage_spec)
+    node_kind_value = stage_spec.get("node_kind")
+    node_kind = str(node_kind_value) if node_kind_value is not None else None
+    if node_kind is not None and node_kind not in NODE_KIND_VALUES:
+        raise ValueError(f"unknown pipeline node_kind: {node_kind}")
     sandbox_value = stage_spec.get("sandbox", SandboxMode.READ_ONLY.value)
     sandbox = SandboxMode(str(sandbox_value))
     raw_roots = stage_spec.get("write_roots")
@@ -564,7 +572,8 @@ def normalize_stage_spec(
     )
     if max_attempts < 1:
         raise ValueError("stage max_attempts must be >= 1")
-    if "depends_on" in stage_spec:
+    depends_on_explicit = "depends_on" in stage_spec
+    if depends_on_explicit:
         depends_on = [str(item) for item in stage_spec.get("depends_on", [])]
     elif previous_stage_id:
         depends_on = [previous_stage_id]
@@ -578,6 +587,7 @@ def normalize_stage_spec(
     return {
         "id": stage_id,
         "role": role,
+        "node_kind": node_kind,
         "sandbox": sandbox.value,
         "workdir": stage_spec.get("workdir"),
         "write_roots": write_roots,
@@ -585,6 +595,7 @@ def normalize_stage_spec(
         "input_keys": input_keys,
         "max_attempts": max_attempts,
         "depends_on": depends_on,
+        "depends_on_explicit": depends_on_explicit,
         "merge_strategy": merge_strategy,
         "prompt": stage_spec.get("prompt"),
         "instructions": stage_spec.get("instructions"),
@@ -605,6 +616,11 @@ def canonicalize_pipeline_spec(
     else:
         raw_spec = dict(pipeline_spec)
         source_schema = str(pipeline_spec.get("schema_version") or "legacy")
+    team_policy = raw_spec.get("team_policy")
+    if team_policy is not None:
+        team_policy = str(team_policy)
+        if team_policy not in TEAM_POLICY_VALUES:
+            raise ValueError(f"unknown pipeline team_policy: {team_policy}")
 
     raw_stages = raw_spec.get("stages", [])
     explicit_dependency = any(
@@ -626,6 +642,7 @@ def canonicalize_pipeline_spec(
         "allow_dynamic_stages": bool(
             raw_spec.get("allow_dynamic_stages", False)
         ),
+        "team_policy": team_policy,
         "allowed_stage_ids": list(raw_spec.get("allowed_stage_ids") or []),
         "max_total_prompt_chars": raw_spec.get("max_total_prompt_chars"),
         "stages": stages,
@@ -650,6 +667,8 @@ def validate_canonical_pipeline_spec(canonical_spec: dict[str, Any]) -> None:
         raise ValueError(
             "depends_on and dynamic next_stages cannot be combined"
         )
+    if canonical_spec.get("team_policy") == TEAM_POLICY_MANAGER_LEAF_V1:
+        validate_manager_leaf_team_policy(canonical_spec)
     for stage in canonical_spec["stages"]:
         for dependency in stage.get("depends_on", []):
             if dependency not in known_stage_ids:
@@ -668,6 +687,55 @@ def validate_canonical_pipeline_spec(canonical_spec: dict[str, Any]) -> None:
         build_stage_layers(canonical_spec["stages"])
     except ValueError as exc:
         raise ValueError(f"pipeline_spec is invalid: {exc}") from exc
+
+
+def validate_manager_leaf_team_policy(canonical_spec: dict[str, Any]) -> None:
+    if not canonical_spec.get("uses_graph"):
+        raise ValueError(
+            "manager_leaf_v1 pipeline specs must declare a DAG with depends_on"
+        )
+
+    stages = canonical_spec["stages"]
+    if any(not stage.get("depends_on_explicit", False) for stage in stages):
+        raise ValueError(
+            "manager_leaf_v1 pipeline stages must explicitly declare "
+            "depends_on"
+        )
+    node_kinds = {stage.get("node_kind") for stage in stages}
+    if None in node_kinds:
+        raise ValueError(
+            "manager_leaf_v1 pipeline stages must declare node_kind"
+        )
+    if "manager" not in node_kinds or "leaf" not in node_kinds:
+        raise ValueError(
+            "manager_leaf_v1 pipeline requires manager and leaf nodes"
+        )
+
+    for stage in stages:
+        node_kind = stage.get("node_kind")
+        if node_kind not in NODE_KIND_VALUES:
+            raise ValueError(
+                "manager_leaf_v1 pipeline stage node_kind is invalid"
+            )
+        if node_kind == "manager":
+            if stage.get("role") == "executor":
+                raise ValueError(
+                    "manager_leaf_v1 manager nodes cannot use executor role"
+                )
+            if stage.get("sandbox") != SandboxMode.READ_ONLY.value:
+                raise ValueError(
+                    "manager_leaf_v1 manager nodes must use read-only sandbox"
+                )
+            if stage.get("write_roots"):
+                raise ValueError(
+                    "manager_leaf_v1 manager nodes cannot declare write_roots"
+                )
+        elif stage.get("write_roots"):
+            continue
+        elif stage.get("role") == "executor":
+            raise ValueError(
+                "manager_leaf_v1 executor leaf nodes must declare write_roots"
+            )
 
 
 def build_stage_layers(stages: list[dict[str, Any]]) -> list[list[str]]:
@@ -697,6 +765,7 @@ def build_stage_policy(stage_spec: dict[str, Any]) -> StageExecutionPolicy:
     return StageExecutionPolicy(
         stage_id=stage_spec["id"],
         role=stage_spec["role"],
+        node_kind=stage_spec.get("node_kind"),
         sandbox=SandboxMode(stage_spec["sandbox"]),
         workdir=stage_spec.get("workdir"),
         write_roots=list(stage_spec.get("write_roots") or []),
@@ -1242,6 +1311,8 @@ def build_stage_prompt(
     policy_lines: list[str] = []
     if stage_policy:
         policy_lines.append(f"- Role: {stage_policy.role}")
+        if stage_policy.node_kind:
+            policy_lines.append(f"- Node kind: {stage_policy.node_kind}")
         policy_lines.append(f"- Sandbox: {stage_policy.sandbox.value}")
         if stage_policy.workdir:
             policy_lines.append(f"- Workdir: {stage_policy.workdir}")
@@ -1253,6 +1324,20 @@ def build_stage_prompt(
                 else "(none)"
             )
         )
+        if stage_policy.node_kind == "manager":
+            policy_lines.extend(
+                [
+                    "- Manager-only: decompose tasks, assign bounded work, "
+                    "track status, and reduce sanitized leaf results.",
+                    "- Do not implement code changes, run product work, or "
+                    "perform the leaf task yourself.",
+                ]
+            )
+        elif stage_policy.node_kind == "leaf":
+            policy_lines.append(
+                "- Leaf-only: execute only the assigned bounded task and "
+                "report evidence for the manager reducer."
+            )
         policy_lines.append(
             "- Capsule input keys: "
             + (
