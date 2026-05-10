@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import fnmatch
 import re
+import subprocess
 import tomllib
 from pathlib import Path
 
@@ -333,3 +334,37 @@ def test_gitignore_tracks_codex_skill_symlinks() -> None:
     text = (ROOT / ".gitignore").read_text(encoding="utf-8")
     for needle in ("!.codex/skills/", "!.codex/skills/*"):
         assert needle in text
+
+
+def test_gitignore_keeps_shipped_codex_files_trackable() -> None:
+    for rel in (
+        ".codex/config.toml",
+        ".codex/version.json",
+        ".codex/skills/git-commit-pr",
+    ):
+        result = subprocess.run(
+            ["git", "check-ignore", "--no-index", "-q", rel],
+            cwd=ROOT,
+            check=False,
+        )
+        assert result.returncode == 1, rel
+
+    ignored_result = subprocess.run(
+        ["git", "check-ignore", "--no-index", "-q", ".codex/auth.json"],
+        cwd=ROOT,
+        check=False,
+    )
+    assert ignored_result.returncode == 0
+
+    system_skill_result = subprocess.run(
+        [
+            "git",
+            "check-ignore",
+            "--no-index",
+            "-q",
+            ".codex/skills/.system/.codex-system-skills.marker",
+        ],
+        cwd=ROOT,
+        check=False,
+    )
+    assert system_skill_result.returncode == 0

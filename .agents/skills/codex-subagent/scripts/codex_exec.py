@@ -59,7 +59,7 @@ ROOT_DIR = Path(__file__).resolve().parents[4]
 LOG_ROOT_DIR = ROOT_DIR / ".codex" / "sessions" / "codex_exec"
 DEFAULT_HUMAN_LOG_DIR = LOG_ROOT_DIR / "human"
 DEFAULT_AUTO_LOG_DIR = LOG_ROOT_DIR / "auto"
-SCHEMA_DIR = ROOT_DIR / ".claude" / "skills" / "codex-subagent" / "schemas"
+SCHEMA_DIR = ROOT_DIR / ".agents" / "skills" / "codex-subagent" / "schemas"
 FAST_PROFILES = {"fast", "very-fast"}
 FAST_PROFILE_GUARDRAILS = """\
 [注意] --profile fast/very-fast で実行中（推論強度が低い設定）。

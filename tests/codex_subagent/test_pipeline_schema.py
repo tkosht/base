@@ -13,6 +13,12 @@ import codex_exec  # noqa: E402
 SCHEMA_VERSION = codex_exec.SCHEMA_VERSION
 
 
+def test_schema_dir_uses_agents_skill_source():
+    assert codex_exec.SCHEMA_DIR == (
+        ROOT / ".agents" / "skills" / "codex-subagent" / "schemas"
+    )
+
+
 def test_pipeline_spec_schema_valid(tmp_path):
     spec = {
         "stages": [{"id": "draft"}],

@@ -15,17 +15,6 @@ bk/
 bkup/
 .ssh/
 .chroma/
-.claude/settings.local.json
-.claude/.claude/
-.codex/*
-!.codex/config.toml
-!.codex/version.json
-!.codex/skills/
-!.codex/skills/*
-.codex/skills/.system/**
-!.codex/skills/.system/.codex-system-skills.marker
-secrets/**
-!secrets/README.md
 .codex-last-pr-url.txt
 .npm-cache/
 .serena/
@@ -224,6 +213,7 @@ auth.json
 # Codex CLI metadata: track only specific files under .codex
 .codex/*
 !.codex/config.toml
+!.codex/version.json
 !.codex/skills/
 !.codex/skills/*
 !.codex/skills/.system/
