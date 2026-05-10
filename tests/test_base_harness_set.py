@@ -5,6 +5,8 @@ import re
 import tomllib
 from pathlib import Path
 
+from scripts.ci.validate_template import REQUIRED_PATHS
+
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST_PATH = ROOT / "docs" / "architecture" / "base-harness-set.toml"
 RESOURCE_REGISTRY_PATH = (
@@ -23,6 +25,16 @@ def _path_matches_manifest_pattern(pattern: str, path: str) -> bool:
         path == pattern
         or path.startswith(pattern.rstrip("/") + "/")
         or fnmatch.fnmatchcase(path, pattern)
+    )
+
+
+def _manifest_path_covers_required_path(
+    manifest_path: str, required_path: str
+) -> bool:
+    return (
+        required_path == manifest_path
+        or required_path.startswith(manifest_path.rstrip("/") + "/")
+        or fnmatch.fnmatchcase(required_path, manifest_path)
     )
 
 
@@ -157,6 +169,29 @@ def test_portable_harness_group_paths_exist_when_copied() -> None:
         for rel in paths:
             assert isinstance(rel, str)
             assert (ROOT / rel).exists(), (group["id"], rel)
+
+
+def test_portable_harness_groups_cover_template_required_paths() -> None:
+    manifest = load_manifest()
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+
+    copy_group_paths = {
+        rel
+        for group in groups
+        if isinstance(group, dict) and group["tier"] != "do_not_copy"
+        for rel in group["paths"]
+    }
+    missing = sorted(
+        rel
+        for rel in REQUIRED_PATHS
+        if not any(
+            _manifest_path_covers_required_path(group_path, rel)
+            for group_path in copy_group_paths
+        )
+    )
+
+    assert missing == []
 
 
 def test_runtime_exclusions_preserve_public_placeholders() -> None:

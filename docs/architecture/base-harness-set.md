@@ -18,6 +18,13 @@
 正確な path は `docs/architecture/base-harness-set.toml` の
 `portable_harness_groups` を見る。
 
+`tier` の意味:
+
+- `must_copy`: ハーネスとして成立させるために必ず移す
+- `copy_with_adjustments`: 移した後、移植先 repo の事実へ合わせて調整する
+- `optional`: その運用を使う repo だけ移す
+- `do_not_copy`: runtime state、cache、secret として移さない
+
 ## 必ずコピーするもの
 
 - agent instruction surface
@@ -31,13 +38,20 @@
   - `docs/architecture/base-harness-set.toml`
   - `docs/architecture/base-harness-set.md`
   - `docs/architecture/harness-resources.toml`
-  - `docs/architecture/decision-records/` の正本説明と基礎判断メモ
+  - `docs/architecture/decision-records/README.md`
+  - `docs/architecture/decision-records/knowledge-surface-consolidation.md`
+  - `docs/architecture/decision-records/codex-shared-defaults.md`
+  - `docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md`
 - validation and copy tools
   - `Makefile`
   - `pyproject.toml`
+  - `scripts/__init__.py`
+  - `scripts/ci/__init__.py`
   - `scripts/ci/validate_template.py`
   - `scripts/ci/repo_copy.py`
+  - `scripts/template/__init__.py`
   - `scripts/template/`
+  - `templates/`
   - `tests/test_base_harness_set.py`
   - `tests/test_template_contract.py`
   - `tests/template_smoke/`
@@ -49,6 +63,7 @@
 - knowledge and standards
   - `docs/ai/`、`docs/design/`、`docs/architecture/`、`docs/standards/` は構造を保ってコピーし、template 例を移植先 repo の事実へ置き換える
   - Model Context Protocol（MCP）や secret handling の記述は、移植先の実際の connector と権限に合わせて見直す
+  - `docs/repository-template-design.md` は入力設計書として必要なら残すが、運用正本にはしない
 - automation workflows
   - `.github/workflows/ci.yml`
   - `.github/workflows/claude.yml`
@@ -61,9 +76,21 @@
   - `.claude/settings.json`
   - `.mcp.json`
   - `.env.example`
+  - `.editorconfig`
+  - `.gitattributes`
+  - `.gitignore`
+  - `.github/CODEOWNERS`
   - `.github/dependabot.yml`
+  - `.github/ISSUE_TEMPLATE/agent-task.yml`
+  - `.github/ISSUE_TEMPLATE/bug.yml`
+  - `.github/ISSUE_TEMPLATE/config.yml`
+  - `.github/ISSUE_TEMPLATE/feature.yml`
   - `.github/ISSUE_TEMPLATE/simple.yml`
+  - `.github/PULL_REQUEST_TEMPLATE.md`
   - `README.md`
+  - `CONTRIBUTING.md`
+  - `SECURITY.md`
+  - `CODE_OF_CONDUCT.md`
   - `package*.json`
   - `uv.lock`
   - `bin/`
@@ -121,6 +148,7 @@
 - validation
   - `.claude/skills/harness-autoptimizer/prompts/*`
   - `scripts/ci/repo_copy.py`
+  - `templates/`
   - `tests/codex_subagent/*`
   - `tests/harness_autoptimizer/*`
   - `tests/test_base_harness_set.py`
@@ -129,6 +157,12 @@
   - `.codex/config.toml`
   - `.codex/version.json`
   - `README.md`
+  - `CONTRIBUTING.md`
+  - `SECURITY.md`
+  - `CODE_OF_CONDUCT.md`
+  - `.github/CODEOWNERS`
+  - `.github/ISSUE_TEMPLATE/*`
+  - `.github/PULL_REQUEST_TEMPLATE.md`
   - `Makefile`
   - `bin/`
   - `docker/`
@@ -149,5 +183,6 @@
 ## 検証
 
 - `tests/test_base_harness_set.py` で、一覧どおりに存在しているかと削除対象が消えているかを確認する
+- `scripts/ci/validate_template.py` は、`portable_harness_groups` が template validator の required paths を cover しているか確認する
 - `tests/codex_subagent/*` で `codex-subagent` の単体検証面と実行テスト面を維持する
 - `template-health.yml` は bootstrap と構造検証を、`ci.yml` は lint と test を実行する

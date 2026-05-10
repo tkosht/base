@@ -499,6 +499,24 @@ def test_template_contract_checks_fail_for_unbounded_repo_copy(
     ) in errors
 
 
+def test_template_contract_checks_fail_when_portable_group_misses_required_path(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    manifest = repo / "docs" / "architecture" / "base-harness-set.toml"
+    entry = '  "scripts/template/apply_overlay.py",\n'
+    text = manifest.read_text(encoding="utf-8")
+    assert text.count(entry) == 2
+    manifest.write_text(text.replace(entry, "", 2), encoding="utf-8")
+
+    errors = run_checks(repo)
+
+    assert (
+        "base harness portable groups missing required path: "
+        "scripts/template/apply_overlay.py"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_autopt_prompt_is_missing(
     tmp_path: Path,
 ) -> None:

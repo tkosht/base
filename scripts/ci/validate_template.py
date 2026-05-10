@@ -375,6 +375,16 @@ def _path_matches_manifest_pattern(pattern: str, path: str) -> bool:
     )
 
 
+def _manifest_path_covers_required_path(
+    manifest_path: str, required_path: str
+) -> bool:
+    return (
+        required_path == manifest_path
+        or required_path.startswith(manifest_path.rstrip("/") + "/")
+        or fnmatch.fnmatchcase(required_path, manifest_path)
+    )
+
+
 def _check_base_harness_manifest(root: Path, errors: list[str]) -> None:
     manifest_path = root / "docs" / "architecture" / "base-harness-set.toml"
     manifest = tomllib.loads(manifest_path.read_text(encoding="utf-8"))
@@ -402,11 +412,27 @@ def _check_base_harness_manifest(root: Path, errors: list[str]) -> None:
             f"base harness included_paths missing preserve path: {rel}"
         )
 
-    copyable_paths = set(included_paths)
+    portable_group_paths: set[str] = set()
     for group in groups.values():
         if group.get("tier") == "do_not_copy":
             continue
-        copyable_paths.update(group.get("paths", []))
+        portable_group_paths.update(group.get("paths", []))
+
+    missing_required_paths = sorted(
+        rel
+        for rel in REQUIRED_PATHS
+        if not any(
+            _manifest_path_covers_required_path(group_path, rel)
+            for group_path in portable_group_paths
+        )
+    )
+    for rel in missing_required_paths:
+        errors.append(
+            "base harness portable groups missing required path: " + rel
+        )
+
+    copyable_paths = set(included_paths)
+    copyable_paths.update(portable_group_paths)
 
     do_not_copy_patterns = local_runtime.get("paths", [])
     collisions = sorted(
