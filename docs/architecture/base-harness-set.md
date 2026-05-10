@@ -31,8 +31,8 @@
   - `AGENTS.md` を正本にし、`CLAUDE.md`、`GEMINI.md`、`.cursor/rules/*` は薄い互換アダプタとして維持する
   - `DESIGN.md` は generated repo の visual contract として移す
 - skill surface
-  - `.claude/skills/` の実体
-  - `.agents/skills/` と `.codex/skills/` の互換 entrypoint
+  - `.agents/skills/` の実体
+  - `.claude/skills/` と `.codex/skills/` の互換 shim
   - `docs/ai/skills/` の利用者向け説明
 - harness registry
   - `docs/architecture/base-harness-set.toml`
@@ -42,6 +42,7 @@
   - `docs/architecture/decision-records/knowledge-surface-consolidation.md`
   - `docs/architecture/decision-records/codex-shared-defaults.md`
   - `docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md`
+  - `docs/architecture/decision-records/2026-05-10-agents-skills-canonical.md`
 - validation and copy tools
   - `Makefile`
   - `pyproject.toml`
@@ -121,6 +122,7 @@
   - `docs/design/`
   - `docs/architecture/`
   - `docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md`
+  - `docs/architecture/decision-records/2026-05-10-agents-skills-canonical.md`
   - `docs/standards/`
 - skills
   - `ai-agent-collaboration-exec`
@@ -146,7 +148,7 @@
   - `claude.yml`
   - `harness-autopt.yml`
 - validation
-  - `.claude/skills/harness-autoptimizer/prompts/*`
+  - `.agents/skills/harness-autoptimizer/prompts/*`
   - `scripts/ci/repo_copy.py`
   - `templates/`
   - `tests/codex_subagent/*`

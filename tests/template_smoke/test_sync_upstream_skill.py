@@ -18,12 +18,12 @@ def test_sync_upstream_skill_updates_target_and_recreates_symlinks(
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    target = repo / ".claude" / "skills" / "grill-me" / "SKILL.md"
-    agent_link = repo / ".agents" / "skills" / "grill-me"
+    target = repo / ".agents" / "skills" / "grill-me" / "SKILL.md"
+    claude_link = repo / ".claude" / "skills" / "grill-me"
     codex_link = repo / ".codex" / "skills" / "grill-me"
 
     target.write_text("stale\n", encoding="utf-8")
-    agent_link.unlink()
+    claude_link.unlink()
     codex_link.unlink()
 
     result = sync_skill(
@@ -34,8 +34,8 @@ def test_sync_upstream_skill_updates_target_and_recreates_symlinks(
 
     assert result.skill_name == "grill-me"
     assert target.read_text(encoding="utf-8") == "fresh\n"
-    assert agent_link.is_symlink()
-    assert agent_link.readlink() == Path("../../.claude/skills/grill-me")
+    assert claude_link.is_symlink()
+    assert claude_link.readlink() == Path("../../.agents/skills/grill-me")
     assert codex_link.is_symlink()
     assert codex_link.readlink() == Path("../../.agents/skills/grill-me")
     assert result.url.endswith("/main/grill-me/SKILL.md")

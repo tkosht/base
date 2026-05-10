@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPTS = ROOT / ".claude" / "skills" / "harness-autoptimizer" / "scripts"
+SCRIPTS = ROOT / ".agents" / "skills" / "harness-autoptimizer" / "scripts"
 sys.path.append(str(SCRIPTS))
 
 import harness_autopt  # noqa: E402
@@ -60,12 +60,12 @@ def test_load_resource_registry_includes_codex_subagent() -> None:
     resource = resources["codex-subagent"]
     assert resource.kind == "skill"
     assert "make test" in resource.validators
-    assert ".claude/skills/codex-subagent" in resource.mutable_paths
+    assert ".agents/skills/codex-subagent" in resource.mutable_paths
 
 
 def test_autoptimizer_prompts_require_manager_leaf_dag_team() -> None:
     prompt_dir = (
-        ROOT / ".claude" / "skills" / "harness-autoptimizer" / "prompts"
+        ROOT / ".agents" / "skills" / "harness-autoptimizer" / "prompts"
     )
     auto_controller = (prompt_dir / "auto-controller.md").read_text(
         encoding="utf-8"
@@ -100,7 +100,7 @@ def test_load_resource_registry_includes_markdown_docs_resource() -> None:
 @pytest.mark.parametrize(
     ("path", "expected"),
     [
-        (".claude/skills/codex-subagent/SKILL.md", True),
+        (".agents/skills/codex-subagent/SKILL.md", True),
         ("tests/codex_subagent/test_pipeline_cli.py", True),
         ("docs/ai/skills/codex-subagent.md", True),
         ("package.json", False),
@@ -111,7 +111,7 @@ def test_load_resource_registry_includes_markdown_docs_resource() -> None:
 )
 def test_is_path_allowed(path: str, expected: bool) -> None:
     allowed = (
-        ".claude/skills/codex-subagent",
+        ".agents/skills/codex-subagent",
         "docs/ai/skills/codex-subagent.md",
         "tests/codex_subagent",
     )

@@ -111,14 +111,14 @@ def test_template_contract_checks_fail_when_git_mainbranch_worktree_contract_is_
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(skill, "skipped_worktrees", "skipped-worktrees")
     _replace_once(skill, "skipped_worktrees", "skipped-worktrees")
 
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/SKILL.md "
+        ".agents/skills/git-mainbranch/SKILL.md "
         "missing cleanup contract: skipped_worktrees"
     ) in errors
 
@@ -129,7 +129,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_contract_is_
     repo = _copy_repo(tmp_path)
     playbook = (
         repo
-        / ".claude"
+        / ".agents"
         / "skills"
         / "git-mainbranch"
         / "references"
@@ -144,7 +144,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_contract_is_
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+        ".agents/skills/git-mainbranch/references/mainbranch-playbook.md "
         "missing cleanup contract: Worktree Cleanup Before Branch Deletion"
     ) in errors
 
@@ -153,7 +153,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_squash_candidate_cont
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(
         skill,
         'gh pr list --state merged --search "head:<branch>"',
@@ -163,7 +163,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_squash_candidate_cont
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/SKILL.md "
+        ".agents/skills/git-mainbranch/SKILL.md "
         'missing cleanup contract: gh pr list --state merged --search "head:<branch>" '
         "--json number,state,mergedAt,headRefName,headRefOid,baseRefName,mergeCommit"
     ) in errors
@@ -173,13 +173,13 @@ def test_template_contract_checks_fail_when_git_mainbranch_remote_gone_evidence_
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(skill, "upstream が gone", "upstream を確認")
 
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/SKILL.md "
+        ".agents/skills/git-mainbranch/SKILL.md "
         "missing cleanup contract: upstream が gone のローカルブランチ"
     ) in errors
 
@@ -188,7 +188,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_guard_is
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(
         skill,
         "force delete の客観証拠は、PR merged、"
@@ -204,7 +204,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_guard_is
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/SKILL.md "
+        ".agents/skills/git-mainbranch/SKILL.md "
         "missing cleanup contract: "
         "force delete の客観証拠は、PR merged、"
         "upstream/remote branch gone、残存 worktree で checkout "
@@ -220,7 +220,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_executio
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(
         skill,
         "追加のユーザー承認を求めず `git branch -D <branch>`",
@@ -230,7 +230,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_delete_executio
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/SKILL.md "
+        ".agents/skills/git-mainbranch/SKILL.md "
         "missing cleanup contract: "
         "追加のユーザー承認を求めず `git branch -D <branch>`"
     ) in errors
@@ -240,7 +240,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_missing_proof_guard_i
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(
         skill,
         "証拠欠落をユーザー承認で補わない",
@@ -250,7 +250,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_missing_proof_guard_i
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/SKILL.md "
+        ".agents/skills/git-mainbranch/SKILL.md "
         "missing cleanup contract: 証拠欠落をユーザー承認で補わない"
     ) in errors
 
@@ -259,14 +259,14 @@ def test_template_contract_checks_fail_when_git_mainbranch_force_deleted_output_
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     _replace_once(skill, "force_deleted_branches", "force-deleted-branches")
     _replace_once(skill, "force_deleted_branches", "force-deleted-branches")
 
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/SKILL.md "
+        ".agents/skills/git-mainbranch/SKILL.md "
         "missing cleanup contract: force_deleted_branches"
     ) in errors
 
@@ -277,7 +277,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_remote_gone_
     repo = _copy_repo(tmp_path)
     playbook = (
         repo
-        / ".claude"
+        / ".agents"
         / "skills"
         / "git-mainbranch"
         / "references"
@@ -292,7 +292,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_remote_gone_
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+        ".agents/skills/git-mainbranch/references/mainbranch-playbook.md "
         "missing cleanup contract: remote branch gone と PR merge の両方"
     ) in errors
 
@@ -303,7 +303,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_pr_target_co
     repo = _copy_repo(tmp_path)
     playbook = (
         repo
-        / ".claude"
+        / ".agents"
         / "skills"
         / "git-mainbranch"
         / "references"
@@ -329,7 +329,7 @@ def test_template_contract_checks_fail_when_git_mainbranch_playbook_pr_target_co
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+        ".agents/skills/git-mainbranch/references/mainbranch-playbook.md "
         "missing cleanup contract: "
         "merged PR の `headRefName` が `<branch>` と一致すること"
     ) in errors
@@ -523,7 +523,7 @@ def test_template_contract_checks_fail_when_autopt_prompt_is_missing(
     repo = _copy_repo(tmp_path)
     prompt = (
         repo
-        / ".claude"
+        / ".agents"
         / "skills"
         / "harness-autoptimizer"
         / "prompts"
@@ -535,7 +535,7 @@ def test_template_contract_checks_fail_when_autopt_prompt_is_missing(
 
     assert (
         "missing required path: "
-        ".claude/skills/harness-autoptimizer/prompts/auto-controller.md"
+        ".agents/skills/harness-autoptimizer/prompts/auto-controller.md"
     ) in errors
 
 
@@ -545,7 +545,7 @@ def test_template_contract_checks_fail_when_self_audit_prompt_is_missing(
     repo = _copy_repo(tmp_path)
     prompt = (
         repo
-        / ".claude"
+        / ".agents"
         / "skills"
         / "harness-autoptimizer"
         / "prompts"
@@ -557,7 +557,7 @@ def test_template_contract_checks_fail_when_self_audit_prompt_is_missing(
 
     assert (
         "missing required path: "
-        ".claude/skills/harness-autoptimizer/prompts/self-audit.md"
+        ".agents/skills/harness-autoptimizer/prompts/self-audit.md"
     ) in errors
 
 
@@ -579,7 +579,7 @@ def test_template_contract_checks_fail_when_autopt_helper_keeps_candidate_runner
     repo = _copy_repo(tmp_path)
     helper = (
         repo
-        / ".claude"
+        / ".agents"
         / "skills"
         / "harness-autoptimizer"
         / "scripts"
@@ -631,7 +631,7 @@ def test_template_contract_checks_fail_when_autopt_review_contract_is_missing(
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    skill = repo / ".claude" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    skill = repo / ".agents" / "skills" / "harness-autoptimizer" / "SKILL.md"
     skill.write_text(
         skill.read_text(encoding="utf-8").replace(
             "ReviewReport", "StructuredReviewRemoved"
@@ -642,7 +642,7 @@ def test_template_contract_checks_fail_when_autopt_review_contract_is_missing(
     errors = run_checks(repo)
 
     assert (
-        ".claude/skills/harness-autoptimizer/SKILL.md "
+        ".agents/skills/harness-autoptimizer/SKILL.md "
         "missing controller contract: ReviewReport"
     ) in errors
 
@@ -699,12 +699,12 @@ def test_template_contract_checks_fail_when_grill_me_skill_dir_is_missing(
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    shutil.rmtree(repo / ".claude" / "skills" / "grill-me")
+    shutil.rmtree(repo / ".agents" / "skills" / "grill-me")
 
     errors = run_checks(repo)
 
     assert (
-        "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
+        "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, dependabot-pr-maintainer, "
         "git-commit-pr, git-mainbranch, "
         "grill-me-essential-first, harness-autoptimizer, "
@@ -731,12 +731,12 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_skill_dir_i
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    shutil.rmtree(repo / ".claude" / "skills" / "grill-me-essential-first")
+    shutil.rmtree(repo / ".agents" / "skills" / "grill-me-essential-first")
 
     errors = run_checks(repo)
 
     assert (
-        "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
+        "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, dependabot-pr-maintainer, "
         "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
         "repo-instruction-optimizer, repo-template-specializer, "
@@ -744,16 +744,16 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_skill_dir_i
     ) in errors
 
 
-def test_template_contract_checks_fail_when_grill_me_essential_first_agent_entrypoint_is_missing(
+def test_template_contract_checks_fail_when_grill_me_essential_first_claude_entrypoint_is_missing(
     tmp_path: Path,
 ) -> None:
     repo = _copy_repo(tmp_path)
-    (repo / ".agents" / "skills" / "grill-me-essential-first").unlink()
+    (repo / ".claude" / "skills" / "grill-me-essential-first").unlink()
 
     errors = run_checks(repo)
 
     assert (
-        "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
+        "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, dependabot-pr-maintainer, "
         "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
         "repo-instruction-optimizer, repo-template-specializer, "

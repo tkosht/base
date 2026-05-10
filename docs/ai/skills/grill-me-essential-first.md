@@ -2,8 +2,8 @@
 
 - Purpose: 本質論点を先に詰め、重要論点が閉じるまで細部を `parking lot` に送る
 - Use when: 設計や計画で、まず `目的 / 成功条件 / 非目標 / 制約 / 最大リスク` を固めたいとき。`本質優先で grill me`、`重要論点から詰めたい` と明示されたとき
-- Codex entrypoint: `.agents/skills/grill-me-essential-first`
-- Claude entrypoint: `.claude/skills/grill-me-essential-first`
+- Skill source: `.agents/skills/grill-me-essential-first`
+- Claude shim: `.claude/skills/grill-me-essential-first`
 - Implementation: repo-local
 - Upstream sync: なし
 

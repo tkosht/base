@@ -81,10 +81,10 @@ included_paths = [
   "docs/ai/skills/ai-agent-collaboration-exec.md",
   "docs/ai/skills/dependabot-pr-maintainer.md",
   "docs/ai/skills/harness-autoptimizer.md",
-  ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
-  ".claude/skills/harness-autoptimizer/prompts/self-audit.md",
-  ".claude/skills/harness-autoptimizer/prompts/experience-to-rule.md",
-  ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
+  ".agents/skills/harness-autoptimizer/prompts/auto-controller.md",
+  ".agents/skills/harness-autoptimizer/prompts/self-audit.md",
+  ".agents/skills/harness-autoptimizer/prompts/experience-to-rule.md",
+  ".agents/skills/harness-autoptimizer/prompts/repair-request.md",
   "docs/ai/skills/grill-me.md",
   "docs/ai/skills/grill-me-essential-first.md",
   "docs/ai/skills/repo-template-specializer.md",
@@ -101,6 +101,7 @@ included_paths = [
   "docs/architecture/decision-records/codex-shared-defaults.md",
   "docs/architecture/decision-records/knowledge-surface-consolidation.md",
   "docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md",
+  "docs/architecture/decision-records/2026-05-10-agents-skills-canonical.md",
   "docs/repository-template-design.md",
   "docs/standards/coding.md",
   "docs/standards/testing.md",
@@ -157,7 +158,7 @@ excluded_paths = [
   ".claude/commands/tasks/serena-expert.md",
   ".claude/commands/tasks/serena.md",
   ".claude/commands/tasks/worktree.md",
-  ".claude/skills/codex-subagent/tests/verification_report_2026-01-10.md",
+  ".agents/skills/codex-subagent/tests/verification_report_2026-01-10.md",
   "agent",
   "app",
   "checklists",
@@ -234,13 +235,14 @@ id = "skill-surface"
 tier = "must_copy"
 summary = "Skill implementations, compatibility shims, and user-facing skill docs."
 paths = [
-  ".claude/skills",
   ".agents/skills",
+  ".claude/skills",
   ".codex/skills",
   "docs/ai/skills",
 ]
 post_copy_actions = [
-  "Preserve symlink entrypoints for .agents and .codex.",
+  "Keep .agents/skills as the implementation source.",
+  "Preserve symlink entrypoints for .claude and .codex.",
   "Review skill descriptions for target repo ownership.",
 ]
 
@@ -269,6 +271,7 @@ paths = [
   "docs/architecture/decision-records/codex-shared-defaults.md",
   "docs/architecture/decision-records/knowledge-surface-consolidation.md",
   "docs/architecture/decision-records/2026-05-06-harness-autoptimizer-downstream-feedback.md",
+  "docs/architecture/decision-records/2026-05-10-agents-skills-canonical.md",
 ]
 post_copy_actions = [
   "Reclassify resources that do not exist in the target repo.",

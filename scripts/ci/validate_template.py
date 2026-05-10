@@ -63,10 +63,10 @@ REQUIRED_PATHS = [
     "docs/ai/skills/grill-me-essential-first.md",
     "docs/ai/skills/harness-autoptimizer.md",
     "docs/ai/skills/repo-template-specializer.md",
-    ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
-    ".claude/skills/harness-autoptimizer/prompts/self-audit.md",
-    ".claude/skills/harness-autoptimizer/prompts/experience-to-rule.md",
-    ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
+    ".agents/skills/harness-autoptimizer/prompts/auto-controller.md",
+    ".agents/skills/harness-autoptimizer/prompts/self-audit.md",
+    ".agents/skills/harness-autoptimizer/prompts/experience-to-rule.md",
+    ".agents/skills/harness-autoptimizer/prompts/repair-request.md",
     "docs/design/README.md",
     "docs/design/samples/starter-b2b-corporate",
     "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
@@ -79,6 +79,7 @@ REQUIRED_PATHS = [
     "docs/architecture/decision-records/README.md",
     "docs/architecture/decision-records/codex-shared-defaults.md",
     "docs/architecture/decision-records/knowledge-surface-consolidation.md",
+    "docs/architecture/decision-records/2026-05-10-agents-skills-canonical.md",
     "docs/standards/coding.md",
     "docs/standards/testing.md",
     "docs/standards/security.md",
@@ -498,7 +499,7 @@ def _check_harness_autoptimizer_contract(
         )
 
     skill_text = (
-        root / ".claude" / "skills" / "harness-autoptimizer" / "SKILL.md"
+        root / ".agents" / "skills" / "harness-autoptimizer" / "SKILL.md"
     ).read_text(encoding="utf-8")
     for needle in (
         "Codex agent",
@@ -521,13 +522,13 @@ def _check_harness_autoptimizer_contract(
     ):
         if needle not in skill_text:
             errors.append(
-                ".claude/skills/harness-autoptimizer/SKILL.md "
+                ".agents/skills/harness-autoptimizer/SKILL.md "
                 f"missing controller contract: {needle}"
             )
 
     for rel in (
-        ".claude/skills/harness-autoptimizer/prompts/auto-controller.md",
-        ".claude/skills/harness-autoptimizer/prompts/repair-request.md",
+        ".agents/skills/harness-autoptimizer/prompts/auto-controller.md",
+        ".agents/skills/harness-autoptimizer/prompts/repair-request.md",
     ):
         path = root / rel
         if not path.exists():
@@ -549,7 +550,7 @@ def _check_harness_autoptimizer_contract(
 
     helper_text = (
         root
-        / ".claude"
+        / ".agents"
         / "skills"
         / "harness-autoptimizer"
         / "scripts"
@@ -612,7 +613,7 @@ def _check_harness_autoptimizer_contract(
 
 def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
     skill_text = (
-        root / ".claude" / "skills" / "git-mainbranch" / "SKILL.md"
+        root / ".agents" / "skills" / "git-mainbranch" / "SKILL.md"
     ).read_text(encoding="utf-8")
     for needle in (
         "removed_worktrees",
@@ -641,13 +642,13 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
     ):
         if needle not in skill_text:
             errors.append(
-                ".claude/skills/git-mainbranch/SKILL.md "
+                ".agents/skills/git-mainbranch/SKILL.md "
                 f"missing cleanup contract: {needle}"
             )
 
     playbook_text = (
         root
-        / ".claude"
+        / ".agents"
         / "skills"
         / "git-mainbranch"
         / "references"
@@ -678,7 +679,7 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
     ):
         if needle not in playbook_text:
             errors.append(
-                ".claude/skills/git-mainbranch/references/mainbranch-playbook.md "
+                ".agents/skills/git-mainbranch/references/mainbranch-playbook.md "
                 f"missing cleanup contract: {needle}"
             )
 
@@ -862,25 +863,32 @@ def run_checks(root: Path = ROOT) -> list[str]:
         if needle not in gitignore_text:
             errors.append(f".gitignore missing pattern: {needle}")
 
-    claude_skill_dirs = sorted(
-        path.name
-        for path in (root / ".claude" / "skills").iterdir()
-        if path.is_dir() and path.name != "__pycache__"
-    )
-    if claude_skill_dirs != RETAINED_SKILLS:
-        errors.append(
-            "unexpected .claude/skills layout: " + ", ".join(claude_skill_dirs)
-        )
-
-    agent_entries = sorted(
+    agent_skill_dirs = sorted(
         path.name
         for path in (root / ".agents" / "skills").iterdir()
+        if path.is_dir() and path.name != "__pycache__"
+    )
+    if agent_skill_dirs != RETAINED_SKILLS:
+        errors.append(
+            "unexpected .agents/skills layout: " + ", ".join(agent_skill_dirs)
+        )
+
+    claude_entries = sorted(
+        path.name
+        for path in (root / ".claude" / "skills").iterdir()
         if path.is_symlink()
     )
-    if agent_entries != RETAINED_SKILLS:
+    if claude_entries != RETAINED_SKILLS:
         errors.append(
-            "unexpected .agents/skills layout: " + ", ".join(agent_entries)
+            "unexpected .claude/skills layout: " + ", ".join(claude_entries)
         )
+    for skill_name in claude_entries:
+        link = root / ".claude" / "skills" / skill_name
+        expected_target = Path(f"../../.agents/skills/{skill_name}")
+        if link.readlink() != expected_target:
+            errors.append(
+                f".claude/skills/{skill_name} must point to {expected_target}"
+            )
 
     codex_entries = sorted(
         path.name
@@ -891,6 +899,13 @@ def run_checks(root: Path = ROOT) -> list[str]:
         errors.append(
             "unexpected .codex/skills layout: " + ", ".join(codex_entries)
         )
+    for skill_name in codex_entries:
+        link = root / ".codex" / "skills" / skill_name
+        expected_target = Path(f"../../.agents/skills/{skill_name}")
+        if link.readlink() != expected_target:
+            errors.append(
+                f".codex/skills/{skill_name} must point to {expected_target}"
+            )
 
     template_ids = sorted(spec.template_id for spec in list_templates())
     if template_ids != ["nextjs-app", "python-minimal"]:

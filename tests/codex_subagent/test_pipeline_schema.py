@@ -5,12 +5,18 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
-SCRIPTS = ROOT / ".claude" / "skills" / "codex-subagent" / "scripts"
+SCRIPTS = ROOT / ".agents" / "skills" / "codex-subagent" / "scripts"
 sys.path.append(str(SCRIPTS))
 
 import codex_exec  # noqa: E402
 
 SCHEMA_VERSION = codex_exec.SCHEMA_VERSION
+
+
+def test_schema_dir_uses_agents_skill_source():
+    assert codex_exec.SCHEMA_DIR == (
+        ROOT / ".agents" / "skills" / "codex-subagent" / "schemas"
+    )
 
 
 def test_pipeline_spec_schema_valid(tmp_path):
@@ -58,7 +64,7 @@ def test_pipeline_spec_schema_accepts_manager_leaf_policy(tmp_path):
 def test_pipeline_spec_schema_accepts_shipped_v2_template():
     template_path = (
         ROOT
-        / ".claude"
+        / ".agents"
         / "skills"
         / "ai-agent-collaboration-exec"
         / "references"

@@ -90,7 +90,7 @@ You are a codex-subagent orchestrator. For each request:
 3. **Execute via codex_exec.py**:
 ```bash
 # Single mode
-uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
+uv run python .agents/skills/codex-subagent/scripts/codex_exec.py \
   --mode single \
   --model gpt-5.3-codex \
   --prompt "$PROMPT" \
@@ -105,7 +105,7 @@ uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
 # - env: CODEX_SUBAGENT_LOG_DIR / CODEX_SUBAGENT_LOG_SCOPE
 
 # Competition mode
-uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
+uv run python .agents/skills/codex-subagent/scripts/codex_exec.py \
   --mode competition \
   --prompt "$PROMPT" \
   --count $COUNT \
@@ -116,7 +116,7 @@ uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
   --json
 
 # v2 pipeline mode
-uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
+uv run python .agents/skills/codex-subagent/scripts/codex_exec.py \
   --mode pipeline \
   --pipeline-spec "$SPEC" \
   --max-parallel-stages 2 \
@@ -151,10 +151,10 @@ uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
 
 ## References
 
-- Prompt templates: `.claude/skills/codex-subagent/references/prompt_templates.md`
-- Evaluation criteria: `.claude/skills/codex-subagent/references/evaluation_criteria.md`
-- Merge strategies: `.claude/skills/codex-subagent/references/merge_strategies.md`
-- Skill definition: `.claude/skills/codex-subagent/SKILL.md`
+- Prompt templates: `.agents/skills/codex-subagent/references/prompt_templates.md`
+- Evaluation criteria: `.agents/skills/codex-subagent/references/evaluation_criteria.md`
+- Merge strategies: `.agents/skills/codex-subagent/references/merge_strategies.md`
+- Skill definition: `.agents/skills/codex-subagent/SKILL.md`
 
 ## Token Efficiency Tips
 
