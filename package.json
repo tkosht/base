@@ -2,9 +2,8 @@
   "name": "ai-agent-repository-template",
   "private": true,
   "description": "Control-plane tooling for the AI agent repository template",
-  "devDependencies": {
-    "@anthropic-ai/claude-code": "^2.1.138",
-    "@google/gemini-cli": "^0.41.2",
-    "@openai/codex": "^0.130.0"
+  "volta": {
+    "node": "24.16.0",
+    "npm": "11.13.0"
   }
 }
