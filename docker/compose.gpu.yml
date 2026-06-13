@@ -24,7 +24,7 @@ services:
     working_dir: /home/$user_name/workspace
     ports:
       # - "8000:8000"
-      # - "7860:7860"
+      - "7860:7860"
       - "11434:11434"
 #     networks:
 #       - base_net
@@ -34,5 +34,4 @@ services:
 #   base_net:
 #     external: true
 #     name: base_net
-
 

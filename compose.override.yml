@@ -1,3 +1,5 @@
+services: {}
+
 # services:
 #   serena:
 #     image: ghcr.io/oraios/serena:latest
