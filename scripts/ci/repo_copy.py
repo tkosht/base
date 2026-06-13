@@ -24,6 +24,7 @@ TOP_LEVEL_COPY_EXCLUDES = frozenset(
         "bk",
         "bkup",
         "data",
+        "dev-tools",
         "dist",
         "htmlcov",
         "log",
@@ -37,6 +38,7 @@ TOP_LEVEL_COPY_EXCLUDES = frozenset(
         "wk",
         "work",
         "worker",
+        "auth.json",
     }
 )
 TOP_LEVEL_COPY_EXCLUDE_PATTERNS = frozenset(
@@ -48,6 +50,8 @@ TOP_LEVEL_COPY_EXCLUDE_PATTERNS = frozenset(
 CLAUDE_COPY_EXCLUDES = frozenset(
     {
         ".claude",
+        "organization_activity.log",
+        "organization_state.json",
         "settings.local.json",
         "settings.local.json.backup",
     }

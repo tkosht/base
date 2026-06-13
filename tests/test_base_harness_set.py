@@ -6,6 +6,7 @@ import subprocess
 import tomllib
 from pathlib import Path
 
+from scripts.ci import repo_copy
 from scripts.ci.validate_template import REQUIRED_PATHS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -227,6 +228,33 @@ def test_runtime_exclusions_preserve_public_placeholders() -> None:
         if _path_matches_manifest_pattern(pattern, rel)
     }
     assert collisions <= preserve_paths
+
+
+def test_repo_copy_runtime_exclusions_are_declared_in_manifest() -> None:
+    manifest = load_manifest()
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+    by_id = {group["id"]: group for group in groups}
+    local_runtime = by_id["local-runtime-state"]
+    do_not_copy_patterns = local_runtime["paths"]
+
+    repo_copy_excludes = set(repo_copy.TOP_LEVEL_COPY_EXCLUDES)
+    repo_copy_excludes.update(repo_copy.TOP_LEVEL_COPY_EXCLUDE_PATTERNS)
+    for rel in repo_copy.CLAUDE_COPY_EXCLUDES:
+        if rel == ".claude":
+            repo_copy_excludes.add(".claude/.claude")
+        else:
+            repo_copy_excludes.add(f".claude/{rel}")
+
+    missing = {
+        rel
+        for rel in repo_copy_excludes
+        if not any(
+            _path_matches_manifest_pattern(pattern, rel)
+            for pattern in do_not_copy_patterns
+        )
+    }
+    assert missing == set()
 
 
 def test_manifest_skills_match_repo_layout() -> None:
