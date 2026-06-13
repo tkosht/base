@@ -22,9 +22,11 @@ services:
       - .:/home/$user_name/workspace
       - .ssh/:/home/$user_name/.ssh/
     working_dir: /home/$user_name/workspace
-    ports:
-      - "8000:8000"
-      - "7860:7860"
+    # Host port publishing is disabled by default to avoid local collisions.
+    # ports:
+    #   - "8000:8000"
+    #   - "7860:7860"
+    #   - "11434:11434"
 #     networks:
 #       - base_net
 # 
@@ -33,5 +35,3 @@ services:
 #   base_net:
 #     external: true
 #     name: base_net
-
-

@@ -117,8 +117,8 @@ if ! shopt -oq posix; then
 fi
 
 
-export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/workspace/node_modules/.bin/:$PATH"
+export VOLTA_HOME="$HOME/.volta"
+export PATH="$HOME/workspace/node_modules/.bin:$VOLTA_HOME/bin:$HOME/.local/bin:$PATH"
 export UV_LINK_MODE=copy
 export CODEX_HOME="$HOME/workspace/.codex"
 
@@ -130,4 +130,3 @@ alias auto_cursoragent="cursor-agent --force"
 alias ccusage="npx ccusage@latest blocks --live"
 alias geminiflash="gemini -m gemini-2.5-flash"
 alias cx="bash bin/cx.sh"
-

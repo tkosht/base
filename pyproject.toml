@@ -5,7 +5,9 @@ description = "AI agent repository template control plane"
 authors = [{ name = "AI Developer", email = "dev@example.com" }]
 requires-python = ">=3.12,<=3.14"
 dependencies = [
+    "google-genai>=2.8.0",
     "jsonschema",
+    "pillow>=12.2.0",
     "pyyaml",
 ]
 
