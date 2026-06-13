@@ -31,12 +31,12 @@ metadata:
 1. Sense: repo state、gate 結果、duration、failure text、changed paths、task friction、明示された review artifact、`docs/architecture/harness-resources.toml` を読む。選択 target だけでなく、registry 全 resource paths に対して `ProactiveReviewProbe` による proactive review probe を走らせる。ただし各 resource の `excluded_paths` は尊重する。
 2. Classify: 全 registry resource を比較し、evidence から resource / goal / confidence / reason を決める。人間入力の `TARGET` / `GOAL` は使わない。
 3. Constrain: `AutoptRequest` に editable paths、excluded paths、diff limits、validators、success criteria、draft pull request policy を固定する。
-4. Repair: `codex-subagent` の `team_policy: "manager_leaf_v1"` で repair leaf node に `AutoptRequest` の範囲内の最小変更を委譲する。親 Codex agent と非 leaf manager は manager-only とし、分解・割当・進行管理・sanitized result の集約だけを行う。subagent が使えない場合は blocked reason を残して停止し、親や manager が代行せず実装しない。
+4. Repair: `codex-subagent` の `team_policy: "manager_leaf_v1"` で repair leaf node に `AutoptRequest` の範囲内の最小変更を委譲する。repair leaf node は修正前後に `HorizontalExpansionInvestigation` を必ず実行し、same defect pattern、contract drift、missing validation、obsolete instruction、または sibling surface が in-scope にないか調査する。`InScopeHorizontalFix` として同じ resource / goal / constraints 内で直せる same-pattern findings は同じ repair cycle で修正し、範囲外は out_of_scope finding として残す。親 Codex agent と非 leaf manager は manager-only とし、分解・割当・進行管理・sanitized result の集約だけを行う。subagent が使えない場合は blocked reason を残して停止し、親や manager が代行せず実装しない。
 5. Verify: verify leaf node が `make doctor`、`make lint`、`make test` と diff guard を通す。親 Codex agent と manager は manager-only として結果確認と停止判断だけを行う。
-6. Review: review leaf node が、要件・実装・prompt・test・proactive probe finding・review artifact の整合性を code review と同じ厳しさで確認する。finding は `ReviewFinding` として記録し、`verification_class` で検証種別を残す。target 外 resource の material finding は `out_of_scope` として記録し、黙殺しない。`excluded_paths` 内の歴史的記録や意図的な除外 path は false stop reason にしない。`ReviewReport` の `loop_count`、`converged`、`stop_reason` を確認し、material finding があれば同じ `AutoptRequest` 制約内で leaf Repair -> leaf Verify -> leaf Review を繰り返す。親 Codex agent と manager は manager-only として反復を割り当て、sanitized result を集約するだけにする。
+6. Review: review leaf node が、要件・実装・prompt・test・proactive probe finding・review artifact の整合性を code review と同じ厳しさで確認する。finding は `ReviewFinding` として記録し、`verification_class` で検証種別を残す。target 外 resource の material finding は `out_of_scope` として記録し、黙殺しない。`excluded_paths` 内の歴史的記録や意図的な除外 path は false stop reason にしない。`ReviewReport` の `loop_count`、`converged`、`stop_reason` に加えて、`HorizontalExpansionInvestigation` の調査範囲、`InScopeHorizontalFix` の適用有無、deferred / out_of_scope finding、residual risk を確認する。material finding があれば同じ `AutoptRequest` 制約内で leaf Repair -> leaf Verify -> leaf Review を繰り返す。親 Codex agent と manager は manager-only として反復を割り当て、sanitized result を集約するだけにする。
 7. Self-Audit: 実行経験を ExperienceCandidate として扱い、code simplification、test、validator、skill prompt、canonical rule、設計判断メモ、非追跡 state、discard のどれに値するか判断する。
 8. Reflect: low confidence、unsupported evidence、gate failure、保持価値不足、または unresolved material finding がある場合は修復や昇格をせず sanitized state に理由を残す。
-9. Propose: 成功時だけ draft pull request を作る。
+9. Propose: 成功時だけ draft pull request を作る。`RepairReportingRequired` として、修正を試みた場合は final response / pull request body に、修正内容、水平展開で調査した範囲、適用した in-scope horizontal fixes、該当なしの判断、deferred / out_of_scope finding、validation result、residual risk を必ず記録する。
 
 ## Controller Prompts
 
@@ -61,5 +61,8 @@ uv run python .agents/skills/harness-autoptimizer/scripts/harness_autopt.py \
 - raw prompt、raw model output、秘密情報、runtime logs、一回限りの作業メモは tracked knowledge に昇格しない。
 - 永続化する経験は、再発可能性、影響度、一般性、検証可能性、context cost を満たす蒸留済み artifact だけにする。
 - 自己レビューの反復は scope creep の許可ではない。同じ resource / goal / constraints 内で解消できない finding は停止理由として記録する。
+- すべての repair / fix は `HorizontalExpansionInvestigation` を必須とし、same defect pattern、contract drift、missing validation、obsolete instruction、sibling surface を水平展開して調査する。
+- `HorizontalExpansionInvestigation` で見つかった same-pattern findings が同じ AutoptRequest の resource / goal / constraints 内で直せる場合、`InScopeHorizontalFix` として同じ repair cycle で修正し、検証と review を再実行する。
+- 修正を試みた run は `RepairReportingRequired` を満たす。final response / pull request body には、水平展開の調査範囲、適用した in-scope horizontal fixes、該当なしの判断、deferred / out_of_scope finding、validation result、residual risk を明記する。
 - DAG team 実行を既定必須にし、`codex-subagent` pipeline では `team_policy: "manager_leaf_v1"` を使う。
 - 非 leaf / control node は manager-only とし、実装・検証・レビュー作業を直接実行しない。

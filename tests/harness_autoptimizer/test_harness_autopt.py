@@ -123,6 +123,70 @@ def test_skill_workflow_delegates_actual_work_to_leaf_nodes() -> None:
     assert "代行せず" in workflow
 
 
+def test_autoptimizer_repairs_require_horizontal_expansion_contract() -> None:
+    skill_text = (
+        ROOT / ".agents" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    auto_controller = (
+        ROOT
+        / ".agents"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "auto-controller.md"
+    ).read_text(encoding="utf-8")
+    repair_request = (
+        ROOT
+        / ".agents"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "repair-request.md"
+    ).read_text(encoding="utf-8")
+
+    common_needles = (
+        "HorizontalExpansionInvestigation",
+        "InScopeHorizontalFix",
+        "RepairReportingRequired",
+        "same defect pattern",
+        "residual risk",
+        "final response",
+        "pull request body",
+        "out_of_scope",
+        "validation result",
+        "deferred",
+        "in-scope horizontal fixes",
+        "sibling surface",
+        "same-pattern findings",
+    )
+    surface_needles = {
+        "skill": (
+            "repair leaf node は修正前後に",
+            "`ReviewReport` の `loop_count`",
+            "修正を試みた run は",
+        ),
+        "auto_controller": (
+            "The repair leaf must run",
+            "The ReviewReport must include",
+            "Apply `RepairReportingRequired`",
+        ),
+        "repair_request": (
+            "Run `HorizontalExpansionInvestigation` before and after any repair or fix",
+            "Apply `InScopeHorizontalFix`",
+            "If any repair or fix was attempted",
+        ),
+    }
+    surfaces = {
+        "skill": skill_text,
+        "auto_controller": auto_controller,
+        "repair_request": repair_request,
+    }
+
+    for name, text in surfaces.items():
+        for needle in (*common_needles, *surface_needles[name]):
+            assert needle in text, (name, needle)
+
+
 def test_load_resource_registry_includes_markdown_docs_resource() -> None:
     resources = harness_autopt.load_resource_registry(
         ROOT / "docs" / "architecture" / "harness-resources.toml"
