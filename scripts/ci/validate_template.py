@@ -264,11 +264,14 @@ EXPERIENCE_CAPTURE_CONTRACT = (
 )
 GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON = (
     "GitHub HTTPS authentication preflight",
-    "git remote get-url --push origin",
     "git remote get-url origin",
+    "git remote get-url --push origin",
     "fallback",
     "https://github.com/",
+    "git@github.com:",
+    "ssh://git@github.com/",
     "GitHub HTTPS remote",
+    "GitHub SSH remote",
     "gh auth status -h github.com",
     "not logged in",
     "local GitHub HTTPS authentication is known missing",
@@ -705,17 +708,26 @@ def _check_github_https_auth_preflight_contract(
         ".agents/skills/git-commit-pr/SKILL.md": (
             *GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON,
             "コミット、`git push`、`gh pr create` の前に必ず実行する",
+            "fetch URL または push URL が `git@github.com:` または "
+            "`ssh://git@github.com/`",
+            "`gh pr create` には GitHub CLI authentication が必要",
             "コミットせず、push せず、Pull Request（PR）作成もせず停止する",
         ),
         ".agents/skills/git-mainbranch/SKILL.md": (
             *GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON,
             "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "`git fetch --prune` と `git pull --ff-only` の認証判定には"
+            "必ず fetch URL を使う",
+            "`gh pr list` には GitHub CLI authentication が必要",
             "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
             "を行わず停止する",
         ),
         ".agents/skills/git-mainbranch/references/mainbranch-playbook.md": (
             *GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON,
             "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "`git fetch --prune` と `git pull --ff-only` の認証判定には"
+            "必ず fetch URL を使う",
+            "`gh pr list` には GitHub CLI authentication が必要",
             "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
             "を行わず停止する",
         ),

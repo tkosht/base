@@ -49,8 +49,10 @@ description: "コミット・プッシュ・プルリクエスト作成を一気
 
 5. GitHub HTTPS authentication preflight を実行する。
    - コミット、`git push`、`gh pr create` の前に必ず実行する。
-   - `git remote get-url --push origin` を実行し、失敗または空の場合だけ `git remote get-url origin` を fallback として実行する。
-   - remote URL が `https://github.com/` で始まる GitHub HTTPS remote の場合、`gh auth status -h github.com` を実行する。
+   - fetch URL は `git remote get-url origin` で取得する。
+   - push URL は `git remote get-url --push origin` で取得し、失敗または空の場合だけ fetch URL を fallback として使う。
+   - fetch URL または push URL が `https://github.com/` で始まる GitHub HTTPS remote の場合、`gh auth status -h github.com` を実行する。
+   - fetch URL または push URL が `git@github.com:` または `ssh://git@github.com/` で始まる GitHub SSH remote の場合も、`gh pr create` には GitHub CLI authentication が必要なため `gh auth status -h github.com` を実行する。
    - 結果が認証なし、または non-zero で `not logged in` を示す場合は local GitHub HTTPS authentication is known missing と判断する。
    - この場合はコミットせず、push せず、Pull Request（PR）作成もせず停止する。
    - 停止時は「GitHub HTTPS authentication is required. Run `gh auth login -h github.com`, choose/enable HTTPS Git operations, then retry.」とユーザーへ伝える。

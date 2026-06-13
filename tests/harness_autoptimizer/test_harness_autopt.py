@@ -82,6 +82,28 @@ def test_autoptimizer_prompts_require_manager_leaf_dag_team() -> None:
     assert "leaf" in combined
 
 
+def test_autoptimizer_controller_prompt_delegates_loop_work_to_leaf_nodes() -> (
+    None
+):
+    prompt = (
+        ROOT
+        / ".agents"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "auto-controller.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Repair: make the smallest useful change" not in prompt
+    assert "Verify: run the required validators" not in prompt
+    assert "Review: perform a code-review pass" not in prompt
+    assert 'team_policy: "manager_leaf_v1"' in prompt
+    assert "repair leaf node" in prompt
+    assert "verify leaf node" in prompt
+    assert "review leaf node" in prompt
+    assert "manager-only" in prompt
+
+
 def test_skill_workflow_delegates_actual_work_to_leaf_nodes() -> None:
     skill_text = (
         ROOT / ".agents" / "skills" / "harness-autoptimizer" / "SKILL.md"
