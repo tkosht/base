@@ -1,6 +1,6 @@
 services: {}
 
-# services:
+# services:  # Replace the empty mapping above when enabling Serena.
 #   serena:
 #     image: ghcr.io/oraios/serena:latest
 #     container_name: serena-mcp-server
