@@ -272,6 +272,44 @@ def test_manifest_skills_have_canonical_docs() -> None:
         ).exists(), skill
 
 
+def test_git_operation_skills_require_github_https_auth_preflight() -> None:
+    common_needles = (
+        "GitHub HTTPS authentication preflight",
+        "git remote get-url --push origin",
+        "git remote get-url origin",
+        "fallback",
+        "https://github.com/",
+        "GitHub HTTPS remote",
+        "gh auth status -h github.com",
+        "not logged in",
+        "local GitHub HTTPS authentication is known missing",
+        "gh auth login -h github.com",
+        "HTTPS Git operations",
+        "認証済みを確認できた場合だけ次へ進む",
+    )
+    expectations = {
+        ".agents/skills/git-commit-pr/SKILL.md": (
+            "コミット、`git push`、`gh pr create` の前に必ず実行する",
+            "コミットせず、push せず、Pull Request（PR）作成もせず停止する",
+        ),
+        ".agents/skills/git-mainbranch/SKILL.md": (
+            "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
+            "を行わず停止する",
+        ),
+        ".agents/skills/git-mainbranch/references/mainbranch-playbook.md": (
+            "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
+            "を行わず停止する",
+        ),
+    }
+
+    for rel, needles in expectations.items():
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for needle in (*common_needles, *needles):
+            assert needle in text, (rel, needle)
+
+
 def test_manifest_command_docs_and_workflows_exist() -> None:
     manifest = load_manifest()
 

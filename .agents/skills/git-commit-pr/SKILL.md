@@ -47,7 +47,16 @@ description: "コミット・プッシュ・プルリクエスト作成を一気
    - `.codex/*` は `.gitignore` 対象のため、`.codex/skills/.system/**` の整形結果は通常コミットに含めない。
    - `lint_status=pass` を確認するまでコミットしない。
 
-5. ステージングしてコミットする。
+5. GitHub HTTPS authentication preflight を実行する。
+   - コミット、`git push`、`gh pr create` の前に必ず実行する。
+   - `git remote get-url --push origin` を実行し、失敗または空の場合だけ `git remote get-url origin` を fallback として実行する。
+   - remote URL が `https://github.com/` で始まる GitHub HTTPS remote の場合、`gh auth status -h github.com` を実行する。
+   - 結果が認証なし、または non-zero で `not logged in` を示す場合は local GitHub HTTPS authentication is known missing と判断する。
+   - この場合はコミットせず、push せず、Pull Request（PR）作成もせず停止する。
+   - 停止時は「GitHub HTTPS authentication is required. Run `gh auth login -h github.com`, choose/enable HTTPS Git operations, then retry.」とユーザーへ伝える。
+   - 認証済みを確認できた場合だけ次へ進む。
+
+6. ステージングしてコミットする。
    - ユーザーから部分コミットの指示がない限り `git add -A` を使う。
    - 複数行メッセージはヒアドキュメントで渡す。
    - 例:
@@ -58,11 +67,11 @@ description: "コミット・プッシュ・プルリクエスト作成を一気
      ```
    - 失敗した場合は原因を解消してから再実行する。
 
-6. リモートへプッシュする。
+7. リモートへプッシュする。
    - 初回プッシュは `git push -u origin <branch>` を使う。
    - 追跡設定済みなら `git push` を使う。
 
-7. Pull Request を作成する。
+8. Pull Request を作成する。
    - タイトルはコミット要約から作る。
    - 本文は `references/pr-body-template.md` を使って作る。
    - 推奨コマンド:
@@ -72,7 +81,7 @@ description: "コミット・プッシュ・プルリクエスト作成を一気
    - URL を必ず取得する。
    - 既存 PR がある場合は `gh pr view --json url -q .url` で URL を返す。
 
-8. 結果を報告する。
+9. 結果を報告する。
    - `branch` / `commit` / `pr_url` / `summary` / `lint_status` / `lint_commands` を返す。
    - テスト未実施などの注意点があれば明記する。
 

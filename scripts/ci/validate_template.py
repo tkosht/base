@@ -262,6 +262,20 @@ EXPERIENCE_CAPTURE_CONTRACT = (
     "ユーザー訂正時、gate 異常時、実装複雑化や instruction surface "
     "の矛盾を見つけた時に、経験を将来の行動改善へ残すべきかを軽量に判断する"
 )
+GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON = (
+    "GitHub HTTPS authentication preflight",
+    "git remote get-url --push origin",
+    "git remote get-url origin",
+    "fallback",
+    "https://github.com/",
+    "GitHub HTTPS remote",
+    "gh auth status -h github.com",
+    "not logged in",
+    "local GitHub HTTPS authentication is known missing",
+    "gh auth login -h github.com",
+    "HTTPS Git operations",
+    "認証済みを確認できた場合だけ次へ進む",
+)
 
 
 def _check_primary_terminology(root: Path, errors: list[str]) -> None:
@@ -684,6 +698,38 @@ def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
             )
 
 
+def _check_github_https_auth_preflight_contract(
+    root: Path, errors: list[str]
+) -> None:
+    expectations = {
+        ".agents/skills/git-commit-pr/SKILL.md": (
+            *GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON,
+            "コミット、`git push`、`gh pr create` の前に必ず実行する",
+            "コミットせず、push せず、Pull Request（PR）作成もせず停止する",
+        ),
+        ".agents/skills/git-mainbranch/SKILL.md": (
+            *GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON,
+            "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
+            "を行わず停止する",
+        ),
+        ".agents/skills/git-mainbranch/references/mainbranch-playbook.md": (
+            *GITHUB_HTTPS_AUTH_PREFLIGHT_COMMON,
+            "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
+            "を行わず停止する",
+        ),
+    }
+    for rel, needles in expectations.items():
+        text = (root / rel).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                errors.append(
+                    f"{rel} missing GitHub HTTPS auth preflight contract: "
+                    + needle
+                )
+
+
 def _check_github_api_helper(root: Path, errors: list[str]) -> None:
     helper = root / "bin" / "github_api_pr.sh"
     if not helper.exists():
@@ -993,6 +1039,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
     _check_github_api_helper(root, errors)
     _check_heavy_repo_copy_guard(root, errors)
     _check_harness_autoptimizer_contract(root, errors)
+    _check_github_https_auth_preflight_contract(root, errors)
     _check_git_mainbranch_contract(root, errors)
     _check_non_root_design_md(root, errors)
     _check_design_contract(root, errors)

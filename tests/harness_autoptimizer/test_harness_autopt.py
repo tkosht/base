@@ -82,6 +82,25 @@ def test_autoptimizer_prompts_require_manager_leaf_dag_team() -> None:
     assert "leaf" in combined
 
 
+def test_skill_workflow_delegates_actual_work_to_leaf_nodes() -> None:
+    skill_text = (
+        ROOT / ".agents" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    workflow = skill_text.split("## Workflow", 1)[1].split(
+        "## Controller Prompts", 1
+    )[0]
+
+    assert "Repair: Codex agent 自身が" not in workflow
+    assert "Review: Codex agent 自身が" not in workflow
+    assert 'team_policy: "manager_leaf_v1"' in workflow
+    assert "repair leaf node" in workflow
+    assert "verify leaf node" in workflow
+    assert "review leaf node" in workflow
+    assert "manager-only" in workflow
+    assert "blocked reason" in workflow
+    assert "代行せず" in workflow
+
+
 def test_load_resource_registry_includes_markdown_docs_resource() -> None:
     resources = harness_autopt.load_resource_registry(
         ROOT / "docs" / "architecture" / "harness-resources.toml"
