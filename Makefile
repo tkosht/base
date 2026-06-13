@@ -1,11 +1,14 @@
-.PHONY: bootstrap doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter sync-skill
+.PHONY: bootstrap node-toolchain doctor lint test test-codex-live template-smoke use-python-starter use-nextjs-starter sync-skill
 
 default: all
 
 
 bootstrap:
 	uv sync --all-groups --all-extras
-	npm ci
+	sh bin/install_agentcli.sh
+
+node-toolchain:
+	sh bin/install_node_toolchain.sh
 
 doctor:
 	uv run python scripts/ci/validate_template.py

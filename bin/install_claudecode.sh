@@ -1,10 +1,14 @@
 #!/usr/bin/sh
+set -eu
 
+d=$(CDPATH= cd -- "$(dirname "$0")" && pwd)
+cd "$d/../"
 
-# nvmが管理する場所にClaude Codeをグローバルインストールする
-echo "Installing @anthropic-ai/claude-code ..."
-# npm install @anthropic-ai/claude-code
-curl -fsSL https://claude.ai/install.sh | bash
+VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
+export VOLTA_HOME
+export PATH="$VOLTA_HOME/bin:$PATH"
 
-echo "Installation complete."
+sh bin/install_node_toolchain.sh
+volta install @anthropic-ai/claude-code@latest
 
+echo "Claude Code: $(claude --version)"
