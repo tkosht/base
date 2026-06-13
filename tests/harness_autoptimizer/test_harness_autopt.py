@@ -82,6 +82,111 @@ def test_autoptimizer_prompts_require_manager_leaf_dag_team() -> None:
     assert "leaf" in combined
 
 
+def test_autoptimizer_controller_prompt_delegates_loop_work_to_leaf_nodes() -> (
+    None
+):
+    prompt = (
+        ROOT
+        / ".agents"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "auto-controller.md"
+    ).read_text(encoding="utf-8")
+
+    assert "Repair: make the smallest useful change" not in prompt
+    assert "Verify: run the required validators" not in prompt
+    assert "Review: perform a code-review pass" not in prompt
+    assert 'team_policy: "manager_leaf_v1"' in prompt
+    assert "repair leaf node" in prompt
+    assert "verify leaf node" in prompt
+    assert "review leaf node" in prompt
+    assert "manager-only" in prompt
+
+
+def test_skill_workflow_delegates_actual_work_to_leaf_nodes() -> None:
+    skill_text = (
+        ROOT / ".agents" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    workflow = skill_text.split("## Workflow", 1)[1].split(
+        "## Controller Prompts", 1
+    )[0]
+
+    assert "Repair: Codex agent 自身が" not in workflow
+    assert "Review: Codex agent 自身が" not in workflow
+    assert 'team_policy: "manager_leaf_v1"' in workflow
+    assert "repair leaf node" in workflow
+    assert "verify leaf node" in workflow
+    assert "review leaf node" in workflow
+    assert "manager-only" in workflow
+    assert "blocked reason" in workflow
+    assert "代行せず" in workflow
+
+
+def test_autoptimizer_repairs_require_horizontal_expansion_contract() -> None:
+    skill_text = (
+        ROOT / ".agents" / "skills" / "harness-autoptimizer" / "SKILL.md"
+    ).read_text(encoding="utf-8")
+    auto_controller = (
+        ROOT
+        / ".agents"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "auto-controller.md"
+    ).read_text(encoding="utf-8")
+    repair_request = (
+        ROOT
+        / ".agents"
+        / "skills"
+        / "harness-autoptimizer"
+        / "prompts"
+        / "repair-request.md"
+    ).read_text(encoding="utf-8")
+
+    common_needles = (
+        "HorizontalExpansionInvestigation",
+        "InScopeHorizontalFix",
+        "RepairReportingRequired",
+        "same defect pattern",
+        "residual risk",
+        "final response",
+        "pull request body",
+        "out_of_scope",
+        "validation result",
+        "deferred",
+        "in-scope horizontal fixes",
+        "sibling surface",
+        "same-pattern findings",
+    )
+    surface_needles = {
+        "skill": (
+            "repair leaf node は修正前後に",
+            "`ReviewReport` の `loop_count`",
+            "修正を試みた run は",
+        ),
+        "auto_controller": (
+            "The repair leaf must run",
+            "The ReviewReport must include",
+            "Apply `RepairReportingRequired`",
+        ),
+        "repair_request": (
+            "Run `HorizontalExpansionInvestigation` before and after any repair or fix",
+            "Apply `InScopeHorizontalFix`",
+            "If any repair or fix was attempted",
+        ),
+    }
+    surfaces = {
+        "skill": skill_text,
+        "auto_controller": auto_controller,
+        "repair_request": repair_request,
+    }
+
+    for name, text in surfaces.items():
+        for needle in (*common_needles, *surface_needles[name]):
+            assert needle in text, (name, needle)
+
+
 def test_load_resource_registry_includes_markdown_docs_resource() -> None:
     resources = harness_autopt.load_resource_registry(
         ROOT / "docs" / "architecture" / "harness-resources.toml"

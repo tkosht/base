@@ -6,6 +6,7 @@ import subprocess
 import tomllib
 from pathlib import Path
 
+from scripts.ci import repo_copy
 from scripts.ci.validate_template import REQUIRED_PATHS
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -149,7 +150,11 @@ def test_manifest_declares_portable_harness_groups() -> None:
         "docs/architecture/harness-resources.toml"
         in by_id["harness-registry"]["paths"]
     )
-    assert ".codex/auth.json" in by_id["local-runtime-state"]["paths"]
+    local_runtime_paths = by_id["local-runtime-state"]["paths"]
+    assert ".codex/auth.json" in local_runtime_paths
+    assert ".claude/settings.local.json" in local_runtime_paths
+    assert "output" in local_runtime_paths
+    assert "tmux-*.log" in local_runtime_paths
     assert by_id["local-runtime-state"]["preserve_paths"] == [
         ".env.example",
         "secrets/README.md",
@@ -225,6 +230,33 @@ def test_runtime_exclusions_preserve_public_placeholders() -> None:
     assert collisions <= preserve_paths
 
 
+def test_repo_copy_runtime_exclusions_are_declared_in_manifest() -> None:
+    manifest = load_manifest()
+    groups = manifest["portable_harness_groups"]
+    assert isinstance(groups, list)
+    by_id = {group["id"]: group for group in groups}
+    local_runtime = by_id["local-runtime-state"]
+    do_not_copy_patterns = local_runtime["paths"]
+
+    repo_copy_excludes = set(repo_copy.TOP_LEVEL_COPY_EXCLUDES)
+    repo_copy_excludes.update(repo_copy.TOP_LEVEL_COPY_EXCLUDE_PATTERNS)
+    for rel in repo_copy.CLAUDE_COPY_EXCLUDES:
+        if rel == ".claude":
+            repo_copy_excludes.add(".claude/.claude")
+        else:
+            repo_copy_excludes.add(f".claude/{rel}")
+
+    missing = {
+        rel
+        for rel in repo_copy_excludes
+        if not any(
+            _path_matches_manifest_pattern(pattern, rel)
+            for pattern in do_not_copy_patterns
+        )
+    }
+    assert missing == set()
+
+
 def test_manifest_skills_match_repo_layout() -> None:
     manifest = load_manifest()
     skills = manifest["skills"]
@@ -270,6 +302,56 @@ def test_manifest_skills_have_canonical_docs() -> None:
         assert (
             ROOT / "docs" / "ai" / "skills" / f"{skill}.md"
         ).exists(), skill
+
+
+def test_git_operation_skills_require_github_https_auth_preflight() -> None:
+    common_needles = (
+        "GitHub HTTPS authentication preflight",
+        "git remote get-url origin",
+        "git remote get-url --push origin",
+        "fallback",
+        "https://github.com/",
+        "git@github.com:",
+        "ssh://git@github.com/",
+        "GitHub HTTPS remote",
+        "GitHub SSH remote",
+        "gh auth status -h github.com",
+        "not logged in",
+        "local GitHub HTTPS authentication is known missing",
+        "gh auth login -h github.com",
+        "HTTPS Git operations",
+        "認証済みを確認できた場合だけ次へ進む",
+    )
+    expectations = {
+        ".agents/skills/git-commit-pr/SKILL.md": (
+            "コミット、`git push`、`gh pr create` の前に必ず実行する",
+            "fetch URL または push URL が `git@github.com:` または "
+            "`ssh://git@github.com/`",
+            "`gh pr create` には GitHub CLI authentication が必要",
+            "コミットせず、push せず、Pull Request（PR）作成もせず停止する",
+        ),
+        ".agents/skills/git-mainbranch/SKILL.md": (
+            "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "`git fetch --prune` と `git pull --ff-only` の認証判定には"
+            "必ず fetch URL を使う",
+            "`gh pr list` には GitHub CLI authentication が必要",
+            "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
+            "を行わず停止する",
+        ),
+        ".agents/skills/git-mainbranch/references/mainbranch-playbook.md": (
+            "`git fetch --prune`、`git pull --ff-only`、`gh pr list`",
+            "`git fetch --prune` と `git pull --ff-only` の認証判定には"
+            "必ず fetch URL を使う",
+            "`gh pr list` には GitHub CLI authentication が必要",
+            "fetch、pull、`gh pr list`、worktree cleanup、branch deletion "
+            "を行わず停止する",
+        ),
+    }
+
+    for rel, needles in expectations.items():
+        text = (ROOT / rel).read_text(encoding="utf-8")
+        for needle in (*common_needles, *needles):
+            assert needle in text, (rel, needle)
 
 
 def test_manifest_command_docs_and_workflows_exist() -> None:
