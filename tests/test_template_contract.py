@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from scripts.ci.validate_template import (
     DESIGN_READ_FIRST_CONTRACT,
     DESIGN_README_MIN_ROLE,
     DESIGN_README_SYNC_REF,
+    _is_tracked_or_shipped_path,
     run_checks,
 )
 
@@ -33,13 +35,18 @@ def test_copy_repo_prunes_runtime_and_dependency_dirs(
         ".pytest_cache",
         ".ruff_cache",
         ".venv",
+        ".serena_home",
+        ".ssh",
         "node_modules",
+        "output",
+        "tmux-server-4579.log",
     ):
         assert not (repo / rel).exists(), rel
     assert (repo / ".env.example").exists()
     assert (repo / ".codex" / "config.toml").exists()
     assert (repo / ".codex" / "skills").exists()
     assert not (repo / ".codex" / "sessions").exists()
+    assert not (repo / ".claude" / "settings.local.json").exists()
     assert (repo / "secrets" / "README.md").exists()
 
 
@@ -105,6 +112,74 @@ def test_template_contract_checks_pass_for_workspace_write(
     )
 
     assert run_checks(repo) == []
+
+
+def test_template_contract_allows_ignored_local_only_paths_in_git_worktree(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(
+        ["git", "init"],
+        cwd=repo,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    (repo / ".gitignore").write_text(
+        ".claude/settings.local.json\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "add", "-A"],
+        cwd=repo,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    (repo / ".claude").mkdir()
+    (repo / ".claude" / "settings.local.json").write_text(
+        "{}\n", encoding="utf-8"
+    )
+
+    assert not _is_tracked_or_shipped_path(repo, ".claude/settings.local.json")
+
+
+def test_template_contract_rejects_tracked_local_only_paths(
+    tmp_path: Path,
+) -> None:
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(
+        ["git", "init"],
+        cwd=repo,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    (repo / ".gitignore").write_text(
+        ".claude/settings.local.json\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "add", "-A"],
+        cwd=repo,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+    (repo / ".claude").mkdir()
+    (repo / ".claude" / "settings.local.json").write_text(
+        "{}\n", encoding="utf-8"
+    )
+    subprocess.run(
+        ["git", "add", "-f", ".claude/settings.local.json"],
+        cwd=repo,
+        check=True,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+    )
+
+    assert _is_tracked_or_shipped_path(repo, ".claude/settings.local.json")
 
 
 def test_template_contract_checks_fail_when_git_mainbranch_worktree_contract_is_missing(

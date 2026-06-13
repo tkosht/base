@@ -3,6 +3,7 @@ from __future__ import annotations
 import ast
 import fnmatch
 import re
+import subprocess
 import sys
 import tomllib
 from pathlib import Path
@@ -862,6 +863,23 @@ def _paths_cover_design_docs(paths: list[str]) -> bool:
     return any(path in {"docs/design/**", "docs/**", "**"} for path in paths)
 
 
+def _is_tracked_or_shipped_path(root: Path, rel: str) -> bool:
+    try:
+        result = subprocess.run(
+            ["git", "-C", str(root), "ls-files", "--error-unmatch", "--", rel],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+        )
+    except FileNotFoundError:
+        return (root / rel).exists()
+
+    if result.returncode in {0, 1}:
+        return result.returncode == 0
+
+    return (root / rel).exists()
+
+
 def _check_workflow_path_filters(root: Path, errors: list[str]) -> None:
     for rel in (
         ".github/workflows/template-health.yml",
@@ -892,7 +910,7 @@ def run_checks(root: Path = ROOT) -> list[str]:
             errors.append(f"missing required path: {rel}")
 
     for rel in FORBIDDEN_PATHS:
-        if (root / rel).exists():
+        if _is_tracked_or_shipped_path(root, rel):
             errors.append(f"local-only path should not be tracked: {rel}")
 
     agents_text = (root / "AGENTS.md").read_text(encoding="utf-8")

@@ -6,13 +6,50 @@ from pathlib import Path
 
 TOP_LEVEL_COPY_EXCLUDES = frozenset(
     {
+        ".benchmarks",
+        ".cache",
         ".git",
         ".npm-global",
+        ".npm-cache",
+        ".nox",
+        ".projects",
         ".pytest_cache",
         ".ruff_cache",
+        ".serena",
+        ".serena_home",
+        ".ssh",
+        ".tox",
         ".venv",
+        "backup",
+        "bk",
+        "bkup",
+        "data",
+        "dist",
+        "htmlcov",
+        "log",
+        "logs",
+        "mlruns",
         "node_modules",
+        "output",
+        "result",
+        "temp",
+        "tmp",
+        "wk",
+        "work",
         "worker",
+    }
+)
+TOP_LEVEL_COPY_EXCLUDE_PATTERNS = frozenset(
+    {
+        "*.log",
+        "*logs",
+    }
+)
+CLAUDE_COPY_EXCLUDES = frozenset(
+    {
+        ".claude",
+        "settings.local.json",
+        "settings.local.json.backup",
     }
 )
 CODEX_COPY_KEEP = frozenset({"config.toml", "skills", "version.json"})
@@ -38,6 +75,14 @@ def make_repo_copy_ignore(
                 name for name in names if name in TOP_LEVEL_COPY_EXCLUDES
             )
             ignored.update(
+                name
+                for name in names
+                if any(
+                    Path(name).match(pattern)
+                    for pattern in TOP_LEVEL_COPY_EXCLUDE_PATTERNS
+                )
+            )
+            ignored.update(
                 name for name in names if _is_env_runtime_file(name)
             )
         try:
@@ -47,6 +92,10 @@ def make_repo_copy_ignore(
         if rel == ".codex":
             ignored.update(
                 name for name in names if name not in CODEX_COPY_KEEP
+            )
+        if rel == ".claude":
+            ignored.update(
+                name for name in names if name in CLAUDE_COPY_EXCLUDES
             )
         if rel == "secrets":
             ignored.update(

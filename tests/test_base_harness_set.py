@@ -149,7 +149,11 @@ def test_manifest_declares_portable_harness_groups() -> None:
         "docs/architecture/harness-resources.toml"
         in by_id["harness-registry"]["paths"]
     )
-    assert ".codex/auth.json" in by_id["local-runtime-state"]["paths"]
+    local_runtime_paths = by_id["local-runtime-state"]["paths"]
+    assert ".codex/auth.json" in local_runtime_paths
+    assert ".claude/settings.local.json" in local_runtime_paths
+    assert "output" in local_runtime_paths
+    assert "tmux-*.log" in local_runtime_paths
     assert by_id["local-runtime-state"]["preserve_paths"] == [
         ".env.example",
         "secrets/README.md",
