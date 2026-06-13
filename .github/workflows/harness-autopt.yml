@@ -15,7 +15,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v7
@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           uv sync --all-groups --all-extras
-          npm ci
+          sh bin/install_codexcli.sh
 
       - name: Preflight Codex auth
         env:
@@ -55,7 +55,8 @@ jobs:
           CODEX_HOME: ${{ runner.temp }}/codex-home
           GH_TOKEN: ${{ github.token }}
         run: |
-          export PATH="$GITHUB_WORKSPACE/node_modules/.bin:$PATH"
+          export VOLTA_HOME="${VOLTA_HOME:-$HOME/.volta}"
+          export PATH="$VOLTA_HOME/bin:$PATH"
           uv run python .claude/skills/codex-subagent/scripts/codex_exec.py \
             --mode single \
             --task-type code_gen \
