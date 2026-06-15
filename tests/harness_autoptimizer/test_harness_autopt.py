@@ -365,6 +365,113 @@ def test_agent_controller_prompt_lists_all_resources() -> None:
     assert '"test-performance"' in prompt
 
 
+def test_prompt_dir_uses_agents_canonical_source() -> None:
+    assert harness_autopt.PROMPT_DIR == (
+        ROOT / ".agents" / "skills" / "harness-autoptimizer" / "prompts"
+    )
+    assert (harness_autopt.PROMPT_DIR / "harness-contracts.md").exists()
+
+
+def test_prompt_contracts_are_appended_to_all_prompt_builders() -> None:
+    candidate = harness_autopt.ExperienceCandidate(
+        trigger_source="user-correction",
+        observation="User-facing harness language used unclear jargon.",
+        evidence=("avoid unexplained jargon",),
+    )
+    assessment = harness_autopt.assess_experience_candidate(candidate)
+    request = harness_autopt.build_autopt_request(
+        resources={"project-docs": _resource()},
+        resource_id="project-docs",
+        goal="consistency",
+        trigger_source="codex-session",
+        confidence=0.9,
+        reason="review gatekeeping prompt contract",
+        evidence=("Prior Findings Closure Table",),
+    )
+    prompts = {
+        "controller": harness_autopt.build_controller_prompt(
+            {"project-docs": _resource()}
+        ),
+        "repair": harness_autopt.build_repair_prompt(request),
+        "self-audit": harness_autopt.build_self_audit_prompt(candidate),
+        "experience-to-rule": harness_autopt.build_experience_to_rule_prompt(
+            candidate, assessment
+        ),
+    }
+
+    headings = (
+        harness_autopt.AGREEMENT_REVERSAL_PROMPT_HEADING,
+        harness_autopt.CONVERSATION_CAPTURE_PROMPT_HEADING,
+        harness_autopt.REVIEW_GATEKEEPING_PROMPT_HEADING,
+        harness_autopt.USER_FACING_LANGUAGE_PROMPT_HEADING,
+    )
+    for name, prompt in prompts.items():
+        for heading in headings:
+            assert heading in prompt, (name, heading)
+        assert "Prior Findings Closure Table" in prompt, name
+        assert "Failure Hypothesis Table" in prompt, name
+        assert "clone referenced source repos" in prompt, name
+        assert "`git clone`" in prompt, name
+        assert "`git fetch`" in prompt, name
+        assert "source refs, not raw transcript" in prompt, name
+        assert "plain Japanese before internal labels" in prompt, name
+
+
+def test_repair_prompt_appends_contracts_before_payload() -> None:
+    request = harness_autopt.build_autopt_request(
+        resources={"project-docs": _resource()},
+        resource_id="project-docs",
+        goal="consistency",
+        trigger_source="codex-session",
+        confidence=0.9,
+        reason="contract order",
+        evidence=("Context Reconstruction Table",),
+    )
+
+    prompt = harness_autopt.build_repair_prompt(request)
+    payload_index = prompt.index("## AutoptRequest")
+
+    for heading in (
+        harness_autopt.AGREEMENT_REVERSAL_PROMPT_HEADING,
+        harness_autopt.CONVERSATION_CAPTURE_PROMPT_HEADING,
+        harness_autopt.REVIEW_GATEKEEPING_PROMPT_HEADING,
+    ):
+        assert 0 <= prompt.find(heading) < payload_index
+
+
+def test_prompt_contract_markers_are_loaded_from_markdown() -> None:
+    agreement_markers = harness_autopt.prompt_contract_markers(
+        harness_autopt.AGREEMENT_REVERSAL_PROMPT_HEADING
+    )
+    review_markers = harness_autopt.prompt_contract_markers(
+        harness_autopt.REVIEW_GATEKEEPING_PROMPT_HEADING
+    )
+
+    assert "agreement override" in agreement_markers
+    assert "hidden reversal proposal" in agreement_markers
+    assert "Prior Findings Closure Table" in review_markers
+    assert "validators do not close semantic findings" in review_markers
+    assert "clone referenced source repos" in review_markers
+    assert "`git clone`" in review_markers
+    assert "`git fetch`" in review_markers
+    assert "needs_user_decision" in review_markers
+
+
+def test_experience_assessment_routes_unclear_language_to_skill_prompt() -> (
+    None
+):
+    candidate = harness_autopt.ExperienceCandidate(
+        trigger_source="user-correction",
+        observation="User said the default terminology was unclear jargon.",
+        evidence=("わかりにくい表現", "avoid unexplained jargon"),
+    )
+
+    assessment = harness_autopt.assess_experience_candidate(candidate)
+
+    assert assessment.decision == "skill-prompt"
+    assert assessment.placement.endswith("prompts/harness-contracts.md")
+
+
 def test_repair_prompt_includes_request_constraints_and_evidence() -> None:
     request = harness_autopt.build_autopt_request(
         resources={"project-docs": _resource()},

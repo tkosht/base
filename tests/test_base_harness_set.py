@@ -61,9 +61,11 @@ def test_harness_resource_registry_covers_retained_autoptimizer() -> None:
     assert "harness-autoptimizer" in resource_ids
     assert "instruction-surface" in resource_ids
     assert "knowledge-docs" in resource_ids
+    assert "pr-review-lifecycle" in resource_ids
     assert "project-docs" in resource_ids
     assert "repo-template-specializer" in resource_ids
     assert "test-performance" in resource_ids
+    assert "tmux-agent-review-loop" in resource_ids
 
 
 def test_markdown_harness_resources_keep_guardrails() -> None:
@@ -92,6 +94,21 @@ def test_markdown_harness_resources_keep_guardrails() -> None:
     assert test_performance["kind"] == "test_performance"
     assert test_performance["goals"] == ["efficiency"]
     assert "scripts/ci/repo_copy.py" in test_performance["mutable_paths"]
+
+    pr_review_lifecycle = resources["pr-review-lifecycle"]
+    assert pr_review_lifecycle["kind"] == "skill"
+    assert pr_review_lifecycle["mutation_policy"] == "guarded_pr"
+    assert ".agents/skills/pr-review-lifecycle" in (
+        pr_review_lifecycle["paths"]
+    )
+    assert "tmux-agent-review-loop" in pr_review_lifecycle["depends_on"]
+
+    tmux_review_loop = resources["tmux-agent-review-loop"]
+    assert tmux_review_loop["kind"] == "skill"
+    assert tmux_review_loop["mutation_policy"] == "guarded_pr"
+    assert "tests/harness_autoptimizer/test_tmux_handoff_state.py" in (
+        tmux_review_loop["mutable_paths"]
+    )
 
 
 def test_manifest_paths_match_filesystem() -> None:

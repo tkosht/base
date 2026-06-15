@@ -16,6 +16,8 @@
 - `grill-me`
 - `grill-me-essential-first`
 - `harness-autoptimizer`
+- `pr-review-lifecycle`
 - `repo-instruction-optimizer`
 - `repo-template-specializer`
 - `skill-authoring`
+- `tmux-agent-review-loop`

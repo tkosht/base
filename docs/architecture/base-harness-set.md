@@ -71,6 +71,10 @@
   - `.github/workflows/harness-autopt.yml`
   - `.github/workflows/template-health.yml`
   - workflow permission、secret、path filter は移植先に合わせて確認する
+  - public base repo では `harness-autopt.yml` の schedule は残すが、`CODEX_AUTH_JSON` secret がなければ auth check だけで成功終了し、checkout や Codex 実行へ進まない
+  - `CODEX_AUTH_JSON` を設定した generated repo では schedule autopt が有効になるため、secret 追加時に schedule の要否と write 権限を同時に確認する
+  - `claude.yml` は trusted actor の `@claude` 起動と pinned action を前提に移す。collaborator を増やす repo では起動条件を再確認する
+  - secret 未設定の schedule run は主に Actions 履歴ノイズと軽微な runner 消費の問題であり、secret や repository checkout には進まない
 - ops scaffold
   - `.codex/config.toml`
   - `.codex/version.json`
@@ -133,9 +137,11 @@
   - `grill-me`
   - `grill-me-essential-first`
   - `harness-autoptimizer`
+  - `pr-review-lifecycle`
   - `repo-instruction-optimizer`
   - `repo-template-specializer`
   - `skill-authoring`
+  - `tmux-agent-review-loop`
 - ハーネス資源 registry
   - `docs/architecture/harness-resources.toml`
 - command docs
@@ -149,6 +155,7 @@
   - `harness-autopt.yml`
 - validation
   - `.agents/skills/harness-autoptimizer/prompts/*`
+  - `.agents/skills/tmux-agent-review-loop/scripts/tmux_handoff_state.py`
   - `scripts/ci/repo_copy.py`
   - `templates/`
   - `tests/codex_subagent/*`

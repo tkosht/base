@@ -23,9 +23,11 @@ RETAINED_SKILLS = [
     "grill-me",
     "grill-me-essential-first",
     "harness-autoptimizer",
+    "pr-review-lifecycle",
     "repo-instruction-optimizer",
     "repo-template-specializer",
     "skill-authoring",
+    "tmux-agent-review-loop",
 ]
 REQUIRED_PATHS = [
     "README.md",
@@ -63,11 +65,14 @@ REQUIRED_PATHS = [
     "docs/ai/skills/grill-me.md",
     "docs/ai/skills/grill-me-essential-first.md",
     "docs/ai/skills/harness-autoptimizer.md",
+    "docs/ai/skills/pr-review-lifecycle.md",
     "docs/ai/skills/repo-template-specializer.md",
+    "docs/ai/skills/tmux-agent-review-loop.md",
     ".agents/skills/harness-autoptimizer/prompts/auto-controller.md",
     ".agents/skills/harness-autoptimizer/prompts/self-audit.md",
     ".agents/skills/harness-autoptimizer/prompts/experience-to-rule.md",
     ".agents/skills/harness-autoptimizer/prompts/repair-request.md",
+    ".agents/skills/harness-autoptimizer/prompts/harness-contracts.md",
     "docs/design/README.md",
     "docs/design/samples/starter-b2b-corporate",
     "docs/design/samples/starter-b2b-corporate/DESIGN.sample.md",
@@ -236,9 +241,11 @@ REQUIRED_HARNESS_RESOURCE_IDS = {
     "harness-autoptimizer",
     "instruction-surface",
     "knowledge-docs",
+    "pr-review-lifecycle",
     "project-docs",
     "repo-template-specializer",
     "test-performance",
+    "tmux-agent-review-loop",
 }
 PROJECT_DOCS_RESOURCE_PATHS = {
     "README.md",
@@ -611,7 +618,14 @@ def _check_harness_autoptimizer_contract(
     ).read_text(encoding="utf-8")
     for needle in (
         "workflow_dispatch:",
+        "reason:",
         "schedule:",
+        "cron:",
+        "Check Codex auth",
+        "available=false",
+        "available=true",
+        "available == 'true'",
+        "skipping harness autoptimizer",
         "contents: write",
         "pull-requests: write",
         "CODEX_AUTH_JSON",
@@ -627,6 +641,35 @@ def _check_harness_autoptimizer_contract(
         errors.append(
             "harness-autopt workflow must start a Codex agent controller"
         )
+    if (
+        workflow_text.count("if: steps.codex-auth.outputs.available == 'true'")
+        < 7
+    ):
+        errors.append(
+            "harness-autopt workflow must guard runtime steps on CODEX_AUTH_JSON"
+        )
+
+    claude_workflow = root / ".github" / "workflows" / "claude.yml"
+    if claude_workflow.exists():
+        claude_text = claude_workflow.read_text(encoding="utf-8")
+        for needle in (
+            "author_association",
+            "OWNER",
+            "MEMBER",
+            "COLLABORATOR",
+            "grll/claude-code-action@"
+            "eaa832e2642dfd5ecf723e5d99fc72c8f291c9bc",
+        ):
+            if needle not in claude_text:
+                errors.append(
+                    "claude workflow missing public trigger guard: " + needle
+                )
+        for forbidden in ("id-token: write", "claude-code-action@beta"):
+            if forbidden in claude_text:
+                errors.append(
+                    "claude workflow keeps unsafe public trigger surface: "
+                    + forbidden
+                )
 
 
 def _check_git_mainbranch_contract(root: Path, errors: list[str]) -> None:
