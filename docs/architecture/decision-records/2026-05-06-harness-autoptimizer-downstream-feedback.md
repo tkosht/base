@@ -2,7 +2,7 @@
 
 - Status: Proposed
 - Date: 2026-05-06
-- Source: downstream `tkosht/corporate_site` harness-autoptimizer evolution after base PR #68
+- Source: sanitized applied-repository harness-autoptimizer evolution after base PR #68
 
 ## Context
 
@@ -10,9 +10,9 @@ Base PR #68 moved the first repo-specialization feedback into this template:
 `ReviewFinding`, `ProactiveReviewProbe`, `ReviewReport` convergence, PR creation
 gating, and the `repo-template-specializer` skill.
 
-The downstream corporate-site repo continued using `harness-autoptimizer` after
+A downstream applied repository continued using `harness-autoptimizer` after
 that merge. Several later incidents exposed a deeper lesson: the useful feedback
-is not the corporate-site content itself. The base-level value is the control
+is not the applied product content itself. The base-level value is the control
 system that prevents a Codex agent from treating prose guidance, local patches,
 or convenient tools as proof of convergence.
 
@@ -42,12 +42,12 @@ Base should own:
 
 Base should not own:
 
-- AGen Innoventoria identity, Nova role wording, or site-renewal documentation
-- Astro public-route path lists, AGen public-copy slugs, or company research
-  requirements
-- D1 contact-funnel schema, Resend, Turnstile, Cloudflare Pages, R2, Wix,
-  Squarespace, Search Console, Bing Webmaster Tools, IndexNow, or domain-specific
-  probes as core behavior
+- downstream brand identity, role wording, or project-renewal documentation
+- framework-specific public-route path lists, public-copy slugs, or company
+  research requirements
+- contact-funnel schema, email delivery, bot-protection, hosting, object
+  storage, site-builder, webmaster, indexing, or provider-specific probes as
+  core behavior
 - downstream route counts, sitemap identities, private operations state, or
   provider dashboard handoff details
 
@@ -178,11 +178,11 @@ Downstream policy:
 
 Acceptance:
 
-- The base package works in a repository with no `docs/site-renewal`, no Astro
-  app, and no Cloudflare configuration.
-- Domain literals such as `agen-i`, `Cloudflare`, `Resend`, `D1`,
-  `Search Console`, or route names are absent from base core tests except inside
-  examples that are explicitly marked as downstream policy.
+- The base package works in a repository with no product-renewal docs, no
+  product-specific frontend app, and no provider configuration.
+- Domain-specific literals, provider names, or route names are absent from base
+  core tests except inside examples that are explicitly marked as downstream
+  policy.
 
 ### 7. Resource Registry Schema Hardening
 
@@ -218,12 +218,12 @@ Acceptance:
 
 Keep these out of base core:
 
-- corporate-site public-copy slug list and AGen-specific review vocabulary
+- downstream public-copy slug list and project-specific review vocabulary
 - exact route names, sitemap URL set, trailing-slash policy, and indexing handoff
   state
-- contact form D1 tables, reporting query shapes, and Resend email behavior
-- Cloudflare Pages project names, Workers/D1/R2 settings, Turnstile, Wix, and
-  Squarespace operational notes
+- contact form tables, reporting query shapes, and email delivery behavior
+- hosting project names, edge/runtime data-store settings, bot protection,
+  site-builder settings, and operational notes
 - downstream `.codex`, `.claude`, `.cursor`, and retained-harness naming history
 - generated repo clean-up findings that are already template-specific history,
   except as examples for `repo-template-specializer`

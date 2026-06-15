@@ -702,6 +702,154 @@ def test_template_contract_checks_fail_when_autopt_workflow_missing_codex_agent(
     )
 
 
+def test_template_contract_checks_fail_when_autopt_workflow_schedule_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "harness-autopt.yml"
+    workflow.write_text(
+        workflow.read_text(encoding="utf-8").replace(
+            '  schedule:\n    - cron: "17 3 * * *"\n',
+            "",
+        ),
+        encoding="utf-8",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "harness-autopt workflow missing controller contract: schedule:"
+        in errors
+    )
+
+
+def test_template_contract_checks_fail_when_autopt_workflow_dispatch_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "harness-autopt.yml"
+    _replace_once(workflow, "workflow_dispatch:", "manual_dispatch:")
+
+    errors = run_checks(repo)
+
+    assert (
+        "harness-autopt workflow missing controller contract: "
+        "workflow_dispatch:"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_autopt_codex_auth_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "harness-autopt.yml"
+    workflow.write_text(
+        workflow.read_text(encoding="utf-8").replace(
+            "CODEX_AUTH_JSON", "REMOVED_CODEX_AUTH"
+        ),
+        encoding="utf-8",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "harness-autopt workflow missing controller contract: "
+        "CODEX_AUTH_JSON"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_autopt_auth_skip_marker_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "harness-autopt.yml"
+    _replace_once(workflow, "available=false", "auth-missing")
+
+    errors = run_checks(repo)
+
+    assert (
+        "harness-autopt workflow missing controller contract: "
+        "available=false"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_autopt_runtime_step_is_unguarded(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "harness-autopt.yml"
+    _replace_once(
+        workflow,
+        "        if: steps.codex-auth.outputs.available == 'true'\n",
+        "",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "harness-autopt workflow must guard runtime steps on CODEX_AUTH_JSON"
+        in errors
+    )
+
+
+def test_template_contract_checks_fail_when_claude_author_gate_is_missing(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "claude.yml"
+    workflow.write_text(
+        workflow.read_text(encoding="utf-8").replace(
+            "author_association", "actor_association"
+        ),
+        encoding="utf-8",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "claude workflow missing public trigger guard: author_association"
+        in errors
+    )
+
+
+def test_template_contract_checks_fail_when_claude_oidc_write_is_reintroduced(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "claude.yml"
+    _replace_once(
+        workflow,
+        "            issues: write\n",
+        "            issues: write\n            id-token: write\n",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "claude workflow keeps unsafe public trigger surface: "
+        "id-token: write"
+    ) in errors
+
+
+def test_template_contract_checks_fail_when_claude_beta_ref_is_reintroduced(
+    tmp_path: Path,
+) -> None:
+    repo = _copy_repo(tmp_path)
+    workflow = repo / ".github" / "workflows" / "claude.yml"
+    _replace_once(
+        workflow,
+        "grll/claude-code-action@" "eaa832e2642dfd5ecf723e5d99fc72c8f291c9bc",
+        "grll/claude-code-action@beta",
+    )
+
+    errors = run_checks(repo)
+
+    assert (
+        "claude workflow keeps unsafe public trigger surface: "
+        "claude-code-action@beta"
+    ) in errors
+
+
 def test_template_contract_checks_fail_when_autopt_review_contract_is_missing(
     tmp_path: Path,
 ) -> None:
@@ -783,8 +931,8 @@ def test_template_contract_checks_fail_when_grill_me_skill_dir_is_missing(
         "codex-subagent, dependabot-pr-maintainer, "
         "git-commit-pr, git-mainbranch, "
         "grill-me-essential-first, harness-autoptimizer, "
-        "repo-instruction-optimizer, repo-template-specializer, "
-        "skill-authoring"
+        "pr-review-lifecycle, repo-instruction-optimizer, "
+        "repo-template-specializer, skill-authoring, tmux-agent-review-loop"
     ) in errors
 
 
@@ -814,8 +962,8 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_skill_dir_i
         "unexpected .agents/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, dependabot-pr-maintainer, "
         "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
-        "repo-instruction-optimizer, repo-template-specializer, "
-        "skill-authoring"
+        "pr-review-lifecycle, repo-instruction-optimizer, "
+        "repo-template-specializer, skill-authoring, tmux-agent-review-loop"
     ) in errors
 
 
@@ -831,8 +979,8 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_claude_entr
         "unexpected .claude/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, dependabot-pr-maintainer, "
         "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
-        "repo-instruction-optimizer, repo-template-specializer, "
-        "skill-authoring"
+        "pr-review-lifecycle, repo-instruction-optimizer, "
+        "repo-template-specializer, skill-authoring, tmux-agent-review-loop"
     ) in errors
 
 
@@ -848,8 +996,8 @@ def test_template_contract_checks_fail_when_grill_me_essential_first_codex_entry
         "unexpected .codex/skills layout: ai-agent-collaboration-exec, "
         "codex-subagent, dependabot-pr-maintainer, "
         "git-commit-pr, git-mainbranch, grill-me, harness-autoptimizer, "
-        "repo-instruction-optimizer, repo-template-specializer, "
-        "skill-authoring"
+        "pr-review-lifecycle, repo-instruction-optimizer, "
+        "repo-template-specializer, skill-authoring, tmux-agent-review-loop"
     ) in errors
 
 

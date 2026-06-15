@@ -1,0 +1,11 @@
+# pr-review-lifecycle
+
+- Purpose: GitHub Pull Request（PR）の内容レビュー、review feedback の修復、検証、レビュー再依頼、GitHub thread resolve まで evidence-first で回す
+- Use when: PR 内容レビュー、PR Conversation への review summary 投稿、tmux pane への findings 連携、PR review comment 対応、レビュー再依頼、未解決 thread の解消、`Resolve まで` と明示された review lifecycle
+- Skill source: `.agents/skills/pr-review-lifecycle`
+- Claude shim: `.claude/skills/pr-review-lifecycle`
+- Codex compatibility shim: `.codex/skills/pr-review-lifecycle`
+- Key outputs: reviewed head commit、findings-first review、PR Conversation comment state、tmux handoff state、RootCauseReview、targeted regression、gate results、PRReviewLifecycleAudit、resolved thread IDs、remaining-thread status
+- Review request rule: After pushing verified fixes, reply to addressed review comments with an evidence-bearing review response that names fix evidence, verification, `@codex review` state, post-request readback, and resolve state; post `@codex review` on the PR, then Re-read review threads and checks before resolving anything
+- Review response summary: When a thread reply cannot already show the post-request readback, add a follow-up reply or PR-level `Review response summary` mapping comments to reply URL, fix, verification, re-review request, readback, and resolve state
+- Notes: flat comment だけでは closure 判定に使わず、thread-aware review state を毎回確認する。Resolve は修復・検証済み thread に限る。`Prior Findings Closure Table` と `Failure Hypothesis Table` を使い、no material findings requires negative evidence、parent reducer must audit no-finding leaves、validators do not close semantic findings、existing implementation output semantics are protected を守る。PR body、コメント、実行者自己採点、CI 通過は input であり、closure evidence ではない。target tmux pane へ委譲する run は `tmux-agent-review-loop` / `references/tmux_handoff_protocol.md` の handoff protocol と target pane dirty-input classification に従い、current editable prompt 以外の placeholder / transcript / last-submitted prompt / `idle_codex_surface` 表示だけでは dirty input とみなさない。未送信入力、pane 未確定、handoff 未確認、親 reviewer の自己実装、pane lifecycle 侵害、自己 handoff は `target_pane_input_dirty`、`target_pane_unresolved`、`handoff_unconfirmed`、`role_boundary_violation`、`target_pane_lifecycle_violation`、`self_handoff_blocked` として non-converged で止める

@@ -10,9 +10,11 @@ skills = [
   "grill-me",
   "grill-me-essential-first",
   "harness-autoptimizer",
+  "pr-review-lifecycle",
   "repo-instruction-optimizer",
   "repo-template-specializer",
   "skill-authoring",
+  "tmux-agent-review-loop",
 ]
 
 command_docs = [
@@ -81,10 +83,13 @@ included_paths = [
   "docs/ai/skills/ai-agent-collaboration-exec.md",
   "docs/ai/skills/dependabot-pr-maintainer.md",
   "docs/ai/skills/harness-autoptimizer.md",
+  "docs/ai/skills/pr-review-lifecycle.md",
+  "docs/ai/skills/tmux-agent-review-loop.md",
   ".agents/skills/harness-autoptimizer/prompts/auto-controller.md",
   ".agents/skills/harness-autoptimizer/prompts/self-audit.md",
   ".agents/skills/harness-autoptimizer/prompts/experience-to-rule.md",
   ".agents/skills/harness-autoptimizer/prompts/repair-request.md",
+  ".agents/skills/harness-autoptimizer/prompts/harness-contracts.md",
   "docs/ai/skills/grill-me.md",
   "docs/ai/skills/grill-me-essential-first.md",
   "docs/ai/skills/repo-template-specializer.md",

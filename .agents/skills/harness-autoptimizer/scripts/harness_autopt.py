@@ -27,7 +27,7 @@ DEFAULT_REGISTRY_PATH = (
 )
 DEFAULT_LOG_ROOT = ROOT_DIR / ".codex" / "sessions" / "harness_autopt"
 PROMPT_DIR = (
-    ROOT_DIR / ".claude" / "skills" / "harness-autoptimizer" / "prompts"
+    ROOT_DIR / ".agents" / "skills" / "harness-autoptimizer" / "prompts"
 )
 DEFAULT_GATES = ("make doctor", "make lint", "make test")
 PROTECTED_PREFIXES = (
@@ -89,6 +89,23 @@ RAW_TRACE_MARKERS = (
     "stdout",
     "stderr",
 )
+AGREEMENT_REVERSAL_PROMPT_HEADING = "## Agreement Reversal Contract"
+CONVERSATION_CAPTURE_PROMPT_HEADING = "## Conversation Capture Contract"
+REVIEW_GATEKEEPING_PROMPT_HEADING = "## Review Gatekeeping Contract"
+USER_FACING_LANGUAGE_PROMPT_HEADING = "## User-Facing Language Contract"
+PROMPT_CONTRACTS_TEMPLATE = "harness-contracts.md"
+PROMPT_CONTRACT_SECTION_HEADINGS = (
+    AGREEMENT_REVERSAL_PROMPT_HEADING,
+    CONVERSATION_CAPTURE_PROMPT_HEADING,
+    REVIEW_GATEKEEPING_PROMPT_HEADING,
+    USER_FACING_LANGUAGE_PROMPT_HEADING,
+)
+
+
+@dataclass(frozen=True)
+class PromptContractSection:
+    heading: str
+    body: str
 
 
 @dataclass(frozen=True)
@@ -389,6 +406,33 @@ def assess_experience_candidate(
             reason=(
                 "The experience concerns instruction authority and should be "
                 "resolved in the canonical instruction surface."
+            ),
+        )
+
+    if any(
+        marker in text
+        for marker in (
+            "jargon",
+            "unclear",
+            "terminology",
+            "plain language",
+            "plain japanese",
+            "わかりにく",
+            "意味不明",
+            "用語",
+            "略語",
+        )
+    ):
+        return ExperienceAssessment(
+            decision="skill-prompt",
+            placement=(
+                ".agents/skills/harness-autoptimizer/"
+                "prompts/harness-contracts.md"
+            ),
+            confidence=0.86,
+            reason=(
+                "The experience shows user-facing harness language needs a "
+                "clearer prompt rule."
             ),
         )
 
@@ -821,6 +865,87 @@ def load_prompt_template(name: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _extract_markdown_section(
+    document: str, heading: str
+) -> PromptContractSection:
+    lines = document.splitlines()
+    try:
+        start = next(
+            index
+            for index, line in enumerate(lines)
+            if line.strip() == heading
+        )
+    except StopIteration as exc:
+        raise ValueError(
+            f"missing prompt contract section: {heading}"
+        ) from exc
+
+    heading_level = len(heading.split(" ", 1)[0])
+    end = len(lines)
+    for index in range(start + 1, len(lines)):
+        match = re.match(r"^(#{1,6})\s+\S", lines[index])
+        if match and len(match.group(1)) <= heading_level:
+            end = index
+            break
+
+    body = "\n".join(lines[start + 1 : end]).strip()
+    if not body:
+        raise ValueError(f"empty prompt contract section: {heading}")
+    return PromptContractSection(heading=heading, body=body)
+
+
+def load_prompt_contract_sections() -> tuple[PromptContractSection, ...]:
+    document = load_prompt_template(PROMPT_CONTRACTS_TEMPLATE)
+    return tuple(
+        _extract_markdown_section(document, heading)
+        for heading in PROMPT_CONTRACT_SECTION_HEADINGS
+    )
+
+
+def prompt_contract_markers(heading: str | None = None) -> tuple[str, ...]:
+    markers: list[str] = []
+    for section in load_prompt_contract_sections():
+        if heading is not None and section.heading != heading:
+            continue
+        section_markers: list[str] = []
+        in_markers = False
+        for line in section.body.splitlines():
+            stripped = line.strip()
+            if stripped == "Markers:":
+                in_markers = True
+                continue
+            if not in_markers:
+                continue
+            if not stripped:
+                if section_markers:
+                    break
+                continue
+            if not stripped.startswith("- "):
+                break
+            section_markers.append(stripped[2:])
+        markers.extend(section_markers)
+    return tuple(markers)
+
+
+def append_prompt_contract_section(
+    prompt: str, heading: str, contract: str
+) -> str:
+    section = f"{heading}\n\n{contract}"
+    if section in prompt:
+        return prompt if prompt.endswith("\n") else prompt + "\n"
+    return f"{prompt.rstrip()}\n\n{section}\n"
+
+
+def append_harness_prompt_contracts(prompt: str) -> str:
+    for section in load_prompt_contract_sections():
+        prompt = append_prompt_contract_section(
+            prompt,
+            section.heading,
+            section.body,
+        )
+    return prompt
+
+
 def build_controller_prompt(resources: dict[str, HarnessResource]) -> str:
     template = load_prompt_template("auto-controller.md")
     self_audit = load_prompt_template("self-audit.md")
@@ -830,10 +955,13 @@ def build_controller_prompt(resources: dict[str, HarnessResource]) -> str:
         ensure_ascii=False,
         indent=2,
     )
-    return (
+    base_prompt = append_harness_prompt_contracts(
         f"{template}\n\n"
         f"## Self-Audit Contract\n\n{self_audit}\n\n"
-        f"## Experience-to-Rule Contract\n\n{experience_to_rule}\n\n"
+        f"## Experience-to-Rule Contract\n\n{experience_to_rule}\n"
+    )
+    return (
+        f"{base_prompt.rstrip()}\n\n"
         f"## Harness Resource Registry\n\n```json\n{catalog}\n```\n"
     )
 
@@ -845,21 +973,29 @@ def build_repair_prompt(request: AutoptRequest) -> str:
         ensure_ascii=False,
         indent=2,
     )
-    return f"{template}\n\n## AutoptRequest\n\n```json\n{payload}\n```\n"
+    base_prompt = append_harness_prompt_contracts(template)
+    return (
+        f"{base_prompt.rstrip()}\n\n"
+        f"## AutoptRequest\n\n```json\n{payload}\n```\n"
+    )
 
 
 def build_self_audit_prompt(
     candidate: ExperienceCandidate | None = None,
 ) -> str:
     template = load_prompt_template("self-audit.md")
+    base_prompt = append_harness_prompt_contracts(template)
     if candidate is None:
-        return template
+        return base_prompt
     payload = json.dumps(
         experience_candidate_to_dict(candidate),
         ensure_ascii=False,
         indent=2,
     )
-    return f"{template}\n\n## ExperienceCandidate\n\n```json\n{payload}\n```\n"
+    return (
+        f"{base_prompt.rstrip()}\n\n"
+        f"## ExperienceCandidate\n\n```json\n{payload}\n```\n"
+    )
 
 
 def build_experience_to_rule_prompt(
@@ -867,7 +1003,7 @@ def build_experience_to_rule_prompt(
     assessment: ExperienceAssessment | None = None,
 ) -> str:
     template = load_prompt_template("experience-to-rule.md")
-    sections = [template]
+    sections = [append_harness_prompt_contracts(template).rstrip()]
     if candidate is not None:
         sections.append(
             "## ExperienceCandidate\n\n```json\n"

@@ -62,6 +62,65 @@ risk_level = "high"
 goals = ["stability", "self-audit"]
 
 [[resources]]
+id = "pr-review-lifecycle"
+kind = "skill"
+authority = "canonical"
+paths = [
+  ".agents/skills/pr-review-lifecycle",
+  ".claude/skills/pr-review-lifecycle",
+  ".codex/skills/pr-review-lifecycle",
+  "docs/ai/skills/pr-review-lifecycle.md",
+  "tests/test_base_harness_set.py",
+]
+mutable_paths = [
+  ".agents/skills/pr-review-lifecycle",
+  "docs/ai/skills/pr-review-lifecycle.md",
+  "tests/test_base_harness_set.py",
+]
+depends_on = [
+  "tmux-agent-review-loop",
+  "validation-surface",
+]
+validators = [
+  "make doctor",
+  "make lint",
+  "make test",
+]
+mutation_policy = "guarded_pr"
+risk_level = "high"
+goals = ["root-cause-review", "thread-closure", "review-quality"]
+
+[[resources]]
+id = "tmux-agent-review-loop"
+kind = "skill"
+authority = "canonical"
+paths = [
+  ".agents/skills/tmux-agent-review-loop",
+  ".claude/skills/tmux-agent-review-loop",
+  ".codex/skills/tmux-agent-review-loop",
+  "docs/ai/skills/tmux-agent-review-loop.md",
+  "tests/harness_autoptimizer/test_tmux_handoff_state.py",
+]
+mutable_paths = [
+  ".agents/skills/tmux-agent-review-loop",
+  "docs/ai/skills/tmux-agent-review-loop.md",
+  "tests/harness_autoptimizer/test_tmux_handoff_state.py",
+]
+depends_on = [
+  "codex-subagent",
+  "harness-autoptimizer",
+  "validation-surface",
+]
+validators = [
+  "make doctor",
+  "make lint",
+  "make test",
+]
+mutation_policy = "guarded_pr"
+risk_level = "high"
+goals = ["handoff-integrity", "review-quality", "agent-collaboration"]
+
+[[resources]]
 id = "repo-template-specializer"
 kind = "skill"
 authority = "canonical"
