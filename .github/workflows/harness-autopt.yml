@@ -33,7 +33,7 @@ jobs:
 
       - name: Checkout code
         if: steps.codex-auth.outputs.available == 'true'
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: Set up uv
         if: steps.codex-auth.outputs.available == 'true'
