@@ -87,6 +87,7 @@ mode:
 # docker compose aliases
 up:
 	docker compose up -d --build
+	docker compose exec app bash -lc 'if command -v configure-nvidia-dind >/dev/null 2>&1; then sudo configure-nvidia-dind; fi'
 	docker compose exec app sudo service docker start
 
 active:

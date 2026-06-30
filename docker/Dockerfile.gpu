@@ -23,13 +23,21 @@ RUN sh /tmp/install_gh.sh
 
 
 # DinD
-# # c.f https://hub.docker.com/r/billyteves/ubuntu-dind/dockerfile
-# # Install Docker and wrapdocker
+# Install Docker and configure NVIDIA support for the inner daemon.
 RUN curl -sSL https://get.docker.com/ | sh
-RUN curl -sSL https://raw.githubusercontent.com/billyteves/ubuntu-dind/master/wrapdocker -o /usr/local/bin/wrapdocker
-RUN chmod +x /usr/local/bin/wrapdocker
+RUN curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+        | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
+    && curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+        | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+        > /etc/apt/sources.list.d/nvidia-container-toolkit.list \
+    && apt-get update -y \
+    && apt-get install -y --no-install-recommends nvidia-container-toolkit
+COPY docker/configure-nvidia-dind /usr/local/bin/configure-nvidia-dind
+RUN chmod +x /usr/local/bin/configure-nvidia-dind
+COPY docker/gpu-container-entrypoint /usr/local/bin/gpu-container-entrypoint
+RUN chmod +x /usr/local/bin/gpu-container-entrypoint
 VOLUME /var/lib/docker
-ENTRYPOINT ["/usr/local/bin/wrapdocker"]
+ENTRYPOINT ["/usr/local/bin/gpu-container-entrypoint"]
 
 
 ENV LANG="ja_JP.UTF-8" \
