@@ -18,7 +18,7 @@ lint:
 	uv run black --check .
 
 test:
-	uv run pytest -q -m "not codex_live" tests/test_base_harness_set.py tests/test_template_contract.py tests/template_smoke tests/codex_subagent tests/harness_autoptimizer
+	uv run pytest -q -m "not codex_live" tests/test_base_harness_set.py tests/test_template_contract.py tests/test_gpu_dind_startup_contract.py tests/template_smoke tests/codex_subagent tests/harness_autoptimizer
 
 test-codex-live:
 	@command -v codex >/dev/null 2>&1 || { echo "codex CLI が見つかりません。まず make bootstrap を実行してください。"; exit 1; }
@@ -87,8 +87,6 @@ mode:
 # docker compose aliases
 up:
 	docker compose up -d --build
-	docker compose exec app bash -lc 'if command -v configure-nvidia-dind >/dev/null 2>&1; then sudo configure-nvidia-dind; fi'
-	docker compose exec app sudo service docker start
 
 active:
 	docker compose up
