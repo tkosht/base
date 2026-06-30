@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() {
+    printf '[configure-nvidia-dind] %s\n' "$*"
+}
+
+if ! command -v nvidia-ctk >/dev/null 2>&1; then
+    log "nvidia-ctk is not installed; skipping NVIDIA Docker setup."
+    exit 0
+fi
+
+daemon_was_running=0
+if docker info >/dev/null 2>&1; then
+    daemon_was_running=1
+fi
+
+mkdir -p /etc/docker /var/run/cdi
+
+log "Configuring the inner Docker daemon for the NVIDIA runtime."
+nvidia-ctk runtime configure --runtime=docker --config=/etc/docker/daemon.json
+
+if command -v nvidia-smi >/dev/null 2>&1; then
+    log "Generating the NVIDIA Container Device Interface specification."
+    if ! nvidia-ctk cdi generate --output=/var/run/cdi/nvidia.yaml; then
+        log "CDI generation failed; continuing with the Docker runtime configuration."
+    fi
+else
+    log "nvidia-smi is not visible in this container; skipping CDI generation."
+fi
+
+if [ "$daemon_was_running" -eq 1 ]; then
+    log "Restarting Docker so the NVIDIA runtime configuration is applied."
+    service docker restart
+fi

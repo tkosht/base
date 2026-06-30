@@ -1,0 +1,23 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+log() {
+    printf '[gpu-container-entrypoint] %s\n' "$*"
+}
+
+if command -v configure-nvidia-dind >/dev/null 2>&1; then
+    sudo configure-nvidia-dind
+fi
+
+if docker info >/dev/null 2>&1; then
+    log "Inner Docker daemon is already running."
+else
+    log "Starting the inner Docker daemon."
+    sudo service docker start
+fi
+
+if [ "$#" -gt 0 ]; then
+    exec "$@"
+fi
+
+exec bash --login
