@@ -12,6 +12,7 @@
 - visual contract: `DESIGN.md`
 - AI 共通運用契約: `docs/ai/repo-contract.md`
 - Codex 経験捕捉: `docs/ai/experience-capture.md`
+- Cursor Cloud 実行メモ: `docs/ai/cursor-cloud.md`
 - design guidance: `docs/design/README.md`
 - Model Context Protocol（MCP）方針: `docs/ai/mcp.md`
 - skill reference: `docs/ai/skills/`
