@@ -49,3 +49,14 @@
 - `AGENTS.md` は短い入口に保ち、長い手順や変化しやすい詳細は `docs/` へ分離する。
 - 長く残す知識は `docs/architecture/knowledge-architecture.md` に従って配置し、設計理由は `docs/architecture/decision-records/` に設計判断メモとして残す。
 - skill entrypoint の正本は `.agents/skills/` とする。`.claude/skills/` と `.codex/skills/` は互換 shim として扱う。
+
+## Cursor Cloud specific instructions
+
+このリポジトリは Python 製の control-plane / template tooling です。標準コマンドは `Makefile` と `README.md` の Commands 節を正本とする（`make lint` / `make doctor` / `make test`）。以下は Cloud 環境で非自明な点のみ。
+
+- パッケージ管理は `uv`。依存の入口は `make bootstrap` だが、これは `bin/install_agentcli.sh`（Claude / Codex / Gemini CLI 導入）も走らせる。update script では依存同期に必要な `uv sync --all-groups --all-extras` のみ行い、エージェント CLI 導入は含めない。
+- `uv` は `~/.local/bin` に入り、`~/.bashrc`（`. "$HOME/.local/bin/env"`）経由で新規シェルの PATH に載る。もし `uv` が見つからない場合は `. "$HOME/.local/bin/env"` を実行する。
+- `make test` は codex-live を除外した control-plane スイート（`tests/` 配下、約 297 件）。`make test-codex-live` と `codex-subagent` パイプラインの実行（`.agents/skills/codex-subagent/scripts/codex_exec.py`）は、実際の `codex` CLI と ChatGPT ログインが必要で Cloud では動かせない（`--help` までは可）。
+- ルート `compose.yml` は `docker/compose.gpu.yml` への symlink で、`make up` などの Docker/GPU 系ターゲットは Docker + GPU 前提。Cloud の通常セットアップでは不要。`Makefile` の `webapp` ターゲットは存在しない `app.demo:api` を参照する残骸で使わない。
+- 動作確認用の自己完結タスク（外部依存なし）: `uv run python scripts/template/apply_overlay.py --template python-minimal --target <dir>` で starter overlay を適用し、生成物を pytest / ruff で検証できる。
+- `.pre-commit-config.yaml` は未存在の `scripts/*_check.py` を参照するため、そのままでは動作しない。コミット前ゲートは `make lint` / `make doctor` / `make test` を使う。
